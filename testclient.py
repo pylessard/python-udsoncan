@@ -1,16 +1,8 @@
 from udsoncan import sessions, services, Request, Connection
 from udsoncan.client import Client
-
 import time
-client_conn = Connection('vcan0', 0x123, 0x456)
-client_conn.open()
 
-client = Client(client_conn, request_timeout=5)
+conn = Connection('vcan0', rxid=0x123, txid=0x456)
 
-try:
-	client.change_session(sessions.ExtendedDiagnosticSession)
-
-except:
-	client_conn.close()
-	raise
-client_conn.close()
+with Client(conn, request_timeout=1) as client:
+	client.unlock_security_access(3)

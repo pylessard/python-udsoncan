@@ -4,6 +4,8 @@ import queue
 import inspect
 import struct
 import time
+import socket
+import errno
 
 from udsoncan.exceptions import *
 
@@ -15,13 +17,24 @@ class Connection(object):
 		self.txid=txid
 		self.rxqueue = queue.Queue()
 		self.exit_requested = False
+		self.opened = False
 
 		self.rxthread = threading.Thread(target=self.rxthread_task)
 		self.tpsock = isotp.socket(timeout=0.1)
 
+
 	def open(self):
 		self.tpsock.bind(self.interface, rxid=self.rxid, txid=self.txid)
+		self.exit_requested = False
 		self.rxthread.start()
+		self.opened = True
+		return self
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, type, value, traceback):
+		self.close()
 
 	def is_open(self):
 		return self.tpsock.bound
@@ -32,12 +45,16 @@ class Connection(object):
 				data = self.tpsock.recv()
 				if data is not None:
 					self.rxqueue.put(data)
-			except:
+			except socket.timeout as e:
+				pass
+			except Exception as e:
 				self.exit_requested = True
+
 
 	def close(self):
 		self.exit_requested = True
 		self.tpsock.close()
+		self.opened = False
 
 	def send(self, obj):
 		if isinstance(obj, Request) or isinstance(obj, Response):
@@ -48,6 +65,12 @@ class Connection(object):
 		self.tpsock.send(payload)
 
 	def wait_frame(self, timeout=5, exception=False):
+		if not self.opened:
+			if exception:
+				raise RuntimeException("Connection is not opened")
+			else:
+				return None
+
 		timedout = False
 		frame = None
 		try:
@@ -68,7 +91,7 @@ class Connection(object):
 
 
 class Request:
-	def __init__(self, service = None, subfunction = None, suppressPosResponse = False):
+	def __init__(self, service = None, subfunction = None, suppress_positive_response = False):
 		if isinstance(service, services.BaseService):
 			self.service = service.__class__
 			self.subfunction = service.subfunction_id()	# service instance are able toe generate the subfunction ID
@@ -79,7 +102,7 @@ class Request:
 		elif service is not None:
 			raise ValueError("Given service must be a service class or instance")
 
-		self.suppressPosResponse = suppressPosResponse
+		self.suppress_positive_response = suppress_positive_response
 		self.service_data = None
 
 	def get_payload(self):
@@ -92,7 +115,7 @@ class Request:
 		requestid = self.service.request_id()	# Return the service ID used to make a client request
 		subfunction = self.subfunction	
 
-		if self.suppressPosResponse:
+		if self.suppress_positive_response:
 			subfunction |= 0x80
 		payload = struct.pack("BB", requestid, subfunction)
 		if self.service_data is not None:
@@ -106,7 +129,7 @@ class Request:
 		if len(payload) >= 2:
 			req.service = services.cls_from_request_id(payload[0])
 			req.subfunction = int(payload[1]) & 0x7F
-			req.suppressPosResponse = True if payload[1] & 0x80 > 0 else False
+			req.suppress_positive_response = True if payload[1] & 0x80 > 0 else False
 			if len(payload) > 2:
 				req.service_data = payload[2:]
 		return req
@@ -167,13 +190,13 @@ class Response:
 					if member[1] == given_id:
 						return member[0]
 
-	def __init__(self, service = None, code = None, payload=None):
+	def __init__(self, service = None, code = None, service_data=None):
 		self.positive = False
 		self.response_code = None
 		self.response_code_name = ""
 		self.valid = False
 
-		self.payload = payload
+		self.service_data = service_data
 		self.service = service
 
 		if code is not None:
@@ -184,13 +207,19 @@ class Response:
 
 	#Used by server
 	def get_payload(self):
+		if not isinstance(self.service, services.BaseService):
+			raise ValueError("Cannot make payload from response object. Given service is not a valid service object")
+
+		if not isinstance(self.response_code, int):
+			raise ValueError("Cannot make payload from response object. Given response code is not a valid integer")
+
 		payload = struct.pack("B", self.service.response_id())
 		if not self.positive:
 			payload += b'\x7F'
 		payload += struct.pack('B', self.response_code)
 
-		if self.payload is not None:
-			payload += self.payload
+		if self.service_data is not None:
+			payload += self.service_data
 		return payload
 
 
@@ -199,23 +228,27 @@ class Response:
 	def from_payload(cls, payload):
 		response = cls()
 		if len(payload) >= 1:
-			if payload[0] != 0x7F:
-				response.service = services.cls_from_response_id(payload[0])
-				response.response_code = Response.Code.PositiveResponse
-				response.response_code_name = Response.Code.get_name(Response.Code.PositiveResponse)
-				response.positive = True
-				response.valid = True
-				response.service_data = b""
-			else:
-				if len(payload) >= 2:
+			response.service = services.cls_from_response_id(payload[0])
+			if len(payload) >= 2 :
+				if payload[1] != 0x7F:
+					data_start=2
+					response.response_code = Response.Code.PositiveResponse
+					response.response_code_name = Response.Code.get_name(Response.Code.PositiveResponse)
+					response.positive = True
+					response.valid = True
+				else:
+					data_start=3
 					response.service = services.cls_from_response_id(payload[1])
 					response.positive = False
 					if len(response) >= 3:
 						response.response_code = response[2]
 						response.response_code_name = Response.Code.get_name(self.response_code)
 						response.valid = True
-						if len(payload) >= 4:
-							response.service_data = payload[4:len(payload)-4]
+				
+				if len(payload) > data_start:
+					response.service_data = payload[data_start:]
+			else:
+				response.valid = False
 		else:
 			response.valid = False
 		return response
