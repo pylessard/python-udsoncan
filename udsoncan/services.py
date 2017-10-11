@@ -1,4 +1,13 @@
+from udsoncan import Response
 from udsoncan.sessions import Session
+import inspect
+import sys
+
+def cls_from_request_id(given_id):
+	return BaseService.from_request_id(given_id)
+
+def cls_from_response_id(given_id):
+	return BaseService.from_response_id(given_id)
 
 class BaseService:
 
@@ -10,14 +19,40 @@ class BaseService:
 	def response_id(cls):
 		return cls._sid + 0x40
 
-	def make_payload(self):
-		return b""
+	def set_id_from_response_payload(self, payload):
+		if not payload or len(payload) == 0:
+			raise ValueError("Response is empty")
+		_sid = payload[0] - 0x40
+
+	def from_positive_response_payload(self, payload):
+		self.set_id_from_response_payload(response)
+
+	@classmethod
+	def from_request_id(cls, given_id):
+		for name, obj in inspect.getmembers(sys.modules[__name__]):
+			if hasattr(obj, "__bases__") and cls in obj.__bases__:
+				if obj.request_id() == given_id:
+					return obj
+
+	@classmethod
+	def from_response_id(cls, given_id):
+		for name, obj in inspect.getmembers(sys.modules[__name__]):
+			if hasattr(obj, "__bases__") and cls in obj.__bases__:
+				if obj.response_id() == given_id:
+					return obj
+
+def is_valid_service(service_cls):
+	return issubclass(service_cls, BaseService)
 
 class ZeroSubFunction:
 	id = 0
 
 class DiagnosticSessionControl(BaseService):
 	_sid = 0x10
+	supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
+									Response.Code.IncorrectMessageLegthOrInvalidFormat,
+									Response.Code.ConditionsNotCorrect
+									]
 	def __init__(self, session):
 		if isinstance(session, int):
 			session = Session.from_id(session)
@@ -27,10 +62,8 @@ class DiagnosticSessionControl(BaseService):
 
 		self.session = session
 
-	@property
 	def subfunction_id(self):
-		return self.session.id
-
+		return self.session.get_id()
 
 
 class ECUReset(BaseService):

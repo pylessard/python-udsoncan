@@ -1,19 +1,21 @@
 import inspect
 import sys
 
+def from_id(given_id):
+	return Session.from_id(given_id)
 
 class Session:
 	_sessionid = None
 
 	@classmethod	
-	def id(cls):
+	def get_id(cls):
 		return cls._sessionid
 
 	@classmethod
 	def from_id(cls, given_id):
 		for name, obj in inspect.getmembers(sys.modules[__name__]):
 			if hasattr(obj, "__bases__") and cls in obj.__bases__:
-				if obj.session_id() == given_id:
+				if obj.get_id() == given_id:
 					return obj
 
 class DefaultSession(Session):
