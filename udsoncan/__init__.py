@@ -207,7 +207,7 @@ class Response:
 
 	#Used by server
 	def get_payload(self):
-		if not isinstance(self.service, services.BaseService) and not issubclass(self. service, services.BaseService):
+		if not isinstance(self.service, services.BaseService) and not issubclass(self.service, services.BaseService):
 			raise ValueError("Cannot make payload from response object. Given service is not a valid service object")
 
 		if not isinstance(self.response_code, int):
