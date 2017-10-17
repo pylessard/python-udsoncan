@@ -34,7 +34,7 @@ with conn.open():
 			else:
 				response = Response(req.service, Response.Code.ServiceNotSupported)
 			
-			if response.response_code != Response.Code.PositiveResponse or not req.suppressPosResponse:
+			if response.response_code != Response.Code.PositiveResponse or not req.suppress_positive_response:
 				conn.send(response)
 			else:
 				print ("Suppressing positive response.")
