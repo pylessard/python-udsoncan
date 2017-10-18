@@ -265,7 +265,7 @@ class Response:
 
 class DidCodec:
 
-	def __init__(self, packstr):
+	def __init__(self, packstr=None):
 		self.packstr = packstr
 
 	def encode(self, did_value):

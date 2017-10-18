@@ -8,11 +8,14 @@ def test_algo(seed):
 	return key
 
 class MyDidCodec(DidCodec):
-	def encode(did_value):
+	def encode(self, did_value):
 		return struct.pack('B', did_value+1)
 
-	def decode(did_payload):
-		return struct.unpack('B', did_payload) - 1
+	def decode(self, did_payload):
+		return struct.unpack('B', did_payload)[0] - 1
+
+	def __len__(self):
+		return 1
 
 client_config  = {
 	'security_algo' : test_algo,

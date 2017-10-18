@@ -78,7 +78,7 @@ class Client:
 			codec = DidCodec.from_config(didconfig[did])
 			subpayload = response.service_data[offset:offset+len(codec)]
 			offset += len(codec)
-			(val,) = codec.decode(subpayload)
+			val = codec.decode(subpayload)
 
 			if output_fmt in ['list']:
 				values.append(val)
