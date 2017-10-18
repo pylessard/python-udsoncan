@@ -41,11 +41,18 @@ class BaseService:
 				if obj.response_id() == given_id:
 					return obj
 
+	def subfunction_id(self):
+		return 0
+
+	@classmethod
+	def use_subfunction(cls):
+		if hasattr(cls, '_use_subfunction'):
+			return cls._use_subfunction
+		else:
+			return True
+
 def is_valid_service(service_cls):
 	return issubclass(service_cls, BaseService)
-
-class ZeroSubFunction:
-	id = 0
 
 class DiagnosticSessionControl(BaseService):
 	_sid = 0x10
@@ -65,12 +72,16 @@ class DiagnosticSessionControl(BaseService):
 	def subfunction_id(self):
 		return self.session.get_id()
 
+	def has_subfunction(self):
+		return True
+
 
 class ECUReset(BaseService):
 	_sid = 0x01
 	def __init__(self):
 		pass
 
+# Done
 class SecurityAccess(BaseService):
 	_sid = 0x27
 	class Mode:
@@ -100,10 +111,10 @@ class CommunicationControl(BaseService):
 	def __init__(self):
 		pass
 
+# Done
 class TesterPresent(BaseService):
 	_sid = 0x3E
-	def __init__(self):
-		pass
+
 
 class AccessTimingParameter(BaseService):
 	_sid = 0x83
@@ -132,8 +143,22 @@ class LinkControl(BaseService):
 
 class ReadDataByIdentifier(BaseService):
 	_sid = 0x22
-	def __init__(self):
-		pass
+	_use_subfunction = False
+
+	def __init__(self, dids):
+		if not isinstance(dids, int) and not isinstance(dids, list):
+			raise ValueError("Data Identifier must either be an integer or a list of integer")
+
+		if isinstance(dids, int):
+			if dids < 0 or dids > 0xFFFF:
+				raise ValueError("Data Identifier must be set between 0 and 0xFFFF")
+		if isinstance(dids, list):
+			for did in dids:
+				if not isinstance(did, int) or did < 0 or did > 0xFFFF:
+					raise ValueError("Data Identifier must be set between 0 and 0xFFFF")
+
+		self.dids = dids
+
 
 class ReadMemoryByAddress(BaseService):
 	_sid = 0x23

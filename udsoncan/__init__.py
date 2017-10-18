@@ -8,6 +8,7 @@ import socket
 import errno
 
 from udsoncan.exceptions import *
+import inspect
 
 
 class Connection(object):
@@ -64,7 +65,7 @@ class Connection(object):
 
 		self.tpsock.send(payload)
 
-	def wait_frame(self, timeout=5, exception=False):
+	def wait_frame(self, timeout=2, exception=False):
 		if not self.opened:
 			if exception:
 				raise RuntimeException("Connection is not opened")
@@ -109,15 +110,19 @@ class Request:
 		if not issubclass(self.service, services.BaseService):
 			raise ValueError("Cannot generate a payload. Given service is not a subclass of BaseService")
 
-		if not isinstance(self.subfunction, int):
+		if self.service.use_subfunction() and not isinstance(self.subfunction, int):
 			raise ValueError("Cannot generate a payload. Given subfunction is not a valid integer")
 
 		requestid = self.service.request_id()	# Return the service ID used to make a client request
-		subfunction = self.subfunction	
+			
 
-		if self.suppress_positive_response:
-			subfunction |= 0x80
-		payload = struct.pack("BB", requestid, subfunction)
+		payload = struct.pack("B", requestid)
+		if self.service.use_subfunction():
+			subfunction = self.subfunction
+			if self.suppress_positive_response:
+				subfunction |= 0x80
+			payload += struct.pack("B", subfunction)
+
 		if self.service_data is not None:
 			 payload += self.service_data
 
@@ -126,12 +131,18 @@ class Request:
 	@classmethod
 	def from_payload(cls, payload):
 		req = cls()
-		if len(payload) >= 2:
+
+		if len(payload) >= 1:
 			req.service = services.cls_from_request_id(payload[0])
-			req.subfunction = int(payload[1]) & 0x7F
-			req.suppress_positive_response = True if payload[1] & 0x80 > 0 else False
-			if len(payload) > 2:
-				req.service_data = payload[2:]
+
+			offset = 0
+			if req.service.use_subfunction():
+				offset += 1
+				if len(payload) >= offset+1: 
+					req.subfunction = int(payload[1]) & 0x7F
+					req.suppress_positive_response = True if payload[1] & 0x80 > 0 else False
+			if len(payload) > offset+1:
+				req.service_data = payload[offset+1:]
 		return req
 
 
@@ -238,11 +249,10 @@ class Response:
 					response.valid = True
 				else:
 					data_start=3
-					response.service = services.cls_from_response_id(payload[1])
 					response.positive = False
-					if len(response) >= 3:
-						response.response_code = response[2]
-						response.response_code_name = Response.Code.get_name(self.response_code)
+					if len(payload) >= 3:
+						response.response_code = payload[2]
+						response.response_code_name = Response.Code.get_name(response.response_code)
 						response.valid = True
 				
 				if len(payload) > data_start:
@@ -253,6 +263,38 @@ class Response:
 			response.valid = False
 		return response
 
+class DidCodec:
+
+	def __init__(self, packstr):
+		self.packstr = packstr
+
+	def encode(self, did_value):
+		if self.packstr is None:
+			raise NotImplementedError('Cannot encode DID to binary payload. Codec has not "encode" implementation')
+
+		return struct.pack(self.packstr, did_value)
+
+	def decode(self, did_payload):
+		if self.packstr is None:
+			raise NotImplementedError('Cannot decode DID from binary payload. Codec has not "decode" implementation')
+
+		return struct.unpack(self.packstr, did_payload)
+
+	def __len__(self):
+		if self.packstr is None:
+			raise NotImplementedError('Cannot tell the payload size. Codec has not "__len__" implementation')
+		return struct.calcsize(self.packstr)
+
+	@classmethod
+	def from_config(cls, didconfig):
+		if isinstance(didconfig, cls):
+			return didconfig
+
+		if inspect.isclass(didconfig) and issubclass(didconfig, cls):
+			return didconfig()
+
+		if isinstance(didconfig, str):
+			return cls(packstr = didconfig)
 
 class SecurityLevel(object):
 	def __init__(self, levelid):
