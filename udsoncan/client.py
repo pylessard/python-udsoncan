@@ -111,6 +111,13 @@ class Client:
 		response = self.send_request(req)
 		return response
 
+	def ecu_reset(self, resettype, powerdowntime=None):
+		service = services.ECUReset(resettype, powerdowntime)
+		req = Request(service)
+		if resettype == services.ECUReset.enableRapidPowerShutDown:
+			req.data =struct.pack('B', service.powerdowntime)
+		return self.send_request(req)
+
 		
 	def send_request(self, request, timeout=-1, validate_response=True):
 		if timeout is not None and timeout < 0:

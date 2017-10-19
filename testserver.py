@@ -1,5 +1,6 @@
 from udsoncan import sessions, services, Request, Response, Connection
 from udsoncan.server import Server
+import struct
 
 
 import time
@@ -47,17 +48,24 @@ with conn.open():
 					response = Response(req.service, Response.Code.PositiveResponse, data=b'\x12\x34\x56\x78')
 				else :
 					response = Response(req.service, Response.Code.RequestOutOfRange)
-			## Read Data By identifier
+			
+			## Write Data By identifier
 			elif req.service == services.WriteDataByIdentifier:
 				if req.data[0:2] in [b"\x00\x01", b"\x00\x02", b"\x00\x03"] :
 					response = Response(req.service, Response.Code.PositiveResponse, req.data[0:2])
 				else:
 					response = Response(req.service, Response.Code.RequestOutOfRange)
 
+			elif req.service == services.ECUReset:
+				if req.subfunction in [1,2] :
+					response = Response(req.service, Response.Code.PositiveResponse, data=struct.pack('B', req.subfunction))
+				else:
+					response = Response(req.service, Response.Code.RequestOutOfRange)
+
 			else:
 				response = Response(req.service, Response.Code.ServiceNotSupported)
 			
-			if response.response_code != Response.Code.PositiveResponse or not req.suppress_positive_response:
+			if not response.positive or not req.suppress_positive_response:
 				print("Sending: " + ''.join(['%02X' % b for b in response.get_payload()]))
 				conn.send(response)
 			else:

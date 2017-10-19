@@ -207,6 +207,17 @@ class Response:
 				if isinstance(member[1], int):
 					if member[1] == given_id:
 						return member[0]
+		@classmethod
+		def is_negative(cls, given_id):
+			if given_id in [None, cls.PositiveResponse]:
+				return False
+
+			for member in inspect.getmembers(cls):
+				if isinstance(member[1], int):
+					if member[1] == given_id:
+						return True
+			return False
+
 
 	def __init__(self, service = None, code = None, data=None):
 		self.positive = False
@@ -220,7 +231,7 @@ class Response:
 		if code is not None:
 			self.response_code=code
 			self.response_code_name = Response.Code.get_name(code)
-			if code == Response.Code.PositiveResponse:
+			if not Response.Code.is_negative(code):
 				self.positive=True
 
 	#Used by server
