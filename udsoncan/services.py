@@ -11,57 +11,57 @@ def cls_from_response_id(given_id):
 
 class BaseService:
 
-	@classmethod	
+	@classmethod	# Returns the service ID used for a client request
 	def request_id(cls):
 		return cls._sid
 
-	@classmethod	
+	@classmethod	# Returns the service ID used for a server response
 	def response_id(cls):
 		return cls._sid + 0x40
 
+	# Set the service ID from a server Response payload value
 	def set_id_from_response_payload(self, payload):
 		if not payload or len(payload) == 0:
 			raise ValueError("Response is empty")
 		_sid = payload[0] - 0x40
 
-	def from_positive_response_payload(self, payload):
-		self.set_id_from_response_payload(response)
-
-	@classmethod
+	@classmethod	# Returns an instance of the service identified by the service ID (Request)
 	def from_request_id(cls, given_id):
 		for name, obj in inspect.getmembers(sys.modules[__name__]):
 			if hasattr(obj, "__bases__") and cls in obj.__bases__:
 				if obj.request_id() == given_id:
 					return obj
 
-	@classmethod
+	@classmethod	# Returns an instance of the service identified by the service ID (Response)
 	def from_response_id(cls, given_id):
 		for name, obj in inspect.getmembers(sys.modules[__name__]):
 			if hasattr(obj, "__bases__") and cls in obj.__bases__:
 				if obj.response_id() == given_id:
 					return obj
 
+	#Default subfunction ID for service that does not implements subfunction_id().
 	def subfunction_id(self):
 		return 0
 
-	@classmethod
+	@classmethod	# Tells if this service include a subfunction byte
 	def use_subfunction(cls):
 		if hasattr(cls, '_use_subfunction'):
 			return cls._use_subfunction
 		else:
 			return True
-	@classmethod
+	
+	@classmethod	# Tells if this service positive response is different from the single byte 0 Response Code
 	def has_custom_positive_response(cls):
 		if hasattr(cls, '_custom_positive_response'):
 			return cls._custom_positive_response
 		else:
 			return False
 
-	@classmethod
+	@classmethod	# Returns the service name. Shortcut that works on class and instances
 	def get_name(cls):
 		return cls.__name__
 
-	@classmethod
+	@classmethod	# Tells if the given response code is expected for this service according to UDS standard.
 	def is_supported_negative_response(cls, code):
 		return code in cls.supported_negative_response
 
@@ -88,7 +88,6 @@ class DiagnosticSessionControl(BaseService):
 
 	def has_subfunction(self):
 		return True
-
 
 class ECUReset(BaseService):
 	_sid = 0x11
@@ -124,7 +123,7 @@ class ECUReset(BaseService):
 
 	def subfunction_id(self):
 		return self.resettype
-# Done
+
 class SecurityAccess(BaseService):
 	_sid = 0x27
 
@@ -170,14 +169,12 @@ class CommunicationControl(BaseService):
 	def __init__(self):
 		pass
 
-# Done
 class TesterPresent(BaseService):
 	_sid = 0x3E
 
 	supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
 							Response.Code.IncorrectMessageLegthOrInvalidFormat
 							]
-
 
 class AccessTimingParameter(BaseService):
 	_sid = 0x83
@@ -257,9 +254,6 @@ class LinkControl(BaseService):
 	def __init__(self):
 		pass
 
-
-
-
 def assert_dids_value(dids):
 	if not isinstance(dids, int) and not isinstance(dids, list):
 		raise ValueError("Data Identifier must either be an integer or a list of integer")
@@ -306,8 +300,6 @@ class WriteDataByIdentifier(BaseService):
 			raise ValueError('Data Identifier must be an integer value')
 		assert_dids_value(did)
 		self.did = did
-
-
 
 class ReadMemoryByAddress(BaseService):
 	_sid = 0x23
@@ -357,8 +349,6 @@ class DynamicallyDefineDataIdentifier(BaseService):
 
 	def __init__(self):
 		pass
-
-
 
 class WriteMemoryByAddress(BaseService):
 	_sid = 0x3D

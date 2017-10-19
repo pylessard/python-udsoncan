@@ -152,7 +152,7 @@ class Request:
 		return '<Request: [%s] %s- %d data bytes %sat 0x%08x>' % (self.service.get_name(), subfunction_name, bytesize, suppress_positive_response, id(self))
 
 
-
+# Represent a response to a client Request
 class Response:
 	class Code:
 		PositiveResponse = 0
@@ -198,6 +198,7 @@ class Response:
 		VoltageTooHigh = 0x92
 		VoltageTooLow = 0x93
 
+		#Defined by ISO-15764. Offset of 0x38 is defined within UDS standard (ISO-14229)
 		GeneralSecurityViolation 			= 0x38 + 0
 		SecuredModeRequested 				= 0x38 + 1
 		InsufficientProtection 				= 0x38 + 2
@@ -209,7 +210,7 @@ class Response:
 		AuditTrailInformationNotAvailable 	= 0x38 + 8
 
 
-
+		#Returns the name of the response code as a string
 		@classmethod
 		def get_name(cls, given_id):
 			if given_id is None:
@@ -219,6 +220,8 @@ class Response:
 				if isinstance(member[1], int):
 					if member[1] == given_id:
 						return member[0]
+		
+		#Tells if a code is a negative code
 		@classmethod
 		def is_negative(cls, given_id):
 			if given_id in [None, cls.PositiveResponse]:
@@ -265,7 +268,7 @@ class Response:
 		return payload
 
 
-	#Analyze a TP frame an build a Response object
+	# Analyze a TP frame an build a Response object. Used by client
 	@classmethod
 	def from_payload(cls, payload):
 		response = cls()
@@ -299,6 +302,7 @@ class Response:
 		bytesize = len(self.data) if self.data is not None else 0
 		return '<%s: [%s] - %d data bytes at 0x%08x>' % (responsename, self.service.get_name(), bytesize, id(self))
 
+#Define how to encode/decode a Data Identifier value to/from abinary payload
 class DidCodec:
 
 	def __init__(self, packstr=None):
@@ -316,6 +320,7 @@ class DidCodec:
 
 		return struct.unpack(self.packstr, did_payload)
 
+	#Must tells the size of the payload encoded or expected for decoding
 	def __len__(self):
 		if self.packstr is None:
 			raise NotImplementedError('Cannot tell the payload size. Codec has no "__len__" implementation')
