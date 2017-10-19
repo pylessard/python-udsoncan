@@ -11,11 +11,17 @@ class Client:
 		self.heartbeat = heartbeat
 
 	def __enter__(self):
-		if not self.conn.is_open():
-			self.conn.open()
+		self.open()
 		return self
 	
 	def __exit__(self, type, value, traceback):
+		self.close()
+
+	def open(self):
+		if not self.conn.is_open():
+			self.conn.open()
+
+	def close(self):
 		self.conn.close()
 
 ## 	DiagnosticSessionControl

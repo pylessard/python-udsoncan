@@ -12,7 +12,7 @@ import inspect
 
 
 class Connection(object):
-	def __init__(self, interface, rxid, txid):
+	def __init__(self, interface, rxid, txid, tpsock=None):
 		self.interface=interface
 		self.rxid=rxid
 		self.txid=txid
@@ -21,7 +21,7 @@ class Connection(object):
 		self.opened = False
 
 		self.rxthread = threading.Thread(target=self.rxthread_task)
-		self.tpsock = isotp.socket(timeout=0.1)
+		self.tpsock = isotp.socket(timeout=0.1) if topsock is None else tpsock
 
 
 	def open(self):
