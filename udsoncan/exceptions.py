@@ -18,7 +18,7 @@ class NegativeResponseException(Exception):
 		super().__init__(msg, *args, **kwargs)
 
 	def make_msg(self, response):
-		return "%s service execution returned a negative response %s (0x%x)" % (service_name(response.service), response.response_code_name, response.response_code)
+		return "%s service execution returned a negative response %s (0x%x)" % (response.service.get_name(), response.response_code_name, response.response_code)
 
 class InvalidResponseException(Exception):
 	def __init__(self, service, *args, **kwargs):
@@ -29,4 +29,4 @@ class InvalidResponseException(Exception):
 		super().__init__(msg, *args, **kwargs)
 
 	def make_msg(self, response):
-		return "%s service execution returned an invalid response." % (service_name(response.service))
+		return "%s service execution returned an invalid response." % (response.service.get_name())

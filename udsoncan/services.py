@@ -50,6 +50,16 @@ class BaseService:
 			return cls._use_subfunction
 		else:
 			return True
+	@classmethod
+	def has_custom_positive_response(cls):
+		if hasattr(cls, '_custom_positive_response'):
+			return cls._custom_positive_response
+		else:
+			return False
+
+	@classmethod
+	def get_name(cls):
+		return cls.__name__
 
 def is_valid_service(service_cls):
 	return issubclass(service_cls, BaseService)
@@ -141,23 +151,42 @@ class LinkControl(BaseService):
 	def __init__(self):
 		pass
 
+
+
+
+def assert_dids_value(dids):
+	if not isinstance(dids, int) and not isinstance(dids, list):
+		raise ValueError("Data Identifier must either be an integer or a list of integer")
+
+	if isinstance(dids, int):
+		if dids < 0 or dids > 0xFFFF:
+			raise ValueError("Data Identifier must be set between 0 and 0xFFFF")
+	if isinstance(dids, list):
+		for did in dids:
+			if not isinstance(did, int) or did < 0 or did > 0xFFFF:
+				raise ValueError("Data Identifier must be set between 0 and 0xFFFF")
+
 class ReadDataByIdentifier(BaseService):
 	_sid = 0x22
 	_use_subfunction = False
+	_custom_positive_response = True
 
 	def __init__(self, dids):
-		if not isinstance(dids, int) and not isinstance(dids, list):
-			raise ValueError("Data Identifier must either be an integer or a list of integer")
-
-		if isinstance(dids, int):
-			if dids < 0 or dids > 0xFFFF:
-				raise ValueError("Data Identifier must be set between 0 and 0xFFFF")
-		if isinstance(dids, list):
-			for did in dids:
-				if not isinstance(did, int) or did < 0 or did > 0xFFFF:
-					raise ValueError("Data Identifier must be set between 0 and 0xFFFF")
+		assert_dids_value(dids)
 
 		self.dids = dids
+
+class WriteDataByIdentifier(BaseService):
+	_sid = 0x2E
+	_use_subfunction = False
+	_custom_positive_response = True
+
+	def __init__(self, did):
+		if not isinstance(did, int):
+			raise ValueError('Data Identifier must be an integer value')
+		assert_dids_value(did)
+		self.did = did
+
 
 
 class ReadMemoryByAddress(BaseService):
@@ -180,10 +209,7 @@ class DynamicallyDefineDataIdentifier(BaseService):
 	def __init__(self):
 		pass
 
-class WriteDataByIdentifier(BaseService):
-	_sid = 0x2E
-	def __init__(self):
-		pass
+
 
 class WriteMemoryByAddress(BaseService):
 	_sid = 0x3D

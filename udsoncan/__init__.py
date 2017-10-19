@@ -145,6 +145,13 @@ class Request:
 				req.service_data = payload[offset+1:]
 		return req
 
+	def __repr__(self):
+		suppress_positive_response = '[SuppressPosResponse] ' if self.suppress_positive_response else ''
+		subfunction_name = '(subfunction=%d) ' % self.subfunction if self.service.use_subfunction() else ''
+		bytesize = len(self.service_data) if self.service_data is not None else 0
+		return '<Request: [%s] %s- %d data bytes %sat 0x%08x>' % (self.service.get_name(), subfunction_name, bytesize, suppress_positive_response, id(self))
+
+
 
 class Response:
 	class Code:
@@ -227,7 +234,8 @@ class Response:
 		payload = struct.pack("B", self.service.response_id())
 		if not self.positive:
 			payload += b'\x7F'
-		payload += struct.pack('B', self.response_code)
+		if not self.positive or self.positive and not self.service.has_custom_positive_response():
+			payload += struct.pack('B', self.response_code)
 
 		if self.service_data is not None:
 			payload += self.service_data
@@ -242,7 +250,7 @@ class Response:
 			response.service = services.cls_from_response_id(payload[0])
 			if len(payload) >= 2 :
 				if payload[1] != 0x7F:
-					data_start=2
+					data_start=1 if response.service.has_custom_positive_response() else 2
 					response.response_code = Response.Code.PositiveResponse
 					response.response_code_name = Response.Code.get_name(Response.Code.PositiveResponse)
 					response.positive = True
@@ -262,6 +270,11 @@ class Response:
 		else:
 			response.valid = False
 		return response
+
+	def __repr__(self):
+		responsename = Response.Code.get_name(Response.Code.PositiveResponse) if self.positive else 'NegativeResponse(%s)' % self.response_code_name
+		bytesize = len(self.service_data) if self.service_data is not None else 0
+		return '<%s: [%s] - %d data bytes at 0x%08x>' % (responsename, self.service.get_name(), bytesize, id(self))
 
 class DidCodec:
 

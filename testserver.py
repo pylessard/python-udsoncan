@@ -47,6 +47,13 @@ with conn.open():
 					response = Response(req.service, Response.Code.PositiveResponse, service_data=b'\x12\x34\x56\x78')
 				else :
 					response = Response(req.service, Response.Code.RequestOutOfRange)
+			## Read Data By identifier
+			elif req.service == services.WriteDataByIdentifier:
+				if req.service_data[0:2] in [b"\x00\x01", b"\x00\x02", b"\x00\x03"] :
+					response = Response(req.service, Response.Code.PositiveResponse, req.service_data[0:2])
+				else:
+					response = Response(req.service, Response.Code.RequestOutOfRange)
+
 			else:
 				response = Response(req.service, Response.Code.ServiceNotSupported)
 			

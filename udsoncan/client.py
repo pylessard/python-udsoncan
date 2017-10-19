@@ -51,11 +51,8 @@ class Client:
 		self.send_request(req)
 
 
-	def read_data_by_identifier(self, dids, output_fmt='dict', force_collection=False):
-		service = services.ReadDataByIdentifier(dids)
-		req = Request(service)
-		didlist = [dids] if not isinstance(dids, list) else dids
-
+	def check_did_config(self, didlist):
+		didlist = [didlist] if not isinstance(didlist, list) else didlist
 		if not 'data_identifiers' in self.config or  not isinstance(self.config['data_identifiers'], dict):
 			raise AttributeError('Configuration does not contains a valid data identifier description.')
 		didconfig = self.config['data_identifiers']
@@ -63,6 +60,16 @@ class Client:
 		for did in didlist:
 			if did not in didconfig:
 				raise LookupError('Actual data identifier configuration contains no definition for data identifier %d' % did)
+
+		return didconfig
+
+
+	def read_data_by_identifier(self, dids, output_fmt='dict', force_collection=False):
+		service = services.ReadDataByIdentifier(dids)
+		req = Request(service)
+		didlist = [service.dids] if not isinstance(service.dids, list) else service.dids
+
+		didconfig = self.check_did_config(didlist)
 		req.service_data = struct.pack('>'+'H'*len(didlist), *didlist)
 		response = self.send_request(req)
 
@@ -92,6 +99,17 @@ class Client:
 				values = values[next(iter(values))]
 
 		return values
+
+	def write_data_by_identifier(self, did, value):
+		service = services.WriteDataByIdentifier(did)
+		req = Request(service)
+		
+		didconfig = self.check_did_config(did)
+		req.service_data = struct.pack('>H', service.did)
+		codec = DidCodec.from_config(didconfig[did])
+		req.service_data += codec.encode(value)
+		response = self.send_request(req)
+		return response
 
 		
 	def send_request(self, request, timeout=-1, validate_response=True):
