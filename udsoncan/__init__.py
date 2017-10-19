@@ -198,6 +198,18 @@ class Response:
 		VoltageTooHigh = 0x92
 		VoltageTooLow = 0x93
 
+		GeneralSecurityViolation 			= 0x38 + 0
+		SecuredModeRequested 				= 0x38 + 1
+		InsufficientProtection 				= 0x38 + 2
+		TerminationWithSignatureRequested 	= 0x38 + 3
+		AccessDenied 						= 0x38 + 4
+		VersionNotSupported 				= 0x38 + 5
+		SecuredLinkNotSupported 			= 0x38 + 6
+		CertificateNotAvailable 			= 0x38 + 7
+		AuditTrailInformationNotAvailable 	= 0x38 + 8
+
+
+
 		@classmethod
 		def get_name(cls, given_id):
 			if given_id is None:
