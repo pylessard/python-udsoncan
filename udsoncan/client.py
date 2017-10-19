@@ -34,7 +34,7 @@ class Client:
 	def send_key(self, level, key):
 		service = services.SecurityAccess(level, mode=services.SecurityAccess.Mode.SendKey)
 		req = Request(service)
-		req.service_data = key
+		req.data = key
 		return self.send_request(req)
 
 	def unlock_security_access(self, level):
@@ -42,7 +42,7 @@ class Client:
 			raise NotImplementedError("Client configuration does not provide a security algorithm")
 		
 		request_seed_response = self.request_key(level)
-		seed = request_seed_response.service_data
+		seed = request_seed_response.data
 		key = self.config['security_algo'].__call__(seed)
 		self.send_key(level, key)
 
@@ -70,7 +70,7 @@ class Client:
 		didlist = [service.dids] if not isinstance(service.dids, list) else service.dids
 
 		didconfig = self.check_did_config(didlist)
-		req.service_data = struct.pack('>'+'H'*len(didlist), *didlist)
+		req.data = struct.pack('>'+'H'*len(didlist), *didlist)
 		response = self.send_request(req)
 
 		if output_fmt in ['list']:
@@ -83,7 +83,7 @@ class Client:
 		offset = 0
 		for did in didlist:
 			codec = DidCodec.from_config(didconfig[did])
-			subpayload = response.service_data[offset:offset+len(codec)]
+			subpayload = response.data[offset:offset+len(codec)]
 			offset += len(codec)
 			val = codec.decode(subpayload)
 
@@ -105,9 +105,9 @@ class Client:
 		req = Request(service)
 		
 		didconfig = self.check_did_config(did)
-		req.service_data = struct.pack('>H', service.did)
+		req.data = struct.pack('>H', service.did)
 		codec = DidCodec.from_config(didconfig[did])
-		req.service_data += codec.encode(value)
+		req.data += codec.encode(value)
 		response = self.send_request(req)
 		return response
 

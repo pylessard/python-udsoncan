@@ -22,9 +22,9 @@ with conn.open():
 			## SecurityAccess
 			elif req.service == services.SecurityAccess:
 				if req.subfunction == 3:
-					response = Response(req.service, Response.Code.PositiveResponse, service_data=b"\x12\x34\x56\x78")
+					response = Response(req.service, Response.Code.PositiveResponse, data=b"\x12\x34\x56\x78")
 				elif req.subfunction == 4:
-					if req.service_data == b"\xed\xcb\xa9\x87":
+					if req.data == b"\xed\xcb\xa9\x87":
 						response = Response(req.service, Response.Code.PositiveResponse)
 					else:
 						response = Response(req.service, Response.Code.InvalidKey)
@@ -37,20 +37,20 @@ with conn.open():
 			## Read Data By identifier
 			elif req.service == services.ReadDataByIdentifier:
 
-				if req.service_data == b"\x00\x01" :
-					response = Response(req.service, Response.Code.PositiveResponse, service_data=b'\x12\x34')
-				elif req.service_data == b"\x00\x02" :
-					response = Response(req.service, Response.Code.PositiveResponse, service_data=b'\x56\x78')
-				elif req.service_data == b"\x00\x03" :
-					response = Response(req.service, Response.Code.PositiveResponse, service_data=b'\x9a\xbc')
-				elif req.service_data == b"\x00\x01\x00\x02" :
-					response = Response(req.service, Response.Code.PositiveResponse, service_data=b'\x12\x34\x56\x78')
+				if req.data == b"\x00\x01" :
+					response = Response(req.service, Response.Code.PositiveResponse, data=b'\x12\x34')
+				elif req.data == b"\x00\x02" :
+					response = Response(req.service, Response.Code.PositiveResponse, data=b'\x56\x78')
+				elif req.data == b"\x00\x03" :
+					response = Response(req.service, Response.Code.PositiveResponse, data=b'\x9a\xbc')
+				elif req.data == b"\x00\x01\x00\x02" :
+					response = Response(req.service, Response.Code.PositiveResponse, data=b'\x12\x34\x56\x78')
 				else :
 					response = Response(req.service, Response.Code.RequestOutOfRange)
 			## Read Data By identifier
 			elif req.service == services.WriteDataByIdentifier:
-				if req.service_data[0:2] in [b"\x00\x01", b"\x00\x02", b"\x00\x03"] :
-					response = Response(req.service, Response.Code.PositiveResponse, req.service_data[0:2])
+				if req.data[0:2] in [b"\x00\x01", b"\x00\x02", b"\x00\x03"] :
+					response = Response(req.service, Response.Code.PositiveResponse, req.data[0:2])
 				else:
 					response = Response(req.service, Response.Code.RequestOutOfRange)
 

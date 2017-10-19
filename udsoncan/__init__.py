@@ -104,7 +104,7 @@ class Request:
 			raise ValueError("Given service must be a service class or instance")
 
 		self.suppress_positive_response = suppress_positive_response
-		self.service_data = None
+		self.data = None
 
 	def get_payload(self):
 		if not issubclass(self.service, services.BaseService):
@@ -123,8 +123,8 @@ class Request:
 				subfunction |= 0x80
 			payload += struct.pack("B", subfunction)
 
-		if self.service_data is not None:
-			 payload += self.service_data
+		if self.data is not None:
+			 payload += self.data
 
 		return payload
 
@@ -142,13 +142,13 @@ class Request:
 					req.subfunction = int(payload[1]) & 0x7F
 					req.suppress_positive_response = True if payload[1] & 0x80 > 0 else False
 			if len(payload) > offset+1:
-				req.service_data = payload[offset+1:]
+				req.data = payload[offset+1:]
 		return req
 
 	def __repr__(self):
 		suppress_positive_response = '[SuppressPosResponse] ' if self.suppress_positive_response else ''
 		subfunction_name = '(subfunction=%d) ' % self.subfunction if self.service.use_subfunction() else ''
-		bytesize = len(self.service_data) if self.service_data is not None else 0
+		bytesize = len(self.data) if self.data is not None else 0
 		return '<Request: [%s] %s- %d data bytes %sat 0x%08x>' % (self.service.get_name(), subfunction_name, bytesize, suppress_positive_response, id(self))
 
 
@@ -208,13 +208,13 @@ class Response:
 					if member[1] == given_id:
 						return member[0]
 
-	def __init__(self, service = None, code = None, service_data=None):
+	def __init__(self, service = None, code = None, data=None):
 		self.positive = False
 		self.response_code = None
 		self.response_code_name = ""
 		self.valid = False
 
-		self.service_data = service_data
+		self.data = data
 		self.service = service
 
 		if code is not None:
@@ -237,8 +237,8 @@ class Response:
 		if not self.positive or self.positive and not self.service.has_custom_positive_response():
 			payload += struct.pack('B', self.response_code)
 
-		if self.service_data is not None:
-			payload += self.service_data
+		if self.data is not None:
+			payload += self.data
 		return payload
 
 
@@ -264,7 +264,7 @@ class Response:
 						response.valid = True
 				
 				if len(payload) > data_start:
-					response.service_data = payload[data_start:]
+					response.data = payload[data_start:]
 			else:
 				response.valid = False
 		else:
@@ -273,7 +273,7 @@ class Response:
 
 	def __repr__(self):
 		responsename = Response.Code.get_name(Response.Code.PositiveResponse) if self.positive else 'NegativeResponse(%s)' % self.response_code_name
-		bytesize = len(self.service_data) if self.service_data is not None else 0
+		bytesize = len(self.data) if self.data is not None else 0
 		return '<%s: [%s] - %d data bytes at 0x%08x>' % (responsename, self.service.get_name(), bytesize, id(self))
 
 class DidCodec:
