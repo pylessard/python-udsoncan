@@ -270,19 +270,19 @@ class DidCodec:
 
 	def encode(self, did_value):
 		if self.packstr is None:
-			raise NotImplementedError('Cannot encode DID to binary payload. Codec has not "encode" implementation')
+			raise NotImplementedError('Cannot encode DID to binary payload. Codec has no "encode" implementation')
 
 		return struct.pack(self.packstr, did_value)
 
 	def decode(self, did_payload):
 		if self.packstr is None:
-			raise NotImplementedError('Cannot decode DID from binary payload. Codec has not "decode" implementation')
+			raise NotImplementedError('Cannot decode DID from binary payload. Codec has no "decode" implementation')
 
 		return struct.unpack(self.packstr, did_payload)
 
 	def __len__(self):
 		if self.packstr is None:
-			raise NotImplementedError('Cannot tell the payload size. Codec has not "__len__" implementation')
+			raise NotImplementedError('Cannot tell the payload size. Codec has no "__len__" implementation')
 		return struct.calcsize(self.packstr)
 
 	@classmethod
