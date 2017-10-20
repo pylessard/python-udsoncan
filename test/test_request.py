@@ -1,7 +1,5 @@
 from udsoncan import Request, services
-
 from test.UdsTest import UdsTest
-
 
 class DummyServiceNormal(services.BaseService):
 	_sid = 0x13
@@ -12,7 +10,6 @@ class DummyServiceNormal(services.BaseService):
 class DummyServiceNoSubunction(services.BaseService):
 	_sid = 0x13
 	_use_subfunction = False
-
 
 
 class TestRequest(UdsTest):
@@ -61,7 +58,7 @@ class TestRequest(UdsTest):
 		req = Request.from_payload(payload)
 		self.assertEqual(req.service.request_id(), 0x3E)
 		self.assertEqual(req.subfunction, 0x01)
-		self.assertTrue(req.suppress_positive_response, 0x01)
+		self.assertTrue(req.suppress_positive_response)
 
 	def test_from_payload_custom_data(self):
 		payload=b'\x3E\x01\x12\x34\x56\x78'	# 0x3E = TesterPresent
