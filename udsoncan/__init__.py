@@ -92,19 +92,30 @@ class Connection(object):
 
 
 class Request:
-	def __init__(self, service = None, subfunction = None, suppress_positive_response = False):
-		if isinstance(service, services.BaseService):
+	def __init__(self, service = None, subfunction = None, suppress_positive_response = False, data=None):
+		if service is None:
+			self.service = None
+			self.subfunction = None
+
+		elif isinstance(service, services.BaseService):
 			self.service = service.__class__
 			self.subfunction = service.subfunction_id()	# service instance are able toe generate the subfunction ID
 		elif inspect.isclass(service) and issubclass(service, services.BaseService):
 			if subfunction is not None:
-				self.service = service
-				self.subfunction = subfunction
+				if isinstance(subfunction, int):
+					self.service = service
+					self.subfunction = subfunction
+				else:
+					raise ValueError("Given subfunction must be a valid integer")
 		elif service is not None:
 			raise ValueError("Given service must be a service class or instance")
 
 		self.suppress_positive_response = suppress_positive_response
-		self.data = None
+		
+		if data is not None and not isinstance(data, str):
+			raise ValueError("data must be a valid string")
+
+		self.data = data
 
 	def get_payload(self):
 		if not issubclass(self.service, services.BaseService):
@@ -134,15 +145,15 @@ class Request:
 
 		if len(payload) >= 1:
 			req.service = services.cls_from_request_id(payload[0])
-
-			offset = 0
-			if req.service.use_subfunction():
-				offset += 1
-				if len(payload) >= offset+1: 
-					req.subfunction = int(payload[1]) & 0x7F
-					req.suppress_positive_response = True if payload[1] & 0x80 > 0 else False
-			if len(payload) > offset+1:
-				req.data = payload[offset+1:]
+			if req.service is not None:		# Invalid service ID will make service None
+				offset = 0
+				if req.service.use_subfunction():
+					offset += 1
+					if len(payload) >= offset+1: 
+						req.subfunction = int(payload[1]) & 0x7F
+						req.suppress_positive_response = True if payload[1] & 0x80 > 0 else False
+				if len(payload) > offset+1:
+					req.data = payload[offset+1:]
 		return req
 
 	def __repr__(self):
@@ -151,6 +162,11 @@ class Request:
 		bytesize = len(self.data) if self.data is not None else 0
 		return '<Request: [%s] %s- %d data bytes %sat 0x%08x>' % (self.service.get_name(), subfunction_name, bytesize, suppress_positive_response, id(self))
 
+	def __len__(self):
+		try:
+			return len(self.get_payload())
+		except:
+			return 0
 
 # Represent a response to a client Request
 class Response:
@@ -220,6 +236,7 @@ class Response:
 				if isinstance(member[1], int):
 					if member[1] == given_id:
 						return member[0]
+			return str(given_id)
 		
 		#Tells if a code is a negative code
 		@classmethod
@@ -236,16 +253,16 @@ class Response:
 
 	def __init__(self, service = None, code = None, data=None):
 		self.positive = False
-		self.response_code = None
-		self.response_code_name = ""
+		self.code = None
+		self.code_name = ""
 		self.valid = False
 
 		self.data = data
 		self.service = service
 
 		if code is not None:
-			self.response_code=code
-			self.response_code_name = Response.Code.get_name(code)
+			self.code=code
+			self.code_name = Response.Code.get_name(code)
 			if not Response.Code.is_negative(code):
 				self.positive=True
 
@@ -254,14 +271,14 @@ class Response:
 		if not isinstance(self.service, services.BaseService) and not issubclass(self.service, services.BaseService):
 			raise ValueError("Cannot make payload from response object. Given service is not a valid service object")
 
-		if not isinstance(self.response_code, int):
+		if not isinstance(self.code, int):
 			raise ValueError("Cannot make payload from response object. Given response code is not a valid integer")
 
 		payload = struct.pack("B", self.service.response_id())
 		if not self.positive:
 			payload += b'\x7F'
 		if not self.positive or self.positive and not self.service.has_custom_positive_response():
-			payload += struct.pack('B', self.response_code)
+			payload += struct.pack('B', self.code)
 
 		if self.data is not None:
 			payload += self.data
@@ -274,19 +291,22 @@ class Response:
 		response = cls()
 		if len(payload) >= 1:
 			response.service = services.cls_from_response_id(payload[0])
-			if len(payload) >= 2 :
+			if response.service is None:
+				response.valid = False
+
+			elif len(payload) >= 2 :
 				if payload[1] != 0x7F:
 					data_start=1 if response.service.has_custom_positive_response() else 2
-					response.response_code = Response.Code.PositiveResponse
-					response.response_code_name = Response.Code.get_name(Response.Code.PositiveResponse)
+					response.code = Response.Code.PositiveResponse
+					response.code_name = Response.Code.get_name(Response.Code.PositiveResponse)
 					response.positive = True
 					response.valid = True
 				else:
 					data_start=3
 					response.positive = False
 					if len(payload) >= 3:
-						response.response_code = payload[2]
-						response.response_code_name = Response.Code.get_name(response.response_code)
+						response.code = payload[2]
+						response.code_name = Response.Code.get_name(response.code)
 						response.valid = True
 				
 				if len(payload) > data_start:
@@ -298,9 +318,15 @@ class Response:
 		return response
 
 	def __repr__(self):
-		responsename = Response.Code.get_name(Response.Code.PositiveResponse) if self.positive else 'NegativeResponse(%s)' % self.response_code_name
+		responsename = Response.Code.get_name(Response.Code.PositiveResponse) if self.positive else 'NegativeResponse(%s)' % self.code_name
 		bytesize = len(self.data) if self.data is not None else 0
 		return '<%s: [%s] - %d data bytes at 0x%08x>' % (responsename, self.service.get_name(), bytesize, id(self))
+
+	def __len__(self):
+		try:
+			return len(self.get_payload())
+		except:
+			return 0
 
 #Define how to encode/decode a Data Identifier value to/from abinary payload
 class DidCodec:

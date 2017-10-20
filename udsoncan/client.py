@@ -74,6 +74,7 @@ class Client:
 
 	def read_data_by_identifier(self, dids, output_fmt='dict', force_collection=False):
 		service = services.ReadDataByIdentifier(dids)
+		self.logger.info("Reading data identifier %s", dids)
 		req = Request(service)
 		didlist = [service.dids] if not isinstance(service.dids, list) else service.dids
 
@@ -110,6 +111,7 @@ class Client:
 
 	def write_data_by_identifier(self, did, value):
 		service = services.WriteDataByIdentifier(did)
+		self.logger.info("Reading data identifier %s", did)
 		req = Request(service)
 		
 		didconfig = self.check_did_config(did)
@@ -121,7 +123,7 @@ class Client:
 
 	def ecu_reset(self, resettype, powerdowntime=None):
 		service = services.ECUReset(resettype, powerdowntime)
-		self.logger.info("Requesting ECU reset of type %d" % (resettype))
+		self.logger.info("Requesting ECU reset of type 0x%02x" % (resettype))
 		req = Request(service)
 		if resettype == services.ECUReset.enableRapidPowerShutDown:
 			req.data =struct.pack('B', service.powerdowntime)
@@ -132,16 +134,29 @@ class Client:
 		if timeout is not None and timeout < 0:
 			timeout = self.request_timeout
 		self.conn.empty_rxqueue()
+		self.logger.debug("Sending request to server")
 		self.conn.send(request)
 
 		if not request.suppress_positive_response:
+			self.logger.debug("Waiting for server response")
 			payload = self.conn.wait_frame(timeout=timeout, exception=True)
 			response = Response.from_payload(payload)
-			if validate_response:
-				if not response.valid:
+			self.logger.info("Response received from server")
+			
+			if not response.valid:
+				self.logger.error("Invalid response gotten by server")
+				if validate_response:
 					raise InvalidResponseException(response)
 
-				if not response.positive:
+			if response.service.response_id() != request.service.response_id():
+				msg = "Response gotten from server has a service ID different than the one of the request. Received=%s, Expected=%s" % (response.service.response_id() , request.service.response_id() )
+				self.logger.error(msg)
+				raise UnexpectedResponseException(response, details=msg)
+			if not response.positive:
+				self.logger.warning("Server responded with Negative response %s" % response.code_name)
+				if not request.service.is_supported_negative_response(response.code):
+					self.logger.warning("Given response (%s) is not a supported negative response code according to UDS standard." % response.code_name)	
+				if validate_response:
 					raise NegativeResponseException(response)
 
 			return response
