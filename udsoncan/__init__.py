@@ -252,19 +252,38 @@ class Response:
 
 
 	def __init__(self, service = None, code = None, data=None):
+		if service is None:
+			self.service = None
+		elif isinstance(service, services.BaseService):
+			self.service = service.__class__
+		elif inspect.isclass(service) and issubclass(service, services.BaseService):
+			self.service = service
+		elif service is not None:
+			raise ValueError("Given service must be a service class or instance")
+
 		self.positive = False
 		self.code = None
 		self.code_name = ""
 		self.valid = False
 
+		if data is not None and not isinstance(data, str):
+			raise ValueError("Given data must be a valid string")
+
 		self.data = data
 		self.service = service
 
 		if code is not None:
+			if not isinstance(code, int):
+				raise ValueError("Response code must be a valid integer")
+			elif code < 0 or code > 0xFF:
+				raise ValueError("Response code must be an integer between 0 and 0xFF")
 			self.code=code
 			self.code_name = Response.Code.get_name(code)
 			if not Response.Code.is_negative(code):
 				self.positive=True
+
+		if self.service is not None and self.code is not None:
+			self.valid = True
 
 	#Used by server
 	def get_payload(self):
@@ -296,11 +315,19 @@ class Response:
 
 			elif len(payload) >= 2 :
 				if payload[1] != 0x7F:
-					data_start=1 if response.service.has_custom_positive_response() else 2
-					response.code = Response.Code.PositiveResponse
-					response.code_name = Response.Code.get_name(Response.Code.PositiveResponse)
-					response.positive = True
 					response.valid = True
+
+					if response.service.has_custom_positive_response():
+						data_start=1
+					else:
+						data_start=2
+						if payload[1] != 0:
+							response.valid = False
+						
+					if response.valid:
+						response.code = Response.Code.PositiveResponse
+						response.code_name = Response.Code.get_name(Response.Code.PositiveResponse)
+						response.positive = True
 				else:
 					data_start=3
 					response.positive = False
