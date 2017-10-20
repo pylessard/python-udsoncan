@@ -2,6 +2,7 @@ from udsoncan import Response, Request, services, DidCodec
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
 import struct
+import logging
 
 class Client:
 	def __init__(self, conn, config=default_client_config, request_timeout = 1, heartbeat  = None):
@@ -9,6 +10,7 @@ class Client:
 		self.request_timeout = request_timeout
 		self.config = config
 		self.heartbeat = heartbeat
+		self.logger = logging.getLogger("UdsClient")
 
 	def __enter__(self):
 		self.open()
@@ -119,6 +121,7 @@ class Client:
 
 	def ecu_reset(self, resettype, powerdowntime=None):
 		service = services.ECUReset(resettype, powerdowntime)
+		self.logger.info("Requesting ECU reset of type %d" % (resettype))
 		req = Request(service)
 		if resettype == services.ECUReset.enableRapidPowerShutDown:
 			req.data =struct.pack('B', service.powerdowntime)
@@ -136,7 +139,7 @@ class Client:
 			response = Response.from_payload(payload)
 			if validate_response:
 				if not response.valid:
-					raise InvalidResponseException(service)
+					raise InvalidResponseException(response)
 
 				if not response.positive:
 					raise NegativeResponseException(response)

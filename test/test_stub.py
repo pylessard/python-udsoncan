@@ -1,8 +1,8 @@
-import unittest
+from UdsTest import UdsTest
 from stub import StubbedConnection
 from udsoncan.exceptions import *
 
-class TestStubbedConnection(unittest.TestCase):
+class TestStubbedConnection(UdsTest):
 
 	def setUp(self):
 		self.conn = StubbedConnection()
