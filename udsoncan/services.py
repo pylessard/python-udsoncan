@@ -84,6 +84,10 @@ class DiagnosticSessionControl(BaseService):
 	def __init__(self, session):
 		if not isinstance(session, int):
 			raise ValueError("Given session number is not a valid integer")
+
+		if session < 0 or session > 0xFF:
+			raise ValueError("Session number must be an integer between 0 and 0xFF")
+
 		self.session = session
 
 	def subfunction_id(self):

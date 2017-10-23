@@ -68,3 +68,15 @@ class TestDiagnosticSessionControl(ThreadableTest):
 	def _test_ecu_reset_wrongservice(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			response = self.udsclient.change_session(0x55)
+
+
+#========================================
+	def test_bad_param(self):
+		pass
+
+	def _test_bad_param(self):
+		with self.assertRaises(ValueError):
+			response = self.udsclient.change_session(0x100)
+
+		with self.assertRaises(ValueError):
+			response = self.udsclient.change_session(-1)
