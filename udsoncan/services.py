@@ -130,6 +130,7 @@ class ECUReset(BaseService):
 
 class SecurityAccess(BaseService):
 	_sid = 0x27
+	_custom_positive_response = True
 
 	supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
 							Response.Code.IncorrectMessageLegthOrInvalidFormat,
@@ -157,9 +158,9 @@ class SecurityAccess(BaseService):
 
 	def subfunction_id(self):
 		if self.mode == SecurityAccess.Mode.RequestSeed:
-			return (self.level & 0xFE) +1
+			return self.level if self.level % 2 == 1 else self.level-1
 		elif self.mode == SecurityAccess.Mode.SendKey:
-			return (self.level +1) & 0xFE
+			return self.level if self.level % 2 == 0 else self.level+1
 		else:
 			raise ValueError("Cannot generate subfunction ID. Mode is invalid")
 

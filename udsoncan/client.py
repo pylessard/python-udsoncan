@@ -31,28 +31,59 @@ class Client:
 		service = services.DiagnosticSessionControl(newsession)
 		req = Request(service)
 		#No service params
-		return self.send_request(req)
+		response = self.send_request(req)
+
+		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
+			raise UnexpectedResponseException(response, "Response data must be at least 1 bytes")
+
+		received = int(response.data[0])
+		expected = service.subfunction_id()
+		if received != expected:
+			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) is not for the requested subfunction (0x%02x)" % (received, expected))
+
+		return response.positive
 
 ##  SecurityAccess
-	def request_key(self, level):
+	def request_seed(self, level):
 		service = services.SecurityAccess(level, mode=services.SecurityAccess.Mode.RequestSeed)
 		req = Request(service)
-		return self.send_request(req)
+		response = self.send_request(req)
+		
+		if len(response.data) < 2:
+			raise UnexpectedResponseException(response, "Response data must be at least 2 bytes")
+
+		received = int(response.data[0])
+		expected = service.subfunction_id()
+		if received != expected:
+			raise UnexpectedResponseException(response, "Seed received from server (0x%02x) is not for the requested subfunction (0x%02x)" % (received, expected))
+
+		return response.data[1:]
 
 	def send_key(self, level, key):
 		service = services.SecurityAccess(level, mode=services.SecurityAccess.Mode.SendKey)
 		req = Request(service)
 		req.data = key
-		return self.send_request(req)
+		response = self.send_request(req)
+		
+		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
+			raise UnexpectedResponseException(response, "Response data must be at least 1 bytes")
+
+		received = int(response.data[0])
+		expected = service.subfunction_id()
+		if received != expected:
+			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) is not for the requested subfunction (0x%02x)" % (received, expected))
+
+		return response.positive
+		
 
 	def unlock_security_access(self, level):
-		if not callable(self.config['security_algo']):
+		if 'security_algo' not in self.config or not callable(self.config['security_algo']):
 			raise NotImplementedError("Client configuration does not provide a security algorithm")
 		
-		request_seed_response = self.request_key(level)
-		seed = request_seed_response.data
+		seed = self.request_seed(level)
 		key = self.config['security_algo'].__call__(seed)
-		self.send_key(level, key)
+		return self.send_key(level, key)
+
 
 	def send_tester_present(self, suppress_positive_response=False):
 		req = Request(services.TesterPresent(), suppress_positive_response=suppress_positive_response)
