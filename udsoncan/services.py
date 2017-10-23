@@ -1,5 +1,4 @@
 from udsoncan import Response
-from udsoncan.sessions import Session
 import inspect
 import sys
 
@@ -70,24 +69,25 @@ def is_valid_service(service_cls):
 
 class DiagnosticSessionControl(BaseService):
 	_sid = 0x10
+	_custom_positive_response = True
+
 	supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
 									Response.Code.IncorrectMessageLegthOrInvalidFormat,
 									Response.Code.ConditionsNotCorrect
 									]
-	def __init__(self, session):
-		if isinstance(session, int):
-			session = Session.from_id(session)
-		
-		if not issubclass(session, Session):
-			raise ValueError("Given parameter is not a valid Session type")
 
+	defaultSession = 1
+	programmingSession = 2
+	extendedDiagnosticSession = 3
+	safetySystemDiagnosticSession = 4
+
+	def __init__(self, session):
+		if not isinstance(session, int):
+			raise ValueError("Given session number is not a valid integer")
 		self.session = session
 
 	def subfunction_id(self):
-		return self.session.get_id()
-
-	def has_subfunction(self):
-		return True
+		return self.session
 
 class ECUReset(BaseService):
 	_sid = 0x11
