@@ -1,11 +1,11 @@
 from udsoncan import services
 from udsoncan.exceptions import *
 
-from test.client.ClientTest import ClientTest
+from test.client.ClientServerTest import ClientServerTest
 
-class TestRequestSeed(ClientTest):
+class TestRequestSeed(ClientServerTest):
 	def __init__(self, *args, **kwargs):
-		ClientTest.__init__(self, *args, **kwargs)
+		ClientServerTest.__init__(self, *args, **kwargs)
 
 #========================================
 	def test_request_seed_success(self):
@@ -86,9 +86,9 @@ class TestRequestSeed(ClientTest):
 #============================================================================
 #============================================================================
 
-class TestSendKey(ClientTest):
+class TestSendKey(ClientServerTest):
 	def __init__(self, *args, **kwargs):
-		ClientTest.__init__(self, *args, **kwargs)
+		ClientServerTest.__init__(self, *args, **kwargs)
 
 	def test_send_key_success(self):
 		request = self.conn.touserqueue.get(timeout=1)
@@ -158,9 +158,9 @@ class TestSendKey(ClientTest):
 #============================================================================
 #============================================================================
 
-class TestUnlockSecurityService(ClientTest):
+class TestUnlockSecurityService(ClientServerTest):
 	def __init__(self, *args, **kwargs):
-		ClientTest.__init__(self, *args, **kwargs)
+		ClientServerTest.__init__(self, *args, **kwargs)
 
 	def dummy_algo(self, seed):
 		key = bytearray(seed)

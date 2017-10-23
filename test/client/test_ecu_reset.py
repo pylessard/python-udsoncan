@@ -2,11 +2,11 @@ from udsoncan.client import Client
 from udsoncan import services
 from udsoncan.exceptions import *
 
-from test.client.ClientTest import ClientTest
+from test.client.ClientServerTest import ClientServerTest
 
-class TestECUReset(ClientTest):
+class TestECUReset(ClientServerTest):
 	def __init__(self, *args, **kwargs):
-		ClientTest.__init__(self, *args, **kwargs)
+		ClientServerTest.__init__(self, *args, **kwargs)
 
 #========================================
 	def test_ecu_reset_success(self):
