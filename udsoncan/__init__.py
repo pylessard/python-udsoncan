@@ -265,6 +265,7 @@ class Response:
 		self.code = None
 		self.code_name = ""
 		self.valid = False
+		self.invalid_reason = "Object not initialized"
 
 		if data is not None and not isinstance(data, str):
 			raise ValueError("Given data must be a valid string")
@@ -284,6 +285,7 @@ class Response:
 
 		if self.service is not None and self.code is not None:
 			self.valid = True
+			self.invalid_reason = ""
 
 	#Used by server
 	def get_payload(self):
@@ -312,6 +314,7 @@ class Response:
 			response.service = services.cls_from_response_id(payload[0])
 			if response.service is None:
 				response.valid = False
+				response.invalid_reason "Payload first byte is not a know service."
 
 			elif len(payload) >= 2 :
 				if payload[1] != 0x7F:
@@ -323,6 +326,7 @@ class Response:
 						data_start=2
 						if payload[1] != 0:
 							response.valid = False
+							response.invalid_reason "A positive response must be 0 for this service."
 						
 					if response.valid:
 						response.code = Response.Code.PositiveResponse
@@ -335,13 +339,18 @@ class Response:
 						response.code = payload[2]
 						response.code_name = Response.Code.get_name(response.code)
 						response.valid = True
+					else:
+						response.valid = False
+						response.invalid_reason "Incomplete invalid response code (7Fxx)"
 				
 				if len(payload) > data_start:
 					response.data = payload[data_start:]
 			else:
 				response.valid = False
+				response.invalid_reason "Payload must be at least 2 bytes long (service and response)"
 		else:
 			response.valid = False
+			response.invalid_reason "Payload must be at least 2 bytes long (service and response)"
 		return response
 
 	def __repr__(self):

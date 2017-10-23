@@ -60,7 +60,7 @@ class TestECUReset(ThreadableTest):
 	def test_ecu_reset_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=1)
 		self.assertEqual(request, b"\x11\x55")
-		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
+		self.conn.fromuserqueue.put(b"\x7E\x55") # Valid but wrong service (Tester Present)
 
 	def _test_ecu_reset_wrongservice(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:

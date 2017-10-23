@@ -31,7 +31,7 @@ class InvalidResponseException(Exception):
 
 	def make_msg(self, response):
 		servicename = response.service.get_name() if response.service is not None else ""
-		return "%s service execution returned an invalid response." % (servicename)
+		return "%s service execution returned an invalid response. Reason : %s" % (servicename, response.invalid_reason)
 
 class UnexpectedResponseException(Exception):
 	def __init__(self, response, details="<No details given>", *args, **kwargs):
