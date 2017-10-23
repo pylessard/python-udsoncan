@@ -142,16 +142,16 @@ class Client:
 			payload = self.conn.wait_frame(timeout=timeout, exception=True)
 			response = Response.from_payload(payload)
 			self.logger.info("Response received from server")
-			
+
 			if not response.valid:
 				self.logger.error("Invalid response gotten by server")
 				if validate_response:
 					raise InvalidResponseException(response)
-
 			if response.service.response_id() != request.service.response_id():
 				msg = "Response gotten from server has a service ID different than the one of the request. Received=%s, Expected=%s" % (response.service.response_id() , request.service.response_id() )
 				self.logger.error(msg)
 				raise UnexpectedResponseException(response, details=msg)
+			
 			if not response.positive:
 				self.logger.warning("Server responded with Negative response %s" % response.code_name)
 				if not request.service.is_supported_negative_response(response.code):

@@ -1,18 +1,18 @@
-import isotp
 import threading
 import queue
 import inspect
 import struct
 import time
-import socket
 import errno
 
 from udsoncan.exceptions import *
-import inspect
 
 
 class Connection(object):
 	def __init__(self, interface, rxid, txid, tpsock=None):
+		import isotp
+		import socket
+
 		self.interface=interface
 		self.rxid=rxid
 		self.txid=txid

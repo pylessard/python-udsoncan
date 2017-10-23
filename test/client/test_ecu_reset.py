@@ -4,11 +4,11 @@ from udsoncan.exceptions import *
 
 from test.stub import StubbedConnection
 from test.ThreadableTest import ThreadableTest
+from test import UdsTest
 import time
 
-class TestClient(ThreadableTest):
+class TestECUReset(ThreadableTest):
 	def __init__(self, *args, **kwargs):
-		#unittest.TestCase.__init__(self, *args, **kwargs)
 		ThreadableTest.__init__(self, *args, **kwargs)
 
 	def setUp(self):
@@ -17,7 +17,6 @@ class TestClient(ThreadableTest):
 	def clientSetUp(self):
 		self.udsclient = Client(self.conn, request_timeout=2)
 		self.udsclient.open()
-
 
 #========================================
 	def test_ecu_reset_success(self):
@@ -31,7 +30,6 @@ class TestClient(ThreadableTest):
 		self.assertTrue(response.valid)
 		self.assertTrue(issubclass(response.service, services.ECUReset))
 		self.assertEqual(response.data, b"\x55")
-
 
 #========================================
 	def test_ecu_reset_denied(self):
@@ -48,7 +46,6 @@ class TestClient(ThreadableTest):
 		self.assertTrue(issubclass(response.service, services.ECUReset))
 		self.assertEqual(response.code, 0x33)
 
-
 #========================================
 	def test_ecu_reset_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=1)
@@ -59,12 +56,11 @@ class TestClient(ThreadableTest):
 		with self.assertRaises(InvalidResponseException) as handle:
 			response = self.udsclient.ecu_reset(0x55)
 
-
 #========================================
 	def test_ecu_reset_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=1)
 		self.assertEqual(request, b"\x11\x55")
-		self.conn.fromuserqueue.put(b"\x7E\x55") # Valid but wrong service (Tester Present)
+		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
 
 	def _test_ecu_reset_wrongservice(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
