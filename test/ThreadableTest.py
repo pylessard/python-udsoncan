@@ -53,12 +53,12 @@ class ThreadableTest(UdsTest):
 			self.clientSetUp()
 		except BaseException as e:
 			self.queue.put(e)
-			self.clientTearDown()
+			self._clientTearDown()
 			return
 		finally:
 			self.client_ready.set()
 		if self.server_crashed:
-			self.clientTearDown()
+			self._clientTearDown()
 			return
 		if not hasattr(test_func, '__call__'):
 			raise TypeError("test_func must be a callable function")
@@ -67,11 +67,17 @@ class ThreadableTest(UdsTest):
 		except BaseException as e:
 			self.queue.put(e)
 		finally:
-			self.clientTearDown()
+			self._clientTearDown()
 
 	def clientSetUp(self):
 		raise NotImplementedError("clientSetUp must be implemented.")
 
-	def clientTearDown(self):
+	def _clientTearDown(self):
 		self.done.set()
-		thread.exit()
+		try:
+			if hasattr(self, 'clientTearDown'):
+				self.clientTearDown()
+		except BaseException as e:
+			self.queue.put(e)
+		finally:			
+			thread.exit()
