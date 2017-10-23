@@ -2,7 +2,7 @@ from udsoncan.client import Client
 from udsoncan import services
 from udsoncan.exceptions import *
 
-from test.client.ClientServerTest import ClientServerTest
+from test.ClientServerTest import ClientServerTest
 
 class TestDiagnosticSessionControl(ClientServerTest):
 	def __init__(self, *args, **kwargs):

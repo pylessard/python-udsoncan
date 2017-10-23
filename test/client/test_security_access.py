@@ -1,7 +1,7 @@
 from udsoncan import services
 from udsoncan.exceptions import *
 
-from test.client.ClientServerTest import ClientServerTest
+from test.ClientServerTest import ClientServerTest
 
 class TestRequestSeed(ClientServerTest):
 	def __init__(self, *args, **kwargs):
