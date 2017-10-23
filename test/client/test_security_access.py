@@ -174,12 +174,12 @@ class TestUnlockSecurityService(ClientServerTest):
 			self.assertEqual(request, b"\x27\x07")		# Request seed
 			self.conn.fromuserqueue.put(b"\x67\x07\x11\x22\x33\x44")	# Positive response
 			request = self.conn.touserqueue.get(timeout=1)
-			self.conn.fromuserqueue.put(b"\x67\x08\xEE\xDD\xCC\xBB")	# Send Key
+			self.assertEqual(request, b"\x27\x08\xEE\xDD\xCC\xBB")
 			self.conn.fromuserqueue.put(b"\x67\x08")	# Positive response
 
 	def _test_unlock_success(self):
 		self.udsclient.config['security_algo'] = self.dummy_algo
-		success = self.udsclient.unlock_security_access(0x07)
+		success = self.udsclient.unlock_security_access(0x07)	
 		self.assertTrue(success)
 
 		success = self.udsclient.unlock_security_access(0x08)
