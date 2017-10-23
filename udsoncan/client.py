@@ -147,6 +147,7 @@ class Client:
 				self.logger.error("Invalid response gotten by server")
 				if validate_response:
 					raise InvalidResponseException(response)
+					
 			if response.service.response_id() != request.service.response_id():
 				msg = "Response gotten from server has a service ID different than the one of the request. Received=%s, Expected=%s" % (response.service.response_id() , request.service.response_id() )
 				self.logger.error(msg)
