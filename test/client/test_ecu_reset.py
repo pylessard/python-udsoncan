@@ -2,24 +2,11 @@ from udsoncan.client import Client
 from udsoncan import services
 from udsoncan.exceptions import *
 
-from test.stub import StubbedConnection
-from test.ThreadableTest import ThreadableTest
-from test import UdsTest
-import time
+from test.client.ClientTest import ClientTest
 
-class TestECUReset(ThreadableTest):
+class TestECUReset(ClientTest):
 	def __init__(self, *args, **kwargs):
-		ThreadableTest.__init__(self, *args, **kwargs)
-
-	def setUp(self):
-		self.conn = StubbedConnection()
-
-	def clientSetUp(self):
-		self.udsclient = Client(self.conn, request_timeout=2)
-		self.udsclient.open()
-
-	def clientTearDown(self):
-		self.udsclient.close()
+		ClientTest.__init__(self, *args, **kwargs)
 
 #========================================
 	def test_ecu_reset_success(self):

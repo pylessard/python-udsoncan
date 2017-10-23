@@ -2,24 +2,11 @@ from udsoncan.client import Client
 from udsoncan import services
 from udsoncan.exceptions import *
 
-from test.stub import StubbedConnection
-from test.ThreadableTest import ThreadableTest
-from test import UdsTest
-import time
+from test.client.ClientTest import ClientTest
 
-class TestDiagnosticSessionControl(ThreadableTest):
+class TestDiagnosticSessionControl(ClientTest):
 	def __init__(self, *args, **kwargs):
-		ThreadableTest.__init__(self, *args, **kwargs)
-
-	def setUp(self):
-		self.conn = StubbedConnection()
-
-	def clientSetUp(self):
-		self.udsclient = Client(self.conn, request_timeout=2)
-		self.udsclient.open()
-
-	def clientTearDown(self):
-		self.udsclient.close()
+		ClientTest.__init__(self, *args, **kwargs)
 
 #========================================
 	def test_dsc_success(self):
@@ -28,11 +15,9 @@ class TestDiagnosticSessionControl(ThreadableTest):
 		self.conn.fromuserqueue.put(b"\x50\x01")	# Positive response
 
 	def _test_dsc_success(self):
-		response = self.udsclient.change_session(services.DiagnosticSessionControl.defaultSession)
-		self.assertTrue(response.positive)
-		self.assertTrue(response.valid)
-		self.assertTrue(issubclass(response.service, services.DiagnosticSessionControl))
-		self.assertEqual(response.data, b"\x01")
+		success = self.udsclient.change_session(services.DiagnosticSessionControl.defaultSession)
+		self.assertTrue(success)
+
 #========================================
 	def test_dsc_denied(self):
 		request = self.conn.touserqueue.get(timeout=1)
@@ -41,12 +26,23 @@ class TestDiagnosticSessionControl(ThreadableTest):
 
 	def _test_dsc_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:
-			response = self.udsclient.change_session(0x08)
+			success = self.udsclient.change_session(0x08)
 		response = handle.exception.response
 
 		self.assertTrue(response.valid)
 		self.assertTrue(issubclass(response.service, services.DiagnosticSessionControl))
 		self.assertEqual(response.code, 0x12)
+
+
+#========================================
+	def test_dsc_bad_subfunction(self):
+		request = self.conn.touserqueue.get(timeout=1)
+		self.assertEqual(request, b"\x10\x01")
+		self.conn.fromuserqueue.put(b"\x50\x02")	# Positive response
+
+	def _test_dsc_bad_subfunction(self):
+		with self.assertRaises(UnexpectedResponseException):
+			success = self.udsclient.change_session(services.DiagnosticSessionControl.defaultSession)
 
 #========================================
 	def test_dsc_invalidservice(self):
@@ -56,7 +52,7 @@ class TestDiagnosticSessionControl(ThreadableTest):
 
 	def _test_dsc_invalidservice(self):
 		with self.assertRaises(InvalidResponseException) as handle:
-			response = self.udsclient.change_session(0x02)
+			success = self.udsclient.change_session(0x02)
 
 
 #========================================
@@ -67,7 +63,7 @@ class TestDiagnosticSessionControl(ThreadableTest):
 
 	def _test_ecu_reset_wrongservice(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
-			response = self.udsclient.change_session(0x55)
+			success = self.udsclient.change_session(0x55)
 
 
 #========================================
@@ -76,7 +72,7 @@ class TestDiagnosticSessionControl(ThreadableTest):
 
 	def _test_bad_param(self):
 		with self.assertRaises(ValueError):
-			response = self.udsclient.change_session(0x100)
+			success = self.udsclient.change_session(0x100)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.change_session(-1)
+			success = self.udsclient.change_session(-1)
