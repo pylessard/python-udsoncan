@@ -115,7 +115,7 @@ class Client:
 
 		return didconfig
 
-	def read_data_by_identifier(self, dids, output_fmt='dict', force_collection=False):
+	def read_data_by_identifier(self, dids, output_fmt='dict'):
 		service = services.ReadDataByIdentifier(dids)
 		self.logger.info("Reading data identifier %s", dids)
 		req = Request(service)
@@ -133,22 +133,47 @@ class Client:
 			raise ValueError("Output format cannot be %s. Use default|list|dict" % output_fmt)
 
 		offset = 0
+		done = False
+		received = {}
 		for did in didlist:
+			received[did] = False
+
+		while True:
+			if len(response.data) <= offset:
+				break
+
+			if len(response.data) <= offset +1:
+				raise InvalidResponseException(response, "Response given by server is incomplete.")
+
+			did = struct.unpack('>H', response.data[offset:offset+2])[0]
+			
+			if did not in didlist:
+				raise UnexpectedResponseException(response, "Server returned a value for data identifier 0x%x which was not requested" % did)
+
+			if did not in didconfig:
+				raise LookupError('Actual data identifier configuration contains no definition for data identifier 0x%x' % did)
+			
 			codec = DidCodec.from_config(didconfig[did])
+			offset+=2
+
+			if len(response.data) < offset+len(codec):
+				raise UnexpectedResponseException(response, "Value fo data identifier 0x%x was incomplete according to definition in configuration" % did)
 			subpayload = response.data[offset:offset+len(codec)]
 			offset += len(codec)
 			val = codec.decode(subpayload)
+			received[did] = True
 
 			if output_fmt in ['list']:
 				values.append(val)
 			elif output_fmt == 'dict':
 				values[did] = val
 
-		if len(values) == 1 and not force_collection:
-			if isinstance(values, list):
-				values = values[0]
-			elif isinstance(values, dict):
-				values = values[next(iter(values))]
+		notreceived = 0;
+		for k in received:
+			notreceived += 1 if k == False else 0
+
+		if notreceived > 0:
+			raise UnexpectedResponseException(response, "%d data identifier values have not been received by the server" % notreceived)
 
 		return values
 
