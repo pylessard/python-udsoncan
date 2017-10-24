@@ -12,6 +12,8 @@ class ClientServerTest(ThreadableTest):
 	def clientSetUp(self):
 		self.udsclient = Client(self.conn, request_timeout=1)
 		self.udsclient.open()
+		if hasattr(self, "postClientSetUp"):
+			self.postClientSetUp()
 
 	def clientTearDown(self):
 		self.udsclient.close()

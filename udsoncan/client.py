@@ -45,7 +45,6 @@ class Client:
 			return response.data[1:]
 		return None
 
-
 ##  SecurityAccess
 	def request_seed(self, level):
 		service = services.SecurityAccess(level, mode=services.SecurityAccess.Mode.RequestSeed)
@@ -78,7 +77,6 @@ class Client:
 
 		return response.positive
 		
-
 	def unlock_security_access(self, level):
 		if 'security_algo' not in self.config or not callable(self.config['security_algo']):
 			raise NotImplementedError("Client configuration does not provide a security algorithm")
@@ -86,7 +84,6 @@ class Client:
 		seed = self.request_seed(level)
 		key = self.config['security_algo'].__call__(seed)
 		return self.send_key(level, key)
-
 
 	def tester_present(self, suppress_positive_response=False):
 		service = services.TesterPresent()
@@ -106,7 +103,6 @@ class Client:
 
 		return True
 
-
 	def check_did_config(self, didlist):
 		didlist = [didlist] if not isinstance(didlist, list) else didlist
 		if not 'data_identifiers' in self.config or  not isinstance(self.config['data_identifiers'], dict):
@@ -118,7 +114,6 @@ class Client:
 				raise LookupError('Actual data identifier configuration contains no definition for data identifier %d' % did)
 
 		return didconfig
-
 
 	def read_data_by_identifier(self, dids, output_fmt='dict', force_collection=False):
 		service = services.ReadDataByIdentifier(dids)
@@ -191,7 +186,6 @@ class Client:
 
 		return True
 
-		
 	def send_request(self, request, timeout=-1, validate_response=True):
 		if timeout is not None and timeout < 0:
 			timeout = self.request_timeout
