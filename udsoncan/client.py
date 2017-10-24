@@ -130,7 +130,7 @@ class Client:
 		elif output_fmt == 'dict':
 			values = {}
 		else:
-			raise ValueError("Output format cannot be %s. Use default|list|dict" % output_fmt)
+			raise ValueError("Output format cannot be %s. Use list or dict" % output_fmt)
 
 		offset = 0
 		done = False
