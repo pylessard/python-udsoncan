@@ -48,13 +48,6 @@ class BaseService:
 			return cls._use_subfunction
 		else:
 			return True
-	
-	@classmethod	# Tells if this service positive response is different from the single byte 0 Response Code
-	def has_custom_positive_response(cls):
-		if hasattr(cls, '_custom_positive_response'):
-			return cls._custom_positive_response
-		else:
-			return False
 
 	@classmethod	# Returns the service name. Shortcut that works on class and instances
 	def get_name(cls):
@@ -69,7 +62,6 @@ def is_valid_service(service_cls):
 
 class DiagnosticSessionControl(BaseService):
 	_sid = 0x10
-	_custom_positive_response = True
 
 	supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
 									Response.Code.IncorrectMessageLegthOrInvalidFormat,
@@ -95,7 +87,6 @@ class DiagnosticSessionControl(BaseService):
 
 class ECUReset(BaseService):
 	_sid = 0x11
-	_custom_positive_response = True
 
 	supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
 								Response.Code.IncorrectMessageLegthOrInvalidFormat,
@@ -130,7 +121,6 @@ class ECUReset(BaseService):
 
 class SecurityAccess(BaseService):
 	_sid = 0x27
-	_custom_positive_response = True
 
 	supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
 							Response.Code.IncorrectMessageLegthOrInvalidFormat,
@@ -150,7 +140,7 @@ class SecurityAccess(BaseService):
 		if mode not in [SecurityAccess.Mode.RequestSeed, SecurityAccess.Mode.SendKey]:
 			raise ValueError("Given mode must be either RequestSeed or Send Key ")
 		level = int(level)
-		if level > 0x7F or level <= 0:
+		if level > 0x7F or level < 0:
 			raise ValueError("Level must be a valid integer between 0 and 0x7F")
 
 		self.level = level
@@ -274,7 +264,6 @@ def assert_dids_value(dids):
 class ReadDataByIdentifier(BaseService):
 	_sid = 0x22
 	_use_subfunction = False
-	_custom_positive_response = True
 
 
 	supported_negative_response = [	 Response.Code.IncorrectMessageLegthOrInvalidFormat,
@@ -291,7 +280,6 @@ class ReadDataByIdentifier(BaseService):
 class WriteDataByIdentifier(BaseService):
 	_sid = 0x2E
 	_use_subfunction = False
-	_custom_positive_response = True
 
 	supported_negative_response = [	 Response.Code.IncorrectMessageLegthOrInvalidFormat,
 							Response.Code.ConditionsNotCorrect,

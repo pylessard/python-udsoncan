@@ -41,7 +41,10 @@ class Client:
 		if received != expected:
 			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) is not for the requested subfunction (0x%02x)" % (received, expected))
 
-		return response.positive
+		if len(response.data) > 1:
+			return response.data[1:]
+		return None
+
 
 ##  SecurityAccess
 	def request_seed(self, level):
@@ -85,9 +88,9 @@ class Client:
 		return self.send_key(level, key)
 
 
-	def send_tester_present(self, suppress_positive_response=False):
+	def tester_presnet(self, suppress_positive_response=False):
 		req = Request(services.TesterPresent(), suppress_positive_response=suppress_positive_response)
-		self.send_request(req)
+		response = self.send_request(req)
 
 
 	def check_did_config(self, didlist):
@@ -156,9 +159,23 @@ class Client:
 		service = services.ECUReset(resettype, powerdowntime)
 		self.logger.info("Requesting ECU reset of type 0x%02x" % (resettype))
 		req = Request(service)
-		if resettype == services.ECUReset.enableRapidPowerShutDown:
-			req.data =struct.pack('B', service.powerdowntime)
-		return self.send_request(req)
+		if powerdowntime is not None:
+			if resettype == services.ECUReset.enableRapidPowerShutDown:
+				req.data =struct.pack('B', service.powerdowntime)
+			else:
+				raise ValueError("Power down time is only used when reset type is enableRapidShutdown")
+		
+		response = self.send_request(req)
+
+		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
+			raise UnexpectedResponseException(response, "Response data must be at least 1 bytes")
+
+		received = int(response.data[0])
+		expected = service.subfunction_id()
+		if received != expected:
+			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) is not for the requested subfunction (0x%02x)" % (received, expected))
+
+		return True
 
 		
 	def send_request(self, request, timeout=-1, validate_response=True):

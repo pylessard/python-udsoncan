@@ -267,7 +267,8 @@ class Response:
 		self.valid = False
 		self.invalid_reason = "Object not initialized"
 
-		if data is not None and not isinstance(data, str):
+		if data is not None and not isinstance(data, bytes):
+			print(type(data))
 			raise ValueError("Given data must be a valid string")
 
 		self.data = data
@@ -298,7 +299,7 @@ class Response:
 		payload = struct.pack("B", self.service.response_id())
 		if not self.positive:
 			payload += b'\x7F'
-		if not self.positive or self.positive and not self.service.has_custom_positive_response():
+		if not self.positive:
 			payload += struct.pack('B', self.code)
 
 		if self.data is not None:
@@ -318,20 +319,11 @@ class Response:
 
 			elif len(payload) >= 2 :
 				if payload[1] != 0x7F:
+					data_start=1
 					response.valid = True
-
-					if response.service.has_custom_positive_response():
-						data_start=1
-					else:
-						data_start=2
-						if payload[1] != 0:
-							response.valid = False
-							response.invalid_reason = "A positive response must be 0 for this service."
-						
-					if response.valid:
-						response.code = Response.Code.PositiveResponse
-						response.code_name = Response.Code.get_name(Response.Code.PositiveResponse)
-						response.positive = True
+					response.code = Response.Code.PositiveResponse
+					response.code_name = Response.Code.get_name(Response.Code.PositiveResponse)
+					response.positive = True
 				else:
 					data_start=3
 					response.positive = False

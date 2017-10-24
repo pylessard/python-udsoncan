@@ -15,11 +15,18 @@ class TestECUReset(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x51\x55")	# Positive response
 
 	def _test_ecu_reset_success(self):
-		response = self.udsclient.ecu_reset(0x55)
-		self.assertTrue(response.positive)
-		self.assertTrue(response.valid)
-		self.assertTrue(issubclass(response.service, services.ECUReset))
-		self.assertEqual(response.data, b"\x55")
+		success = self.udsclient.ecu_reset(0x55)
+		self.assertTrue(success)
+
+#========================================
+	def test_ecu_reset_success_pdt(self):
+		request = self.conn.touserqueue.get(timeout=1)
+		self.assertEqual(request, b"\x11\x04\x23")
+		self.conn.fromuserqueue.put(b"\x51\x04")	# Positive response 
+
+	def _test_ecu_reset_success_pdt(self):
+		success = self.udsclient.ecu_reset(services.ECUReset.enableRapidPowerShutDown, 0x23)
+		self.assertTrue(success)	
 
 #========================================
 	def test_ecu_reset_denied(self):
@@ -29,7 +36,7 @@ class TestECUReset(ClientServerTest):
 
 	def _test_ecu_reset_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:
-			response = self.udsclient.ecu_reset(0x55)
+			success = self.udsclient.ecu_reset(0x55)
 		response = handle.exception.response
 
 		self.assertTrue(response.valid)
@@ -66,3 +73,6 @@ class TestECUReset(ClientServerTest):
 
 		with self.assertRaises(ValueError):
 			response = self.udsclient.ecu_reset(-1)
+
+		with self.assertRaises(ValueError):
+			response = self.udsclient.ecu_reset(0, powerdowntime = 123)	# Power Down time only valid with rapid shutdown

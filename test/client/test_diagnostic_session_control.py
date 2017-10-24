@@ -12,11 +12,11 @@ class TestDiagnosticSessionControl(ClientServerTest):
 	def test_dsc_success(self):
 		request = self.conn.touserqueue.get(timeout=1)
 		self.assertEqual(request, b"\x10\x01")
-		self.conn.fromuserqueue.put(b"\x50\x01")	# Positive response
+		self.conn.fromuserqueue.put(b"\x50\x01\x99\x88")	# Positive response
 
 	def _test_dsc_success(self):
-		success = self.udsclient.change_session(services.DiagnosticSessionControl.defaultSession)
-		self.assertTrue(success)
+		sessionParamRecords = self.udsclient.change_session(services.DiagnosticSessionControl.defaultSession)
+		self.assertEqual(sessionParamRecords, b"\x99\x88")
 
 #========================================
 	def test_dsc_denied(self):
