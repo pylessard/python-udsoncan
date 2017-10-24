@@ -42,7 +42,7 @@ class StubbedConnection(object):
 			payload = payload[0:4095]
 
 		self.logger.info("Sending payload of %d bytes" % len(payload))
-		self.logger.debug(payload)
+		self.logger.debug("".join(["%02x" % b for b in payload]))
 		self.touserqueue.put(payload)
 
 	def wait_frame(self, timeout=2, exception=False):
@@ -57,7 +57,7 @@ class StubbedConnection(object):
 		try:
 			frame = self.fromuserqueue.get(block=True, timeout=timeout)
 			self.logger.info("Received payload of %d bytes" % len(frame))
-			self.logger.debug(frame)
+			self.logger.debug("".join(["%02x" % b for b in frame]))
 		except queue.Empty:
 			timedout = True
 			

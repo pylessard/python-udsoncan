@@ -88,9 +88,23 @@ class Client:
 		return self.send_key(level, key)
 
 
-	def tester_presnet(self, suppress_positive_response=False):
-		req = Request(services.TesterPresent(), suppress_positive_response=suppress_positive_response)
+	def tester_present(self, suppress_positive_response=False):
+		service = services.TesterPresent()
+		if not isinstance(suppress_positive_response, bool):
+			raise ValueError("suppress_positive_response must be a boolean value")
+		req = Request(service, suppress_positive_response=suppress_positive_response)
 		response = self.send_request(req)
+
+		if not suppress_positive_response:
+			if response.data is None or len(response.data) < 1:
+				raise UnexpectedResponseException(response, "Response data must be at least 1 bytes")
+
+			received = int(response.data[0])
+			expected = service.subfunction_id()
+			if received != expected:
+				raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) is not for the requested subfunction (0x%02x)" % (received, expected))
+
+		return True
 
 
 	def check_did_config(self, didlist):

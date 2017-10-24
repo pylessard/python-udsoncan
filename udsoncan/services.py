@@ -33,9 +33,10 @@ class BaseService:
 
 	@classmethod	# Returns an instance of the service identified by the service ID (Response)
 	def from_response_id(cls, given_id):
+
 		for name, obj in inspect.getmembers(sys.modules[__name__]):
 			if hasattr(obj, "__bases__") and cls in obj.__bases__:
-				if obj.response_id() == given_id:
+				if obj.response_id() == int(given_id):
 					return obj
 
 	#Default subfunction ID for service that does not implements subfunction_id().
