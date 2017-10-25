@@ -34,7 +34,7 @@ class Client:
 		response = self.send_request(req)
 
 		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
-			raise UnexpectedResponseException(response, "Response data must be at least 1 bytes")
+			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
 
 		received = int(response.data[0])
 		expected = service.subfunction_id()
@@ -52,7 +52,7 @@ class Client:
 		response = self.send_request(req)
 		
 		if len(response.data) < 2:
-			raise UnexpectedResponseException(response, "Response data must be at least 2 bytes")
+			raise InvalidResponseException(response, "Response data must be at least 2 bytes")
 
 		received = int(response.data[0])
 		expected = service.subfunction_id()
@@ -68,7 +68,7 @@ class Client:
 		response = self.send_request(req)
 		
 		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
-			raise UnexpectedResponseException(response, "Response data must be at least 1 bytes")
+			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
 
 		received = int(response.data[0])
 		expected = service.subfunction_id()
@@ -94,7 +94,7 @@ class Client:
 
 		if not suppress_positive_response:
 			if response.data is None or len(response.data) < 1:
-				raise UnexpectedResponseException(response, "Response data must be at least 1 bytes")
+				raise InvalidResponseException(response, "Response data must be at least 1 bytes")
 
 			received = int(response.data[0])
 			expected = service.subfunction_id()
@@ -143,7 +143,7 @@ class Client:
 				break
 
 			if len(response.data) <= offset +1:
-				raise InvalidResponseException(response, "Response given by server is incomplete.")
+				raise UnexpectedResponseException(response, "Response given by server is incomplete.")
 
 			did = struct.unpack('>H', response.data[offset:offset+2])[0]
 			
@@ -179,15 +179,25 @@ class Client:
 
 	def write_data_by_identifier(self, did, value):
 		service = services.WriteDataByIdentifier(did)
-		self.logger.info("Reading data identifier %s", did)
+		self.logger.info("Writing data identifier %s", did)
 		req = Request(service)
 		
 		didconfig = self.check_did_config(did)
 		req.data = struct.pack('>H', service.did)
+
 		codec = DidCodec.from_config(didconfig[did])
 		req.data += codec.encode(value)
 		response = self.send_request(req)
-		return response
+
+		if len(response.data) < 2:
+			raise InvalidResponseException(response, "Response must be at least 2 bytes long")
+
+		did_fb = struct.unpack(">H", response.data[0:2])[0]
+
+		if did_fb != did:
+			raise UnexpectedResponseException(response, "Server returned a response for data identifier 0x%02x while client requested for did 0x%02x" % (did_fb, did))
+			
+		return True
 
 	def ecu_reset(self, resettype, powerdowntime=None):
 		service = services.ECUReset(resettype, powerdowntime)

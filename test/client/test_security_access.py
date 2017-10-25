@@ -49,7 +49,7 @@ class TestRequestSeed(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x67\x05")	# Positive response with no seed
 
 	def _test_request_seed_incomplete_response(self):
-		with self.assertRaises(UnexpectedResponseException) as handle:
+		with self.assertRaises(InvalidResponseException) as handle:
 			seed = self.udsclient.request_seed(0x05)
 
 #========================================
