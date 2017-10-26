@@ -89,8 +89,6 @@ class Connection(object):
 		while not self.rxqueue.empty():
 			self.rxqueue.get()
 
-
-
 class Request:
 	def __init__(self, service = None, subfunction = None, suppress_positive_response = False, data=None):
 		if service is None:
@@ -266,13 +264,17 @@ class Response:
 		self.code_name = ""
 		self.valid = False
 		self.invalid_reason = "Object not initialized"
+		
+		self.service = service
 
-		if data is not None and not isinstance(data, bytes):
-			print(type(data))
-			raise ValueError("Given data must be a valid string")
+		if data is not None:
+			if self.service is not None and not self.service.has_response_data():
+				raise ValueError("This service should not have any data in its response.")
+
+			if not isinstance(data, bytes):
+				raise ValueError("Given data must be a valid bytes object")
 
 		self.data = data
-		self.service = service
 
 		if code is not None:
 			if not isinstance(code, int):
@@ -302,7 +304,7 @@ class Response:
 		if not self.positive:
 			payload += struct.pack('B', self.code)
 
-		if self.data is not None:
+		if self.data is not None and self.service.has_response_data():
 			payload += self.data
 		return payload
 
@@ -338,8 +340,14 @@ class Response:
 				if len(payload) > data_start:
 					response.data = payload[data_start:]
 			else:
-				response.valid = False
-				response.invalid_reason = "Payload must be at least 2 bytes long (service and response)"
+				if response.service.has_response_data():
+					response.valid = False
+					response.invalid_reason = "Payload must be at least 2 bytes long (service and response)"
+				else:
+					response.valid = True
+					response.code = Response.Code.PositiveResponse
+					response.code_name = Response.Code.get_name(Response.Code.PositiveResponse)
+					response.positive = True
 		else:
 			response.valid = False
 			response.invalid_reason = "Payload must be at least 2 bytes long (service and response)"
@@ -394,3 +402,72 @@ class DidCodec:
 class SecurityLevel(object):
 	def __init__(self, levelid):
 		self.levelid = levelid & 0xFE
+
+class Dtc:
+	class Severity:
+		NotAvailable = 0
+		MaintenanceOnly = 1
+		CheckAtNextHalt = 2
+		CheckImmediately = 4
+
+
+	def __init__(self, dtc):
+
+		self.id = dtcid
+
+		self.testFailed = False
+		self.testFailedThisOperationCycle = False
+		self.pending = False
+		self.confirmed = False
+		self.testNotCompletedSinceLastClear = False
+		self.testFailedSinceLastClear = False
+		self.testNotCompletedThisOperationCycle = False
+		self.warningIndicatorRequested = False
+
+	def updateStatus(testFailed = None, testFailedThisOperationCycle = None, pending = None, confirmed = None, testNotCompletedSinceLastClear  = None, testFailedSinceLastClear = None, warningIndicatorRequested = None):
+		if testFailed is not None:
+			self.testFailed	=  testFailed
+
+		if testFailedThisOperationCycle is not None:
+			self.testFailedThisOperationCycle	= testFailedThisOperationCycle
+
+		if pending is not None:
+			self.pending	= pending
+
+		if confirmed is not None:
+			self.confirmed	= confirmed
+
+		if testNotCompletedSinceLastClear is not None:
+			self.testNotCompletedSinceLastClear	= testNotCompletedSinceLastClear
+
+		if testFailedSinceLastClear is not None:
+			self.testFailedSinceLastClear	= testFailedSinceLastClear
+
+		if testNotCompletedThisOperationCycle is not None:
+			self.testNotCompletedThisOperationCycle	= testNotCompletedThisOperationCycle
+
+		if warningIndicatorRequested is not None:
+			self.warningIndicatorRequested	= warningIndicatorRequested
+
+	@property
+	def status(self):
+		byte = 0
+		byte |= 0x1 if self.testFailed else 0
+		byte |= 0x2 if self.testFailedThisOperationCycle else 0
+		byte |= 0x4 if self.pending else 0
+		byte |= 0x8 if self.confirmed else 0
+		byte |= 0x10 if self.testNotCompletedSinceLastClear else 0
+		byte |= 0x20 if self.testFailedSinceLastClear else 0
+		byte |= 0x40 if self.testNotCompletedThisOperationCycle else 0
+		byte |= 0x80 if self.warningIndicatorRequested else 0
+
+	@status.setter
+	def status(self, byte):
+		self.testFailed 						= True if byte & 0x01 > 0 else False
+		self.testFailedThisOperationCycle 		= True if byte & 0x02 > 0 else False
+		self.pending 							= True if byte & 0x04 > 0 else False
+		self.confirmed 							= True if byte & 0x08 > 0 else False
+		self.testNotCompletedSinceLastClear 	= True if byte & 0x10 > 0 else False
+		self.testFailedSinceLastClear 			= True if byte & 0x20 > 0 else False
+		self.testNotCompletedThisOperationCycle = True if byte & 0x40 > 0 else False
+		self.warningIndicatorRequested 			= True if byte & 0x80 > 0 else False

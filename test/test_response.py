@@ -11,6 +11,10 @@ class DummyServiceNoSubunction(services.BaseService):
 	_sid = 0x13
 	_use_subfunction = False
 
+class DummyServiceNoResponseData(services.BaseService):
+	_sid = 0x13
+	_no_response_data = True
+
 class RandomClass:
 	pass
 
@@ -97,7 +101,10 @@ class TestResponse(UdsTest):
 		self.assertIsNone(response.service)
 		self.assertIsNone(response.data)
 
-
+	def test_no_response_data(self):
+		with self.assertRaises(ValueError):
+			response = Response(DummyServiceNoResponseData(), code = 0x10, data=b'\x12\x13')
+		
 	def test_from_input_param(self):
 		with self.assertRaises(ValueError):
 			response = Response(service = "a string")	

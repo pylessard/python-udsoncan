@@ -221,6 +221,19 @@ class Client:
 
 		return True
 
+	def clear_dtc(self, group=0xFFFFFF):
+		service = services.ClearDiagnosticInformation(group)
+		request = Request(service)
+		group = service.group  # Service object can filter that value
+
+		hb = (group >> 16) & 0xFF
+		mb = (group >> 8) & 0xFF
+		lb = (group >> 0) & 0xFF 
+
+		request.data = struct.pack("BBB", hb,mb,lb)
+		response = self.send_request(request)
+		return True
+
 	def send_request(self, request, timeout=-1, validate_response=True):
 		if timeout is not None and timeout < 0:
 			timeout = self.request_timeout
@@ -252,4 +265,3 @@ class Client:
 					raise NegativeResponseException(response)
 
 			return response
-

@@ -5,8 +5,8 @@ import logging
 
 class StubbedConnection(object):
 	def __init__(self):
-		self.fromuserqueue = queue.Queue()
-		self.touserqueue = queue.Queue()
+		self.fromuserqueue = queue.Queue()	# Client reads from this queue. Other end is simulated
+		self.touserqueue = queue.Queue()	# Client writes to this queue. Other end is simulated
 		self.opened = False
 		self.logger = logging.getLogger("StubbedConnection")
 

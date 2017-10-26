@@ -69,7 +69,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 #========================================
 	def test_wdbi_unwanted_did(self):
 		request = self.conn.touserqueue.get(timeout=1)
-		self.conn.fromuserqueue.put(b"\x6E\x00\x02\x12\x34")	# Positive response
+		self.conn.fromuserqueue.put(b"\x6E\x00\x02")	# Positive response
 
 	def _test_wdbi_unwanted_did(self):
 		with self.assertRaises(UnexpectedResponseException):
@@ -78,7 +78,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 #========================================
 	def test_wdbi_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=1)
-		self.conn.fromuserqueue.put(b"\x00\x00\x01\x12\x34")	# Service is inexistant
+		self.conn.fromuserqueue.put(b"\x00\x00\x01")	# Service is inexistant
 
 	def _test_wdbi_invalidservice(self):
 		with self.assertRaises(InvalidResponseException) as handle:
@@ -87,7 +87,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 #========================================
 	def test_wdbi_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=1)
-		self.conn.fromuserqueue.put(b"\x50\x00\x01\x12\x34")	# Valid service, but not the one requested
+		self.conn.fromuserqueue.put(b"\x50\x00\x01")	# Valid service, but not the one requested
 
 	def _test_wdbi_wrongservice(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
