@@ -234,6 +234,43 @@ class Client:
 		response = self.send_request(request)
 		return True
 
+	def start_routine(self, routine_id, data=None):
+		return self.routine_control(routine_id, services.RoutineControl.startRoutine, data)
+
+	def stop_routine(self, routine_id, data=None):
+		return self.routine_control(routine_id, services.RoutineControl.stopRoutine, data)
+
+	def get_routine_result(self, routine_id, data=None):
+		return self.routine_control(routine_id, services.RoutineControl.requestRoutineResults, data)
+
+	def routine_control(self, routine_id, control_type, data=None):
+		service = services.RoutineControl(routine_id, control_type)
+		req = Request(service)
+
+		req.data = struct.pack('>H', routine_id)
+
+		if data is not None:
+			req.data += data
+
+		response = self.send_request(req)
+
+		if len(response.data) < 3: 	
+			raise InvalidResponseException(response, "Response data must be at least 3 bytes")
+
+		received = int(response.data[0])
+		expected = service.subfunction_id()
+		if received != expected:
+			raise UnexpectedResponseException(response, "Control type of response (0x%02x) does not match request control type (0x%02x)" % (received, expected))
+
+		received = struct.unpack(">H", response.data[1:3])[0]
+		expected = service.routine_id
+
+		if received != expected:
+			raise UnexpectedResponseException(response, "Response received from server (ID = 0x%02x) is not for the requested routine ID (0x%02x)" % (received, expected))
+
+		return response
+		
+
 	def send_request(self, request, timeout=-1, validate_response=True):
 		if timeout is not None and timeout < 0:
 			timeout = self.request_timeout
