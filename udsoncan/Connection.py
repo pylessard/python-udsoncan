@@ -1,8 +1,12 @@
+import isotp
+import socket
+import queue
+import threading
+
+from udsoncan.Request import Request
 
 class Connection(object):
 	def __init__(self, interface, rxid, txid, tpsock=None):
-		import isotp
-		import socket
 
 		self.interface=interface
 		self.rxid=rxid
@@ -12,7 +16,7 @@ class Connection(object):
 		self.opened = False
 
 		self.rxthread = threading.Thread(target=self.rxthread_task)
-		self.tpsock = isotp.socket(timeout=0.1) if topsock is None else tpsock
+		self.tpsock = isotp.socket(timeout=0.1) if tpsock is None else tpsock
 
 
 	def open(self):

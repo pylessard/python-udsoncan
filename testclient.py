@@ -1,4 +1,4 @@
-from udsoncan import sessions, services, Request, Connection
+from udsoncan import services, Request, Connection
 from udsoncan.client import Client
 from testconfig import client_config
 

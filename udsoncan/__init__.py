@@ -1,9 +1,5 @@
-import threading
-import queue
 import inspect
 import struct
-import time
-import errno
 
 from udsoncan.exceptions import *
 from udsoncan.Connection import Connection
