@@ -471,3 +471,29 @@ class Dtc:
 		self.testFailedSinceLastClear 			= True if byte & 0x20 > 0 else False
 		self.testNotCompletedThisOperationCycle = True if byte & 0x40 > 0 else False
 		self.warningIndicatorRequested 			= True if byte & 0x80 > 0 else False
+
+class AddressAndLengthIdentifier:
+	addr_256B = 1
+	addr_64KB = 2
+	addr_16MB = 3
+	addr_4GB = 4
+	addr_1024GB = 5
+
+	msize_256 = 1
+	msize_64KB = 2
+	msize_16MB = 3
+	msize_4GB = 4
+
+
+	@classmethod
+	def make(cls, size, addr):
+		if not isinstance(size, int) or not isinstance(addr, int):
+			raise ValueError('Size and addr must be integers')
+
+		if size < 1 or size > 4:
+			raise ValueError('Size must ba an integer between 1 and 4')
+		
+		if addr < 1 or addr > 5:
+			raise ValueError('Addr must ba an integer between 1 and 5')
+
+		return  (size << 4) | (addr)
