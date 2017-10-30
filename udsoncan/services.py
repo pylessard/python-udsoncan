@@ -1,4 +1,4 @@
-from udsoncan import Response
+from udsoncan.Response import Response
 import inspect
 import sys
 
