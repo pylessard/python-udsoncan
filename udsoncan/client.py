@@ -1,4 +1,4 @@
-from udsoncan import Response, Request, services, DidCodec
+from udsoncan import Response, Request, services, DidCodec, Routine
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
 import struct
@@ -235,15 +235,15 @@ class Client:
 		return True
 
 	def start_routine(self, routine_id, data=None):
-		self.logger.info("Sending request to start %s routine" % (services.RoutineControl.name_by_id(routine_id)))
+		self.logger.info("Sending request to start %s routine" % (Routine.name_from_id(routine_id)))
 		return self.routine_control(routine_id, services.RoutineControl.startRoutine, data)
 
 	def stop_routine(self, routine_id, data=None):
-		self.logger.info("Sending request to stop %s routine" % (services.RoutineControl.name_by_id(routine_id)))
+		self.logger.info("Sending request to stop %s routine" % (Routine.name_from_id(routine_id)))
 		return self.routine_control(routine_id, services.RoutineControl.stopRoutine, data)
 
 	def get_routine_result(self, routine_id, data=None):
-		self.logger.info("Sending request to get results of %s routine" % (services.RoutineControl.name_by_id(routine_id)))
+		self.logger.info("Sending request to get results of %s routine" % (Routine.name_from_id(routine_id)))
 		return self.routine_control(routine_id, services.RoutineControl.requestRoutineResults, data)
 
 	def routine_control(self, routine_id, control_type, data=None):
