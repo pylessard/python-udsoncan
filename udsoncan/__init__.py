@@ -150,7 +150,14 @@ class Units:
 				self.id = id
 				self.symbol = symbol
 				self.description = description
-		exa		= Prefix(id=0x40, name= 'exa', symbol='E', description='10e18')
+
+			def __str__(self):
+				return self.name
+
+			def __repr__(self):
+				desc = "(%s) " % self.description if self.description is not None else ""
+				return "<UDS Unit prefix : %s[%s] %swith ID=%d at %08x>" % (self.name, self.symbol, desc, self.id, id(self))
+		exa		= Prefix(id=0x40, name= 'exa', 	symbol='E', description='10e18')
 		peta	= Prefix(id=0x41, name= 'peta', symbol='P', description='10e15')
 		tera	= Prefix(id=0x42, name= 'tera', symbol='T', description='10e12')
 		giga	= Prefix(id=0x43, name= 'giga', symbol='G', description='10e9')
@@ -173,6 +180,14 @@ class Units:
 			self.name = name
 			self.symbol = symbol
 			self.description = description
+
+
+		def __str__(self):
+			return self.name
+
+		def __repr__(self):
+			desc = "(unit of %s) " % self.description if self.description is not None else ""
+			return "<UDS Unit : %s[%s] %swith ID=%d at %08x>" % (self.name, self.symbol, desc, self.id, id(self))
 	no_unit 			= Unit(id=0x00, name= 'no unit', 					symbol='-', 		description='-')
 	meter 				= Unit(id=0x01, name= 'meter', 						symbol='m', 		description='length')
 	foor 				= Unit(id=0x02, name= 'foot', 						symbol='ft', 		description='length')
@@ -212,7 +227,7 @@ class Units:
 	Pascal				= Unit(id=0x24, name= 'Pascal', 					symbol='Pa', 		description='pressure')
 	bar					= Unit(id=0x25, name= 'bar', 						symbol='bar', 		description='pressure')
 	atmosphere			= Unit(id=0x26, name= 'atmosphere', 				symbol='atm', 		description='pressure')
-	pound				= Unit(id=0x27, name= 'pound', 						symbol='force', 	description='per square inch psi pressure')
+	psi					= Unit(id=0x27, name= 'pound force per square inch',symbol='psi', 		description='pressure')
 	becqerel			= Unit(id=0x28, name= 'becqerel', 					symbol='Bq', 		description='radioactivity')
 	lumen				= Unit(id=0x29, name= 'lumen', 						symbol='lm', 		description='light flux')
 	lux					= Unit(id=0x2A, name= 'lux', 						symbol='lx', 		description='illuminance')
@@ -234,7 +249,7 @@ class Units:
 	watt_per_meter2		= Unit(id=0x3A, name= 'watt per square meter', 		symbol='W/m2', 		description='intensity')
 	bar_per_sec			= Unit(id=0x3B, name= 'bar per second', 			symbol='bar/s', 	description='pressure change')
 	radians_per_sec		= Unit(id=0x3C, name= 'radians per second', 		symbol='rad/s', 	description='angular velocity')
-	radians				= Unit(id=0x3D, name= 'radians', 					symbol='per', 		description='square second rad/s2 angular acceleration')
+	radians				= Unit(id=0x3D, name= 'radians square second', 		symbol='rad/s2', 	description='angular acceleration')
 	kilogram_per_meter2	= Unit(id=0x3E, name= 'kilogram per square meter', 	symbol='kg/m2', 	description='-')
 	date1 				= Unit(id=0x50, name='Date1', 						symbol='-', 		description = 'Year-Month-Day')
 	date2 				= Unit(id=0x51, name='Date2', 						symbol='-', 		description = 'Day/Month/Year')

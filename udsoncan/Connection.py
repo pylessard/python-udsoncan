@@ -4,6 +4,7 @@ import queue
 import threading
 
 from udsoncan.Request import Request
+from udsoncan.Response import Response
 
 class Connection(object):
 	def __init__(self, interface, rxid, txid, tpsock=None):

@@ -1,4 +1,4 @@
-from udsoncan import DataIdentifier, Routine
+from udsoncan import DataIdentifier, Routine, Units
 from test.UdsTest import UdsTest
 
 class TestDefinitions(UdsTest):
