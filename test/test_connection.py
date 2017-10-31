@@ -3,12 +3,22 @@ from udsoncan import Connection
 from test.stub import StubbedIsoTPSocket
 
 class TestConnection(UdsTest):
-	def test_transmit(self):
-		tpsock1 = StubbedIsoTPSocket(timeout=0.5)
-		tpsock2 = StubbedIsoTPSocket(timeout=0.5)
 
-		conn1 = Connection(interface='vcan0', rxid=0x100, txid=0x101, tpsock=tpsock1)
-		conn2 = Connection(interface='vcan0', rxid=0x101, txid=0x100, tpsock=tpsock2)
+	def setUp(self):
+		self.tpsock1 = StubbedIsoTPSocket(timeout=0.1)
+		self.tpsock2 = StubbedIsoTPSocket(timeout=0.1)
+
+	def test_open(self):
+		conn = Connection(interface='vcan0', rxid=0x001, txid=0x002, tpsock=self.tpsock1)
+		self.assertFalse(conn.is_open())
+		conn.open()
+		self.assertTrue(conn.is_open())
+		conn.close()
+		self.assertFalse(conn.is_open())
+
+	def test_transmit(self):
+		conn1 = Connection(interface='vcan0', rxid=0x100, txid=0x101, tpsock=self.tpsock1)
+		conn2 = Connection(interface='vcan0', rxid=0x101, txid=0x100, tpsock=self.tpsock2)
 		
 		with conn1.open():
 			with conn2.open():
