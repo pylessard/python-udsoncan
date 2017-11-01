@@ -310,6 +310,41 @@ class Client:
 		else:
 			return None
 
+	def request_download(self, memory_location, dfi=None):
+		service = services.RequestDownload(memory_location=memory_location, dfi=dfi)
+		req = Request(service)
+
+		if 'server_address_format' in self.config:
+			memory_location.set_format_if_none(address_format=self.config['server_address_format'])
+
+		if 'server_memorysize_format' in self.config:
+			memory_location.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
+
+		req.data=b""
+		req.data += service.dfi.get_byte()
+		req.data += service.memory_location.ali.get_byte()
+		req.data += service.memory_location.get_address_bytes()
+		req.data += service.memory_location.get_memorysize_bytes()
+
+		response = self.send_request(req)
+
+		if len(response.data) < 1:
+			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
+
+		lfid = int(response.data[0]) >> 4
+
+		if lfid > 8:
+			raise NotImplementedError('This client does not support number bigger than %d bits' % (8*8))
+
+		if len(response.data) < lfid+1:
+			raise InvalidResponseException(response, "Length of data (%d) is too short to contains the number of block of given length (%d)" % (len(response.data), lfid))
+		
+		todecode = bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00')
+		for i in range(1,lfid+1):
+			todecode[-i] = response.data[lfid+1-i]
+
+		return struct.unpack('>q', todecode)[0]
+
 	def send_request(self, request, timeout=-1, validate_response=True):
 		if timeout is not None and timeout < 0:
 			timeout = self.request_timeout

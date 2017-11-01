@@ -10,7 +10,7 @@ class ClientServerTest(ThreadableTest):
 		self.conn = StubbedConnection()
 
 	def clientSetUp(self):
-		self.udsclient = Client(self.conn, request_timeout=0.5)
+		self.udsclient = Client(self.conn, request_timeout=0.3)
 		self.udsclient.open()
 		if hasattr(self, "postClientSetUp"):
 			self.postClientSetUp()

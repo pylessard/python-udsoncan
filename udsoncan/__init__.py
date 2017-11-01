@@ -1,5 +1,6 @@
 import inspect
 import struct
+import math
 
 from udsoncan.exceptions import *
 from udsoncan.Connection import Connection
@@ -116,30 +117,112 @@ class Dtc:
 
 class AddressAndLengthIdentifier:
 	#As defined by ISO-14229:2006, Annex G
-	addr_256B = 1
-	addr_64KB = 2
-	addr_16MB = 3
-	addr_4GB = 4
-	addr_1024GB = 5
+	address_map = {
+		8 	: 1,
+		16 	: 2,
+		24	: 3,
+		32 	: 4,
+		40	: 5
+	}
 
-	msize_256 = 1
-	msize_64KB = 2
-	msize_16MB = 3
-	msize_4GB = 4
+	memsize_map = {
+		8 : 1,
+		16 : 2,
+		24 : 3,
+		32 : 4
+	}
 
+	def __init__(self, memorysize_format, address_format):
+		if not isinstance(memorysize_format, int) or not isinstance(address_format, int):
+			raise ValueError('memorysize_format and address_format must be integers')
 
-	@classmethod
-	def make(cls, size, addr):
-		if not isinstance(size, int) or not isinstance(addr, int):
-			raise ValueError('Size and addr must be integers')
-
-		if size < 1 or size > 4:
-			raise ValueError('Size must ba an integer between 1 and 4')
+		if memorysize_format not in self.memsize_map:
+			raise ValueError('memorysize_format must be an integer selected from : %s' % (self.memsize_map.keys()))
 		
-		if addr < 1 or addr > 5:
-			raise ValueError('Addr must ba an integer between 1 and 5')
+		if address_format not in self.address_map:
+			raise ValueError('address_format must ba an integer selected from : %s ' % (self.address_map.keys()))
 
-		return  (size << 4) | (addr)
+		self.memorysize_format = memorysize_format
+		self.address_format = address_format
+
+	def get_byte(self):
+		return  struct.pack('B', ((self.memsize_map[self.memorysize_format] << 4) | (self.address_map[self.address_format])) & 0xFF)
+
+class MemoryLocation:
+	def __init__(self, address, memorysize, address_format=None, memorysize_format=None):
+		self.address = address
+		self.memorysize = memorysize
+		self.address_format = address_format
+		self.memorysize_format = memorysize_format
+
+		if address_format is None:
+			address_format = self.autosize_address(address)
+				
+		if memorysize_format is None:
+			memorysize_format = self.autosize_memorysize(memorysize)
+
+		self.ali = AddressAndLengthIdentifier(memorysize_format=memorysize_format, address_format=address_format)
+
+	def set_format_if_none(self, address_format=None, memorysize_format=None):
+		previous_address_format = self.address_format
+		previous_memorysize_format = self.memorysize_format
+		try:
+			if address_format is not None:
+				if self.address_format is None:
+					self.address_format = address_format
+
+			if memorysize_format is not None:
+				if address_format is None:
+					self.memorysize_format=memorysize_format
+
+			address_format = self.address_format if self.address_format is not None else self.autosize_address(self.address) 
+			memorysize_format = self.memorysize_format if self.memorysize_format is not None else self.autosize_memorysize(self.memorysize) 
+
+			self.ali = AddressAndLengthIdentifier(memorysize_format=memorysize_format, address_format=address_format)
+		except:
+			self.address_format = previous_address_format
+			self.memorysize_format = previous_memorysize_format
+			raise
+
+	def autosize_address(self, val):
+		fmt = math.ceil(val.bit_length()/8)*8
+		if fmt > 40:
+			raise ValueError("address size must be smaller or equal than 40 bits")
+		return fmt
+
+	def autosize_memorysize(self, val):
+		fmt = math.ceil(val.bit_length()/8)*8
+		if fmt > 32:
+			raise ValueError("memory size must be smaller or equal than 32 bits")
+		return fmt
+
+	def get_address_bytes(self):
+		n = AddressAndLengthIdentifier.address_map[self.ali.address_format]
+
+		data = struct.pack('>q', self.address)
+		return data[-n:]
+
+	def get_memorysize_bytes(self):
+		n = AddressAndLengthIdentifier.memsize_map[self.ali.memorysize_format]
+
+		data = struct.pack('>q', self.memorysize)
+		return data[-n:]
+
+class DataFormatIdentifier:
+	def __init__(self, compression=0, encryption=0):
+		both = (compression, encryption)
+		for param in both:
+			if not isinstance(param, int):
+				raise ValueError('compression and encryption method must be an integer value')
+
+			if param < 0 or param > 0xF:
+				raise ValueError('compression and encryption method must each be an integer between 0 and 0xF')
+
+		self.compression = compression
+		self.encryption=encryption
+
+	def get_byte(self):
+		return struct.pack('B', ((self.compression & 0xF) << 4) | (self.encryption & 0xF))
 
 class Units:
 	#As defined in ISO-14229:2006 Annex C
@@ -188,6 +271,7 @@ class Units:
 		def __repr__(self):
 			desc = "(unit of %s) " % self.description if self.description is not None else ""
 			return "<UDS Unit : %s[%s] %swith ID=%d at %08x>" % (self.name, self.symbol, desc, self.id, id(self))
+	
 	no_unit 			= Unit(id=0x00, name= 'no unit', 					symbol='-', 		description='-')
 	meter 				= Unit(id=0x01, name= 'meter', 						symbol='m', 		description='length')
 	foor 				= Unit(id=0x02, name= 'foot', 						symbol='ft', 		description='length')
@@ -449,3 +533,4 @@ class DataIdentifier:
 			return 'SystemSupplierSpecific'
 		if did >= 0xFF00 and did <= 0xFFFF:
 			return 'ISOSAEReserved'
+
