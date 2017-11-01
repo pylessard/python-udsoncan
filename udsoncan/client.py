@@ -272,7 +272,43 @@ class Client:
 			raise UnexpectedResponseException(response, "Response received from server (ID = 0x%02x) is not for the requested routine ID (0x%02x)" % (received, expected))
 
 		return response
+
+	def read_extended_timing_parameters(self):
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.readExtendedTimingParameterSet)
+
+	def read_active_timing_parameters(self):
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.readCurrentlyActiveTimingParameters)
+
+	def set_timing_parameters(self, params):
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.setTimingParametersToGivenValues, request_record=params)
+	
+	def reset_default_timing_parameters(self):
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.setTimingParametersToDefaultValues)
 		
+	def access_timing_parameter(self, access_type, request_record=None):
+		service = services.AccessTimingParameter(access_type, request_record)
+		request = Request(service)
+
+		if service.request_record is not None:
+			request.data += service.request_record
+
+		response = self.send_request(request)
+
+		if len(response.data) < 1: 	
+			raise InvalidResponseException(response, "Response data must be at least 2 bytes")
+
+		received = int(response.data[0])
+		expected = service.subfunction_id()
+		if received != expected:
+			raise UnexpectedResponseException(response, "Access Type of response (0x%02x) does not match request access type (0x%02x)" % (received, expected))
+
+		if response.data is not None and service.access_type not in [services.AccessTimingParameter.readExtendedTimingParameterSet, services.AccessTimingParameter.readCurrentlyActiveTimingParameters]:
+			self.logger.warning("Server returned data altough none were asked")
+
+		if len(response.data) > 1:
+			return response.data[1:]
+		else:
+			return None
 
 	def send_request(self, request, timeout=-1, validate_response=True):
 		if timeout is not None and timeout < 0:
