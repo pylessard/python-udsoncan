@@ -375,6 +375,15 @@ class Client:
 		else:
 			return None
 
+	def request_transfer_exit(self, data=None, suppress_positive_response=False):
+		service = services.RequestTransferExit(data)
+		request = Request(service, suppress_positive_response=suppress_positive_response)
+		request.data = service.data
+
+		response = self.send_request(request)
+
+		return response.data
+
 	def send_request(self, request, timeout=-1, validate_response=True):
 		if timeout is not None and timeout < 0:
 			timeout = self.request_timeout
