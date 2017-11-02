@@ -134,10 +134,13 @@ class Response:
 
 		if not isinstance(self.code, int):
 			raise ValueError("Cannot make payload from response object. Given response code is not a valid integer")
-
-		payload = struct.pack("B", self.service.response_id())
+		
+		payload  = b''
 		if not self.positive:
 			payload += b'\x7F'
+
+		payload += struct.pack("B", self.service.response_id())
+		
 		if not self.positive:
 			payload += struct.pack('B', self.code)
 
@@ -151,44 +154,56 @@ class Response:
 	def from_payload(cls, payload):
 		from udsoncan import services
 		response = cls()
-		if len(payload) >= 1:
+		if len(payload) < 1:
+			response.valid = False
+			response.invalid_reason = "Payload is empty"
+			return response
+
+
+		if payload[0] != 0x7F:	# Positive
 			response.service = services.cls_from_response_id(payload[0])
 			if response.service is None:
 				response.valid = False
 				response.invalid_reason = "Payload first byte is not a know service."
+				return response
 
-			elif len(payload) >= 2 :
-				if payload[1] != 0x7F:
-					data_start=1
-					response.valid = True
-					response.code = Response.Code.PositiveResponse
-					response.code_name = Response.Code.get_name(Response.Code.PositiveResponse)
-					response.positive = True
-				else:
-					data_start=3
-					response.positive = False
-					if len(payload) >= 3:
-						response.code = payload[2]
-						response.code_name = Response.Code.get_name(response.code)
-						response.valid = True
-					else:
-						response.valid = False
-						response.invalid_reason=  "Incomplete invalid response code (7Fxx)"
-				
-				if len(payload) > data_start:
-					response.data = payload[data_start:]
-			else:
-				if response.service.has_response_data():
-					response.valid = False
-					response.invalid_reason = "Payload must be at least 2 bytes long (service and response)"
-				else:
-					response.valid = True
-					response.code = Response.Code.PositiveResponse
-					response.code_name = Response.Code.get_name(Response.Code.PositiveResponse)
-					response.positive = True
-		else:
-			response.valid = False
-			response.invalid_reason = "Payload must be at least 2 bytes long (service and response)"
+			data_start=1
+			response.positive = True
+			if len(payload) < 2 and response.service.has_response_data() :
+				response.valid = False
+				response.positive = False
+				response.invalid_reason = "Payload must be at least 2 bytes long (service and response)"
+				return response
+
+			response.code = Response.Code.PositiveResponse
+			response.code_name = Response.Code.get_name(Response.Code.PositiveResponse)
+
+		else:	# Negative response
+			response.positive = False
+			data_start=3
+			
+			if len(payload) < 2 :
+				response.valid = False
+				response.invalid_reason=  "Incomplete invalid response service (7Fxx)"	
+				return response
+			response.service = services.cls_from_response_id(payload[1])
+			
+			if response.service is None:
+				response.valid = False
+				response.invalid_reason = "Payload first byte is not a know service."
+				return response
+			
+			if len(payload) < 3:
+				response.valid=False
+				response.invalid_reason=  "Response code missing"
+				return response
+
+			response.code = int(payload[2])
+			response.code_name = Response.Code.get_name(response.code)
+
+		response.valid = True
+		if len(payload) > data_start:
+			response.data = payload[data_start:]
 		return response
 
 	def __repr__(self):

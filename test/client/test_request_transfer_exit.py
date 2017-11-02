@@ -31,7 +31,7 @@ class TestRequestTransferExit(ClientServerTest):
 #========================================
 	def test_request_transfer_exit_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.3)
-		self.conn.fromuserqueue.put(b"\x77\x7F\x24") # reset sequence error
+		self.conn.fromuserqueue.put(b"\x7F\x77\x24") # reset sequence error
 
 	def _test_request_transfer_exit_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:

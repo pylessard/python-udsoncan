@@ -45,14 +45,15 @@ class TestResponse(UdsTest):
 		self.assertFalse(response.positive)
 		self.assertTrue(response.valid)
 		payload = response.get_payload()
-		self.assertEqual(b"\x53\x7F\x10", payload)	# Original ID + 0x40. 7F indicate negative
+		self.assertEqual(b"\x7F\x53\x10", payload)	# Original ID + 0x40. 7F indicate negative
 
 	def test_make_payload_custom_data_negative(self):
 		response = Response(DummyServiceNormal(), code = 0x10)
 		self.assertTrue(response.valid)
+		self.assertFalse(response.positive)
 		response.data = b"\x12\x34\x56\x78"
 		payload = response.get_payload()
-		self.assertEqual(b"\x53\x7F\x10\x12\x34\x56\x78", payload)
+		self.assertEqual(b"\x7F\x53\x10\x12\x34\x56\x78", payload)
 
 	def test_from_payload_basic_positive(self):
 		payload=b'\x7E\x00'	# 0x7e = TesterPresent
@@ -63,7 +64,7 @@ class TestResponse(UdsTest):
 		self.assertEqual(response.code, 0)
 	
 	def test_from_payload_basic_negative(self):
-		payload=b'\x7E\x7F\x10'	# 0x7e = TesterPresent, 0x10 = General Reject
+		payload=b'\x7F\x7E\x10'	# 0x7e = TesterPresent, 0x10 = General Reject
 		response = Response.from_payload(payload)
 		self.assertTrue(response.valid)
 		self.assertFalse(response.positive)
@@ -79,7 +80,7 @@ class TestResponse(UdsTest):
 		self.assertEqual(response.data, b'\x01\x12\x34\x56\x78')
 
 	def test_from_payload_custom_data_negative(self):
-		payload=b'\x7E\x7F\x10\x12\x34\x56\x78'	# 0x3E = TesterPresent, 0x10 = General Reject
+		payload=b'\x7F\x7E\x10\x12\x34\x56\x78'	# 0x3E = TesterPresent, 0x10 = General Reject
 		response = Response.from_payload(payload)
 		self.assertTrue(response.valid)
 		self.assertEqual(response.service.response_id(), 0x7E)
