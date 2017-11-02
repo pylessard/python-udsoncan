@@ -82,7 +82,8 @@ class Client:
 			raise NotImplementedError("Client configuration does not provide a security algorithm")
 		
 		seed = self.request_seed(level)
-		key = self.config['security_algo'].__call__(seed)
+		params = self.config['security_algo_params'] if 'security_algo_params' in self.config else None
+		key = self.config['security_algo'].__call__(seed, params)
 		return self.send_key(level, key)
 
 	def tester_present(self, suppress_positive_response=False):

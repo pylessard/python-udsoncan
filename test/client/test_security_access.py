@@ -162,10 +162,10 @@ class TestUnlockSecurityService(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
-	def dummy_algo(self, seed):
+	def dummy_algo(self, seed, params=None):
 		key = bytearray(seed)
 		for i in range(len(key)):
-			key[i] ^= 0xFF	
+			key[i] ^= params
 		return key
 
 	def test_unlock_success(self):
@@ -179,6 +179,7 @@ class TestUnlockSecurityService(ClientServerTest):
 
 	def _test_unlock_success(self):
 		self.udsclient.config['security_algo'] = self.dummy_algo
+		self.udsclient.config['security_algo_params'] = 0xFF
 		success = self.udsclient.unlock_security_access(0x07)	
 		self.assertTrue(success)
 
