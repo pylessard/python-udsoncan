@@ -311,7 +311,16 @@ class Client:
 			return None
 
 	def request_download(self, memory_location, dfi=None):
-		service = services.RequestDownload(memory_location=memory_location, dfi=dfi)
+		return self.request_upload_download(services.RequestDownload, memory_location, dfi)
+
+	def request_upload(self, memory_location, dfi=None):
+		return self.request_upload_download(services.RequestUpload, memory_location, dfi)
+
+	def request_upload_download(self, service_cls, memory_location, dfi=None):
+		if service_cls not in [services.RequestDownload, services.RequestUpload]:
+			raise ValueError('services must eitehr be RequestDownload or RequestUpload')
+
+		service = service_cls(memory_location=memory_location, dfi=dfi)
 		req = Request(service)
 
 		if 'server_address_format' in self.config:

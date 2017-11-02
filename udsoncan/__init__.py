@@ -162,7 +162,7 @@ class MemoryLocation:
 			memorysize_format = self.autosize_memorysize(memorysize)
 
 		self.ali = AddressAndLengthIdentifier(memorysize_format=memorysize_format, address_format=address_format)
-
+		
 	def set_format_if_none(self, address_format=None, memorysize_format=None):
 		previous_address_format = self.address_format
 		previous_memorysize_format = self.memorysize_format

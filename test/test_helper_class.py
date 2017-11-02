@@ -70,7 +70,7 @@ class TestMemoryLocation(UdsTest):
 		self.assertEqual(memloc.get_address_bytes(), b'\x01\x23\x45\x67')
 		self.assertEqual(memloc.get_memorysize_bytes(), b'\x78\x9a\xbb')
 
-	def test_memloc_ovverride(self):
+	def test_memloc_override(self):
 		memloc = MemoryLocation(address=0x1234, memorysize=0x78)
 		self.assertEqual(memloc.get_address_bytes(), b'\x12\x34')
 		self.assertEqual(memloc.get_memorysize_bytes(), b'\x78')
