@@ -186,11 +186,11 @@ class Response:
 				response.valid = False
 				response.invalid_reason=  "Incomplete invalid response service (7Fxx)"	
 				return response
-			response.service = services.cls_from_response_id(payload[1])
+			response.service = services.cls_from_request_id(payload[1])	#Request id, not response id
 			
 			if response.service is None:
 				response.valid = False
-				response.invalid_reason = "Payload first byte is not a know service."
+				response.invalid_reason = "Payload second byte is not a know service."
 				return response
 			
 			if len(payload) < 3:
