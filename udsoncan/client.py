@@ -221,9 +221,9 @@ class Client:
 
 		return True
 
-	def clear_dtc(self, group=0xFFFFFF):
+	def clear_dtc(self, group=0xFFFFFF, suppress_positive_response=False):
 		service = services.ClearDiagnosticInformation(group)
-		request = Request(service)
+		request = Request(service, suppress_positive_response=suppress_positive_response)
 		group = service.group  # Service object can filter that value
 
 		hb = (group >> 16) & 0xFF
@@ -353,6 +353,27 @@ class Client:
 			todecode[-i] = response.data[lfid+1-i]
 
 		return struct.unpack('>q', todecode)[0]
+
+	def transfer_data(self, block_sequence_counter, data=None):
+		service = services.TransferData(block_sequence_counter, data)
+		request = Request(service)
+
+		request.data = service.data
+
+		response = self.send_request(request)
+
+		if len(response.data) < 1:
+			raise InvalidResponseException(response, "Response data must be at least 1 bytes") # Should be catched by response decoder first
+
+		received = int(response.data[0])
+		expected = service.subfunction_id()
+		if received != expected:
+			raise UnexpectedResponseException(response, "Block sequence number of response (0x%02x) does not match request block sequence number (0x%02x)" % (received, expected))
+
+		if len(response.data) > 1:
+			return response.data[1:]
+		else:
+			return None
 
 	def send_request(self, request, timeout=-1, validate_response=True):
 		if timeout is not None and timeout < 0:
