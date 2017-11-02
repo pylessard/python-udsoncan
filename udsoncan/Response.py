@@ -136,12 +136,11 @@ class Response:
 			raise ValueError("Cannot make payload from response object. Given response code is not a valid integer")
 		
 		payload  = b''
-		if not self.positive:
+		if self.positive:
+			payload += struct.pack("B", self.service.response_id())
+		else:
 			payload += b'\x7F'
-
-		payload += struct.pack("B", self.service.response_id())
-		
-		if not self.positive:
+			payload += struct.pack("B", self.service.request_id())
 			payload += struct.pack('B', self.code)
 
 		if self.data is not None and self.service.has_response_data():
@@ -164,7 +163,7 @@ class Response:
 			response.service = services.cls_from_response_id(payload[0])
 			if response.service is None:
 				response.valid = False
-				response.invalid_reason = "Payload first byte is not a know service."
+				response.invalid_reason = "Payload first byte is not a know service response ID."
 				return response
 
 			data_start=1
@@ -190,7 +189,7 @@ class Response:
 			
 			if response.service is None:
 				response.valid = False
-				response.invalid_reason = "Payload second byte is not a know service."
+				response.invalid_reason = "Payload second byte is not a known service request ID."
 				return response
 			
 			if len(payload) < 3:

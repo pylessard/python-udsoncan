@@ -21,7 +21,7 @@ class TestTesterPresent(ClientServerTest):
 	def test_tester_present_denied(self):
 		request = self.conn.touserqueue.get(timeout=1)
 		self.assertEqual(request, b"\x3E\x00")
-		self.conn.fromuserqueue.put(b"\x7F\x7E\x13") # IMLOIF
+		self.conn.fromuserqueue.put(b"\x7F\x3E\x13") # IMLOIF
 
 	def _test_tester_present_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:

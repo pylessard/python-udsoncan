@@ -31,7 +31,7 @@ class TestTransferData(ClientServerTest):
 #========================================
 	def test_transfer_data_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.3)
-		self.conn.fromuserqueue.put(b"\x7F\x76\x73") # wrong block sequence number
+		self.conn.fromuserqueue.put(b"\x7F\x36\x73") # wrong block sequence number
 
 	def _test_transfer_data_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:

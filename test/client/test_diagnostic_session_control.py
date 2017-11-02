@@ -22,7 +22,7 @@ class TestDiagnosticSessionControl(ClientServerTest):
 	def test_dsc_denied(self):
 		request = self.conn.touserqueue.get(timeout=1)
 		self.assertEqual(request, b"\x10\x08")
-		self.conn.fromuserqueue.put(b"\x7F\x50\x12") # Subfunction not supported
+		self.conn.fromuserqueue.put(b"\x7F\x10\x12") # Subfunction not supported
 
 	def _test_dsc_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:
