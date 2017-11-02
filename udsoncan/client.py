@@ -116,6 +116,11 @@ class Client:
 
 		return didconfig
 
+	def read_data_by_identifier_first(self, did):
+		values = self.read_data_by_identifier(did, output_fmt='list')
+		if len(values) > 0:
+			return values[0]
+
 	def read_data_by_identifier(self, dids, output_fmt='dict'):
 		service = services.ReadDataByIdentifier(dids)
 		self.logger.info("Reading data identifier %s", dids)
