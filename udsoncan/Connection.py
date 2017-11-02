@@ -6,7 +6,7 @@ import threading
 from udsoncan.Request import Request
 from udsoncan.Response import Response
 
-class Connection(object):
+class IsoTPConnection(object):
 	def __init__(self, interface, rxid, txid, tpsock=None):
 
 		self.interface=interface
