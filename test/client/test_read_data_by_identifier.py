@@ -48,8 +48,70 @@ class TestReadDataByIdentifier(ClientServerTest):
 		values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
 		self.assertEqual(values[1], (0x1234,))		
 		self.assertEqual(values[2], (0x7856,))		
-		self.assertEqual(values[3], 0x10)		
+		self.assertEqual(values[3], 0x10)	
 
+#========================================
+	def test_rdbi_multiple_zero_padding1_success(self):
+		request = self.conn.touserqueue.get(timeout=1)
+		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00")				# Positive response
+		request = self.conn.touserqueue.get(timeout=1)
+		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00")			# Positive response
+		request = self.conn.touserqueue.get(timeout=1)
+		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00")		# Positive response
+		request = self.conn.touserqueue.get(timeout=1)
+		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00\x00")	# Positive response
+
+	def _test_rdbi_multiple_zero_padding1_success(self):
+		self.udsclient.config['tolerate_zero_padding'] = True
+		values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		self.assertEqual(values[1], (0x1234,))		
+		self.assertEqual(values[2], (0x7856,))		
+		self.assertEqual(values[3], 0x10)
+		self.assertFalse(0 in values)		
+
+		values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		self.assertEqual(values[1], (0x1234,))		
+		self.assertEqual(values[2], (0x7856,))		
+		self.assertEqual(values[3], 0x10)		
+		self.assertFalse(0 in values)		
+
+		values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		self.assertEqual(values[1], (0x1234,))		
+		self.assertEqual(values[2], (0x7856,))		
+		self.assertEqual(values[3], 0x10)		
+		self.assertFalse(0 in values)		
+
+		values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		self.assertEqual(values[1], (0x1234,))		
+		self.assertEqual(values[2], (0x7856,))		
+		self.assertEqual(values[3], 0x10)	
+		self.assertFalse(0 in values)		
+
+#========================================
+	def test_rdbi_multiple_zero_padding_not_tolerated(self):
+		request = self.conn.touserqueue.get(timeout=1)
+		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00")				# Positive response
+		request = self.conn.touserqueue.get(timeout=1)
+		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00")			# Positive response
+		request = self.conn.touserqueue.get(timeout=1)
+		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00")		# Positive response
+		request = self.conn.touserqueue.get(timeout=1)
+		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00\x00")	# Positive response
+
+	def _test_rdbi_multiple_zero_padding_not_tolerated(self):
+		self.udsclient.config['tolerate_zero_padding'] = False
+		with self.assertRaises(UnexpectedResponseException):
+			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+
+		with self.assertRaises(UnexpectedResponseException):
+			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])	
+
+		with self.assertRaises(UnexpectedResponseException):
+			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+
+		with self.assertRaises(UnexpectedResponseException):
+			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+			
 #========================================
 	def test_rdbi_output_format(self):
 		request = self.conn.touserqueue.get(timeout=1)

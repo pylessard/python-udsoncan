@@ -31,7 +31,7 @@ class TestClearDtc(ClientServerTest):
 #========================================
 	def test_clear_dtc_denied(self):
 		request = self.conn.touserqueue.get(timeout=1)
-		self.conn.fromuserqueue.put(b"\x54\x7F\x31") #Request Out Of Range
+		self.conn.fromuserqueue.put(b"\x7F\x14\x31") #Request Out Of Range
 
 	def _test_clear_dtc_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:

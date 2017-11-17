@@ -1,15 +1,15 @@
 from test.UdsTest import UdsTest
-from udsoncan import Connection
+from udsoncan.Connection import IsoTPConnection
 from test.stub import StubbedIsoTPSocket
 
-class TestConnection(UdsTest):
+class TestIsoTPConnection(UdsTest):
 
 	def setUp(self):
 		self.tpsock1 = StubbedIsoTPSocket(timeout=0.1)
 		self.tpsock2 = StubbedIsoTPSocket(timeout=0.1)
 
 	def test_open(self):
-		conn = Connection(interface='vcan0', rxid=0x001, txid=0x002, tpsock=self.tpsock1)
+		conn = IsoTPConnection(interface='vcan0', rxid=0x001, txid=0x002, tpsock=self.tpsock1)
 		self.assertFalse(conn.is_open())
 		conn.open()
 		self.assertTrue(conn.is_open())
@@ -17,8 +17,8 @@ class TestConnection(UdsTest):
 		self.assertFalse(conn.is_open())
 
 	def test_transmit(self):
-		conn1 = Connection(interface='vcan0', rxid=0x100, txid=0x101, tpsock=self.tpsock1)
-		conn2 = Connection(interface='vcan0', rxid=0x101, txid=0x100, tpsock=self.tpsock2)
+		conn1 = IsoTPConnection(interface='vcan0', rxid=0x100, txid=0x101, tpsock=self.tpsock1)
+		conn2 = IsoTPConnection(interface='vcan0', rxid=0x101, txid=0x100, tpsock=self.tpsock2)
 		
 		with conn1.open():
 			with conn2.open():

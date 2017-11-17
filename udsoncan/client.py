@@ -82,7 +82,8 @@ class Client:
 			raise NotImplementedError("Client configuration does not provide a security algorithm")
 		
 		seed = self.request_seed(level)
-		key = self.config['security_algo'].__call__(seed)
+		params = self.config['security_algo_params'] if 'security_algo_params' in self.config else None
+		key = self.config['security_algo'].__call__(seed, params)
 		return self.send_key(level, key)
 
 	def tester_present(self, suppress_positive_response=False):
@@ -111,9 +112,14 @@ class Client:
 
 		for did in didlist:
 			if did not in didconfig:
-				raise LookupError('Actual data identifier configuration contains no definition for data identifier %d' % did)
+				raise LookupError('Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
 
 		return didconfig
+
+	def read_data_by_identifier_first(self, did):
+		values = self.read_data_by_identifier(did, output_fmt='list')
+		if len(values) > 0:
+			return values[0]
 
 	def read_data_by_identifier(self, dids, output_fmt='dict'):
 		service = services.ReadDataByIdentifier(dids)
@@ -137,27 +143,33 @@ class Client:
 		received = {}
 		for did in didlist:
 			received[did] = False
-
+		
+		tolerate_zero_padding = self.config['tolerate_zero_padding'] if 'tolerate_zero_padding' in self.config else True
 		while True:
 			if len(response.data) <= offset:
 				break
 
 			if len(response.data) <= offset +1:
+				if tolerate_zero_padding and response.data[-1] == 0:
+					break
 				raise UnexpectedResponseException(response, "Response given by server is incomplete.")
 
 			did = struct.unpack('>H', response.data[offset:offset+2])[0]
-			
+			if did == 0 and did not in didconfig and tolerate_zero_padding:
+				if response.data[offset:] == b'\x00' * (len(response.data) - offset):
+					break
+
 			if did not in didlist:
-				raise UnexpectedResponseException(response, "Server returned a value for data identifier 0x%x which was not requested" % did)
+				raise UnexpectedResponseException(response, "Server returned a value for data identifier 0x%04x which was not requested" % did)
 
 			if did not in didconfig:
-				raise LookupError('Actual data identifier configuration contains no definition for data identifier 0x%x' % did)
+				raise LookupError('Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
 			
 			codec = DidCodec.from_config(didconfig[did])
 			offset+=2
 
 			if len(response.data) < offset+len(codec):
-				raise UnexpectedResponseException(response, "Value fo data identifier 0x%x was incomplete according to definition in configuration" % did)
+				raise UnexpectedResponseException(response, "Value fo data identifier 0x%04x was incomplete according to definition in configuration" % did)
 			subpayload = response.data[offset:offset+len(codec)]
 			offset += len(codec)
 			val = codec.decode(subpayload)

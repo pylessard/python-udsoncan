@@ -21,7 +21,7 @@ class TestRequestSeed(ClientServerTest):
 	def test_request_seed_denied(self):
 		request = self.conn.touserqueue.get(timeout=1)
 		self.assertEqual(request, b"\x27\x05")
-		self.conn.fromuserqueue.put(b"\x67\x7F\x22")	# Conditions Not Correct
+		self.conn.fromuserqueue.put(b"\x7F\x27\x22")	# Conditions Not Correct
 
 	def _test_request_seed_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:
@@ -103,7 +103,7 @@ class TestSendKey(ClientServerTest):
 	def test_send_key_denied(self):
 		request = self.conn.touserqueue.get(timeout=1)
 		self.assertEqual(request, b"\x27\x06\x11\x22\x33\x44")
-		self.conn.fromuserqueue.put(b"\x67\x7F\x35")	# InvalidKey
+		self.conn.fromuserqueue.put(b"\x7F\x27\x35")	# InvalidKey
 
 	def _test_send_key_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:
@@ -162,10 +162,10 @@ class TestUnlockSecurityService(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
-	def dummy_algo(self, seed):
+	def dummy_algo(self, seed, params=None):
 		key = bytearray(seed)
 		for i in range(len(key)):
-			key[i] ^= 0xFF	
+			key[i] ^= params
 		return key
 
 	def test_unlock_success(self):
@@ -179,6 +179,7 @@ class TestUnlockSecurityService(ClientServerTest):
 
 	def _test_unlock_success(self):
 		self.udsclient.config['security_algo'] = self.dummy_algo
+		self.udsclient.config['security_algo_params'] = 0xFF
 		success = self.udsclient.unlock_security_access(0x07)	
 		self.assertTrue(success)
 

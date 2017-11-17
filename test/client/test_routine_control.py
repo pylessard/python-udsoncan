@@ -45,7 +45,7 @@ class TestRoutineControl(ClientServerTest):
 #========================================
 	def test_routine_control_denied(self):
 		request = self.conn.touserqueue.get(timeout=1)
-		self.conn.fromuserqueue.put(b"\x71\x7F\x72") #General Programming FAilure
+		self.conn.fromuserqueue.put(b"\x7F\x31\x72") #General Programming FAilure
 
 	def _test_routine_control_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:

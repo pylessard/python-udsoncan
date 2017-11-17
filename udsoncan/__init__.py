@@ -3,7 +3,6 @@ import struct
 import math
 
 from udsoncan.exceptions import *
-from udsoncan.Connection import Connection
 from udsoncan.Request import Request
 from udsoncan.Response import Response
 
