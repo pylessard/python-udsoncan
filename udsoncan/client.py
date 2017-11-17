@@ -295,7 +295,7 @@ class Client:
 		response = self.send_request(request)
 
 		if len(response.data) < 1: 	
-			raise InvalidResponseException(response, "Response data must be at least 2 bytes")
+			raise InvalidResponseException(response, "Response data must be at least 1 byte")
 
 		received = int(response.data[0])
 		expected = service.subfunction_id()
@@ -309,6 +309,24 @@ class Client:
 			return response.data[1:]
 		else:
 			return None
+
+	def communication_control(self, control_type, communication_type):
+		service = services.CommunicationControl(control_type, communication_type)
+		req = Request(service)
+		req.data = service.communication_type.get_byte()
+
+		response = self.send_request(req)
+
+		if len(response.data) < 1: 	
+			raise InvalidResponseException(response, "Response data must be at least 1 byte")
+
+		received = int(response.data[0])
+		expected = service.subfunction_id()
+
+		if received != expected:
+			raise UnexpectedResponseException(response, "Control type of response (0x%02x) does not match request control type (0x%02x)" % (received, expected))
+
+		return response
 
 	def request_download(self, memory_location, dfi=None):
 		return self.request_upload_download(services.RequestDownload, memory_location, dfi)

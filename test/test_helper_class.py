@@ -1,4 +1,4 @@
-from udsoncan import DataFormatIdentifier, AddressAndLengthIdentifier,MemoryLocation
+from udsoncan import DataFormatIdentifier, AddressAndLengthIdentifier,MemoryLocation, CommunicationType
 from test.UdsTest import UdsTest
 
 class TestAddressAndLengthIdentifier(UdsTest):
@@ -80,3 +80,37 @@ class TestMemoryLocation(UdsTest):
 		memloc.set_format_if_none(memorysize_format=24)
 		self.assertEqual(memloc.get_address_bytes(), b'\x00\x00\x12\x34')
 		self.assertEqual(memloc.get_memorysize_bytes(), b'\x00\x00\x78')
+
+class TestCommunicationType(UdsTest):
+	def test_make(self):
+		comtype = CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True, network_management_msg=False)
+		self.assertEqual(comtype.get_byte(), b'\x01')
+
+		comtype = CommunicationType(subnet=CommunicationType.Subnet.network, normal_msg=True, network_management_msg=False)
+		self.assertEqual(comtype.get_byte(), b'\xF1')
+
+		comtype = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
+		self.assertEqual(comtype.get_byte(), b'\x33')
+
+	def test_from_byte(self):
+		comtype = CommunicationType.from_byte(b'\x01')
+		self.assertEqual(comtype.get_byte(), b'\x01')
+
+		comtype = CommunicationType.from_byte(b'\xF1')
+		self.assertEqual(comtype.get_byte(), b'\xF1')
+
+		comtype = CommunicationType.from_byte(b'\x33')
+		self.assertEqual(comtype.get_byte(), b'\x33')
+
+	def test_bad_values(self):
+		with self.assertRaises(ValueError):
+			CommunicationType(subnet=0, normal_msg=False, network_management_msg=False)
+
+		with self.assertRaises(ValueError):
+			CommunicationType(subnet='x', normal_msg=True, network_management_msg=False)
+
+		with self.assertRaises(ValueError):
+			CommunicationType(subnet=0, normal_msg=1, network_management_msg=True)
+
+		with self.assertRaises(ValueError):
+			CommunicationType(subnet=0, normal_msg=True, network_management_msg=1)

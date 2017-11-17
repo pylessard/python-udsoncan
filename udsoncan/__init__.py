@@ -534,3 +534,52 @@ class DataIdentifier:
 		if did >= 0xFF00 and did <= 0xFFFF:
 			return 'ISOSAEReserved'
 
+class CommunicationType:
+# As defined by ISO-14229:2006 Annex B, table B.1
+	class Subnet:
+		node = 0
+		network = 0xF
+
+		def __init__(self, subnet):
+			if not isinstance(subnet, int):
+				raise ValueError('subnet must be an integer value')
+
+			if subnet < 0 or subnet > 0xF:
+				raise ValueError('subnet must be an integer between 0 and 0xF')
+
+			self.subnet=subnet
+
+		def value(self):
+			return self.subnet
+
+	def __init__(self, subnet, normal_msg=False, network_management_msg=False):
+
+		if not isinstance(subnet, self.Subnet):
+			subnet = self.Subnet(subnet)
+
+		if not isinstance(normal_msg, bool) or not isinstance(network_management_msg, bool):
+			raise ValueError('message type (normal_msg, network_management_msg) must be valid boolean values')
+
+		if normal_msg == False and network_management_msg == False:
+			raise ValueError('At least one message type must be controlled')
+
+		self.subnet = subnet
+		self.message_type = 0
+		if normal_msg:
+			self.message_type |= 1
+		if network_management_msg:
+			self.message_type |= 2
+
+	def get_byte(self):
+		byte = (self.message_type & 0x3) | ((self.subnet.value() & 0xF) << 4)
+		return struct.pack('B', byte)
+
+	@classmethod
+	def from_byte(cls, byte):
+		if isinstance(byte, bytes):
+			val = struct.unpack('B', byte)[0]
+		val = int(val)
+		subnet = (val & 0xF0) >> 4
+		normal_msg = True if val & 1 > 0 else False
+		network_management_msg = True if val & 2 > 0 else False
+		return cls(subnet,normal_msg,network_management_msg)
