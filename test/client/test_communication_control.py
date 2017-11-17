@@ -35,7 +35,7 @@ class TestCommunicationControl(ClientServerTest):
 #========================================
 	def test_comcontrol_negative_response(self):
 		request = self.conn.touserqueue.get(timeout=0.5)
-		self.conn.fromuserqueue.put(b"\x68\x7F\x31") 	# Request Out Of Range
+		self.conn.fromuserqueue.put(b"\x7F\x28\x31") 	# Request Out Of Range
 
 	def _test_comcontrol_negative_response(self):
 		with self.assertRaises(NegativeResponseException) as handle:
