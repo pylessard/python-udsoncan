@@ -1,5 +1,6 @@
-from udsoncan import DataFormatIdentifier, AddressAndLengthIdentifier,MemoryLocation, CommunicationType
+from udsoncan import DataFormatIdentifier, AddressAndLengthIdentifier,MemoryLocation, CommunicationType, Baudrate
 from test.UdsTest import UdsTest
+import struct
 
 class TestAddressAndLengthIdentifier(UdsTest):
 	def test_ali_1(self):
@@ -10,7 +11,7 @@ class TestAddressAndLengthIdentifier(UdsTest):
 		ali = AddressAndLengthIdentifier(memorysize_format=16, address_format=8)
 		self.assertEqual(ali.get_byte(),b'\x21')
 
-	def test_ali_oob_values(self):
+	def test_ali_oob_values(self):	# Out Of Bounds Value
 		with self.assertRaises(ValueError):
 			AddressAndLengthIdentifier(memorysize_format=1, address_format=1)
 		
@@ -102,7 +103,7 @@ class TestCommunicationType(UdsTest):
 		comtype = CommunicationType.from_byte(b'\x33')
 		self.assertEqual(comtype.get_byte(), b'\x33')
 
-	def test_bad_values(self):
+	def test_oob_values(self):
 		with self.assertRaises(ValueError):
 			CommunicationType(subnet=0, normal_msg=False, network_management_msg=False)
 
@@ -114,3 +115,68 @@ class TestCommunicationType(UdsTest):
 
 		with self.assertRaises(ValueError):
 			CommunicationType(subnet=0, normal_msg=True, network_management_msg=1)
+
+class TestBaudrate(UdsTest):
+	def test_create_fixed(self):
+		br = Baudrate(115200, baudtype=Baudrate.Type.Fixed)
+		self.assertEqual(br.get_bytes(), b'\x05')
+
+		with self.assertRaises(ValueError):
+			br = Baudrate(123456, baudtype=Baudrate.Type.Fixed)
+
+	def test_create_specific(self):
+		br = Baudrate(115200, baudtype=Baudrate.Type.Specific)
+		self.assertEqual(br.get_bytes(), b'\x01\xC2\x00')
+
+		with self.assertRaises(ValueError):
+			br = Baudrate(0x1000000, baudtype=Baudrate.Type.Specific)
+
+	def test_create_id(self):
+		for i in range (0xFF):
+			br = Baudrate(i, baudtype=Baudrate.Type.Identifier)
+			self.assertEqual(br.get_bytes(), struct.pack('B', i))
+
+		with self.assertRaises(ValueError):
+			br = Baudrate(0x100, baudtype=Baudrate.Type.Identifier)
+
+	def test_effective_baudrate(self):
+		br = Baudrate(0x12, Baudrate.Type.Identifier) # 500kbits
+		self.assertEqual(br.effective_baudrate(), 500000)
+
+	def test_change_type(self):
+		br = Baudrate(115200, baudtype=Baudrate.Type.Fixed)
+		br2 = br.make_new_type(Baudrate.Type.Specific)
+		self.assertEqual(br2.get_bytes(), b'\x01\xC2\x00')
+
+		br = Baudrate(115200, baudtype=Baudrate.Type.Specific)
+		br2 = br.make_new_type(Baudrate.Type.Fixed)
+		self.assertEqual(br2.get_bytes(), b'\x05')
+
+	def test_create_auto(self):
+		# Direct ID
+		br = Baudrate(1)
+		self.assertEqual(br.get_bytes(), b'\x01')
+		
+		br = Baudrate(0xFF)
+		self.assertEqual(br.get_bytes(), b'\xFF')
+
+		# Fixed baudrate
+		br = Baudrate(115200)
+		self.assertEqual(br.get_bytes(), b'\x05')
+
+		br = Baudrate(500000)
+		self.assertEqual(br.get_bytes(), b'\x12')
+		
+		#Specific Baudrate:
+		br = Baudrate(0x123456)
+		self.assertEqual(br.get_bytes(), b'\x12\x34\x56')
+
+	def test_oob_values(self):
+		with self.assertRaises(ValueError):
+			br = Baudrate(-1)
+
+		with self.assertRaises(ValueError):
+			br = Baudrate(1, baudtype=-1)
+
+		with self.assertRaises(ValueError):
+			br = Baudrate(1, baudtype=0xFF)

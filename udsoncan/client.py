@@ -414,6 +414,24 @@ class Client:
 
 		return response.data
 
+	def link_control(self, control_type, baudrate=None):
+		service = services.LinkControl(control_type, baudrate)
+		request = Request(service)
+		if service.baudrate is not None:
+			request.data = service.baudrate.get_bytes()
+
+		response = self.send_request(request)
+
+		if len(response.data) < 1:
+			raise InvalidResponseException(response, "Response data must be at least 1 bytes") # Should be catched by response decoder first
+
+		received = int(response.data[0])
+		expected = service.subfunction_id()
+		if received != expected:
+			raise UnexpectedResponseException(response, "Control type of response (0x%02x) does not match request control type (0x%02x)" % (received, expected))
+
+		return response
+
 	def send_request(self, request, timeout=-1, validate_response=True):
 		if timeout is not None and timeout < 0:
 			timeout = self.request_timeout
@@ -433,7 +451,7 @@ class Client:
 					raise InvalidResponseException(response)
 					
 			if response.service.response_id() != request.service.response_id():
-				msg = "Response gotten from server has a service ID different than the one of the request. Received=%s, Expected=%s" % (response.service.response_id() , request.service.response_id() )
+				msg = "Response gotten from server has a service ID different than the one of the request. Received=0x%02x, Expected=0x%02x" % (response.service.response_id() , request.service.response_id() )
 				self.logger.error(msg)
 				raise UnexpectedResponseException(response, details=msg)
 			

@@ -582,3 +582,87 @@ class CommunicationType:
 		normal_msg = True if val & 1 > 0 else False
 		network_management_msg = True if val & 2 > 0 else False
 		return cls(subnet,normal_msg,network_management_msg)
+
+class Baudrate:
+	baudrate_map = {
+	9600 : 0x01,
+	19200 : 0x02,
+	38400 : 0x03,
+	57600 : 0x04,
+	115200 : 0x05,
+	125000 : 0x10,
+	250000 : 0x11,
+	500000 : 0x12,
+	1000000 : 0x13,
+	}
+
+	class Type:
+		Fixed = 0		# When baudrate is predefined value from standard
+		Specific = 1	# When using custom baudrate
+		Identifier = 2  # Baudrate implied by baudrate ID
+		Auto = 3		# Let the class decide the type
+
+	def __init__(self, baudrate, baudtype=Type.Auto):
+		if not isinstance(baudrate, int):
+			raise ValueError('baudrate must be an integer')
+
+		if baudrate < 0:
+			raise ValueError('baudrate must be an integer greater than 0')
+
+		if baudtype == self.Type.Auto:
+			if baudrate in self.baudrate_map:
+				self.baudtype = self.Type.Fixed
+			else:
+				if baudrate <= 0xFF:
+					self.baudtype = self.Type.Identifier
+				else:
+					self.baudtype = self.Type.Specific
+		else:
+			self.baudtype = baudtype
+
+		if self.baudtype == self.Type.Specific:
+			if baudrate > 0xFFFFFF:
+				raise ValueError('Baudrate value cannot be bigger than a 24 bits value.')
+
+		elif self.baudtype == self.Type.Identifier:
+			if baudrate > 0xFF:
+				raise ValueError('Baudrate ID must be an integer between 0 and 0xFF')
+		elif self.baudtype == self.Type.Fixed:
+			if baudrate not in self.baudrate_map:
+				raise ValueError('baudrate must be part of the supported baudrate list defined by UDS standard')
+		else:
+			raise ValueError('Unknown baudtype : %s' % self.baudtype)
+
+		self.baudrate = baudrate
+
+	def make_new_type(self, baudtype):
+		if baudtype not in [self.Type.Fixed, self.Type.Specific]:
+			raise ValueError('Baudrate type can only be change to Fixed or Specific')
+
+		return Baudrate(self.effective_baudrate(), baudtype=baudtype)
+
+
+	def effective_baudrate(self):
+		if self.baudtype == self.Type.Identifier:
+			for k in self.baudrate_map:
+				if self.baudrate_map[k] == self.baudrate:
+					return k
+
+			raise RuntimeError('Unknown effective baudrate, this could indicate a bug')
+		else:
+			return self.baudrate
+
+	def get_bytes(self):
+		if self.baudtype == self.Type.Fixed:
+			return struct.pack('B', self.baudrate_map[self.baudrate])
+
+		if self.baudtype == self.Type.Specific:
+			b1 = (self.baudrate >> 16 ) & 0xFF
+			b2 = (self.baudrate >> 8 ) & 0xFF
+			b3 = (self.baudrate >> 0 ) & 0xFF
+			return struct.pack('BBB', b1, b2, b3)
+
+		if self.baudtype==self.Type.Identifier:
+			return struct.pack('B', self.baudrate)
+
+		raise RuntimeError('Unknown baudrate baudtype : %s' % self.baudtype)

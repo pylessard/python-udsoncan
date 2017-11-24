@@ -43,5 +43,5 @@ class UnexpectedResponseException(Exception):
 
 	def make_msg(self, response, details):
 		servicename = response.service.get_name() if response.service is not None else ""
-		return "%s service execution returned a valid response, but unexpected. Details : %s " % (servicename, details)
+		return "service execution returned a valid response for service %s, but unexpected. Details : %s " % (servicename, details)
 
