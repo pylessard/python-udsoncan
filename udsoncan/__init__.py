@@ -12,11 +12,11 @@ class DidCodec:
 	def __init__(self, packstr=None):
 		self.packstr = packstr
 
-	def encode(self, did_value):
+	def encode(self, *did_value):
 		if self.packstr is None:
 			raise NotImplementedError('Cannot encode DID to binary payload. Codec has no "encode" implementation')
 
-		return struct.pack(self.packstr, did_value)
+		return struct.pack(self.packstr, *did_value)
 
 	def decode(self, did_payload):
 		if self.packstr is None:
@@ -32,14 +32,21 @@ class DidCodec:
 
 	@classmethod
 	def from_config(cls, didconfig):
-		if isinstance(didconfig, cls):
+		if isinstance(didconfig, cls):	#the given object already is a DidCodec instance
 			return didconfig
 
-		if inspect.isclass(didconfig) and issubclass(didconfig, cls):
+		# The definition of the codec is a class. Returns an instance of this codec.
+		if inspect.isclass(didconfig) and issubclass(didconfig, cls):	
 			return didconfig()
 
+		# It could be that the codec is in a dict. (for io_control)
+		if isinstance(didconfig, dict) and 'codec' in didconfig:
+			return cls.from_config(didconfig['codec'])
+
+		# The codec can be defined by a struct pack/unpack string
 		if isinstance(didconfig, str):
 			return cls(packstr = didconfig)
+
 
 class SecurityLevel(object):
 	def __init__(self, levelid):
@@ -666,3 +673,32 @@ class Baudrate:
 			return struct.pack('B', self.baudrate)
 
 		raise RuntimeError('Unknown baudrate baudtype : %s' % self.baudtype)
+
+#Used for IO Control service. Allow comprehensive one-liner.
+class IOMasks:
+	def __init__(self, *args, **kwargs):
+		for k in kwargs:
+			if not isinstance(kwargs[k], bool):
+				raise ValueError('mask value must be a boolean value')
+
+		for k in args:
+			if not isinstance(k, str):
+				raise ValueError('Mask name must be a valid string')
+
+		self.maskdict = dict();
+		for k in args:
+			self.maskdict[k] = True
+
+		for k in kwargs:
+			if not isinstance(kwargs[k], bool):
+				raise ValueError('Mask value must be True or False') 
+			self.maskdict[k] = kwargs[k]
+
+	def get_dict(self):
+		return self.maskdict
+
+
+class IOValues:
+	def __init__(self, *args, **kwargs):
+		self.args = args
+		self.kwargs = kwargs

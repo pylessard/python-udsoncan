@@ -1,8 +1,9 @@
-from udsoncan import Response, Request, services, DidCodec, Routine
+from udsoncan import Response, Request, services, DidCodec, Routine, IOMasks
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
 import struct
 import logging
+import math
 
 class Client:
 	def __init__(self, conn, config=default_client_config, request_timeout = 1, heartbeat  = None):
@@ -115,6 +116,44 @@ class Client:
 				raise LookupError('Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
 
 		return didconfig
+
+	def check_io_config(self, didlist):
+		didlist = [didlist] if not isinstance(didlist, list) else didlist
+		if not 'input_output' in self.config or  not isinstance(self.config['input_output'], dict):
+			raise AttributeError('Configuration does not contains an Input/Output section (config[input_output].')
+		ioconfigs = self.config['input_output']
+
+		for did in didlist:
+			if did not in ioconfigs:
+				raise LookupError('Actual Input/Output configuration contains no definition for data identifier 0x%04x' % did)
+			if isinstance(ioconfigs[did], dict):
+				if 'codec'not in ioconfigs[did]:
+					raise LookupError('Configuration for Input/Output identifier 0x%04x is missing a codec')
+
+				if 'mask' in ioconfigs[did]:
+					mask_def = ioconfigs[did]['mask']
+					for mask_name in mask_def:
+						if not isinstance(mask_def[mask_name], int):
+							raise ValueError('In Input/Output configuration for did 0x%04x, mask "%s" is not an integer' % (did, mask_name))
+
+						if mask_def[mask_name] < 0:
+							raise ValueError('In Input/Output configuration for did 0x%04x, mask "%s" is not a positive integer' % (did, mask_name))
+
+				
+				if 'mask_size' in ioconfigs[did]:
+					if not isinstance(ioconfigs[did]['mask_size'], int):
+						raise ValueError('mask_size in Input/Output configuration for did 0x%04x must be a valid integer' % (did))
+
+					if ioconfigs[did]['mask_size'] < 0:
+						raise ValueError('mask_size in Input/Output configuration for did 0x%04x must be greater than 0' % (did))
+
+					if 'mask' in ioconfigs[did]:
+						mask_def = ioconfigs[did]['mask']
+						for mask_name in mask_def:
+							if mask_def[mask_name] > 2**(ioconfigs[did]['mask_size']*8)-1:
+								raise ValueError('In Input/Output configuration for did 0x%04x, mask "%s" cannot fit in %d bytes (defined by mask_size)' % (did, mask_name,ioconfigs[did]['mask_size']))
+
+		return ioconfigs
 
 	def read_data_by_identifier_first(self, did):
 		values = self.read_data_by_identifier(did, output_fmt='list')
@@ -431,6 +470,97 @@ class Client:
 			raise UnexpectedResponseException(response, "Control type of response (0x%02x) does not match request control type (0x%02x)" % (received, expected))
 
 		return response
+
+	def io_control(self,  did, control_param=None, values=None, masks=None):
+		service = services.InputOutputControlByIdentifier( did, control_param=control_param, values=values, masks=masks)
+		req = Request(service)
+		req.data = b''
+
+		ioconfig = self.check_io_config(service.did)
+
+		req.data += struct.pack('>H', service.did)
+
+		if service.control_param is not None:
+			req.data += struct.pack('B', control_param)
+		
+		codec = DidCodec.from_config(ioconfig[did])
+		
+		if service.values is not None:
+			req.data += codec.encode(*service.values.args, **service.values.kwargs)
+
+		if service.masks is not None: # Skip the masks byte.
+			if isinstance(service.masks, bool):
+				byte = b'\xFF' if service.masks == True else b'\x00'
+				if 'mask_size' in  ioconfig[did]:
+					req.data += (byte * ioconfig[did]['mask_size'])
+				else:
+					raise LookupError('Given mask is boolean value, indicating that all mask should be set to same value, but no mask_size is defined in configuration. Cannot guess how many bits to set.')
+
+			elif isinstance(service.masks, IOMasks):
+				if 'mask' not in ioconfig[did]:
+					raise ValueError('Cannot apply given mask. Input/Output configuration does not define their position (and size).')
+				masks_config = ioconfig[did]['mask']
+				given_masks = service.masks.get_dict()
+
+				numeric_val = 0;
+				for mask_name in given_masks:
+					if mask_name not in masks_config:
+						raise ValueError('Cannot set mask bit for mask %s. The configuration does not define its position' % (mask_name))	
+					
+					if given_masks[mask_name] == True:
+						numeric_val |= masks_config[mask_name]
+
+				minsize = math.ceil(math.log(numeric_val+1, 2)/8.0)
+				size = minsize if 'mask_size' not in ioconfig[did] else ioconfig[did]['mask_size']
+				req.data += numeric_val.to_bytes(size, 'big')
+
+		response = self.send_request(req)
+		min_response_size = 2 if service.control_param is not None else 1	# Spec specifies that if first by is a ControlParameter, it must be echoed back by the server
+
+		if len(response.data) < min_response_size:
+			raise InvalidResponseException(response, "Response must be at least %d bytes long" % d)
+
+		did_fb = struct.unpack(">H", response.data[0:2])[0]
+
+		if did_fb != did:
+			raise UnexpectedResponseException(response, "Server returned a response for data identifier 0x%02x while client requested for did 0x%02x" % (did_fb, did))
+
+		next_byte = 2
+		if service.control_param is not None:
+			if len(response.data) < next_byte:
+				raise InvalidResponseException(response, 'Response should include an echoe of the InputOutputControlParameter (0x%02x)' % service.control_param)
+
+			control_param_fb = response.data[next_byte]
+			if service.control_param != control_param_fb:
+				raise UnexpectedResponseException(response, 'Echo of the InputOutputControlParameter (0x%02x) does not match the value in the request (0x%02x)' % (control_param_fb, service.control_param))	
+
+			next_byte +=1
+
+		if len(response.data) >= next_byte:
+			tolerate_zero_padding = self.config['tolerate_zero_padding'] if 'tolerate_zero_padding' in self.config else True
+			remaining_data = response.data[next_byte:]
+			size_ok = True 
+			
+			if len(remaining_data) > len(codec):
+				if remaining_data[len(codec):] == b'\x00' * (len(remaining_data) - len(codec)):
+					if tolerate_zero_padding:
+						remaining_data = remaining_data[0:len(codec)]
+					else:
+						size_ok = False
+				else:
+					size_ok = False
+			elif len(remaining_data) < len(codec):
+				size_ok = False
+
+			if not size_ok:
+				raise UnexpectedResponseException(response, 'The server did not returned the expected amount of data. Expecting %d bytes, received %d. Trying to decode anyways.' % (len(codec), len(remaining_data)))
+
+			try:
+				decoded_data = codec.decode(remaining_data)
+			except Exception as e:
+				raise UnexpectedResponseException(response, 'Response from server could not be decoded. Exception is : %s' % e)
+			
+			return decoded_data
 
 	def send_request(self, request, timeout=-1, validate_response=True):
 		if timeout is not None and timeout < 0:

@@ -1,5 +1,5 @@
-from UdsTest import UdsTest
-from stub import StubbedConnection
+from test.UdsTest import UdsTest
+from test.stub import StubbedConnection
 from udsoncan.exceptions import *
 
 class TestStubbedConnection(UdsTest):

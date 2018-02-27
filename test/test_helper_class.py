@@ -1,4 +1,4 @@
-from udsoncan import DataFormatIdentifier, AddressAndLengthIdentifier,MemoryLocation, CommunicationType, Baudrate
+from udsoncan import DataFormatIdentifier, AddressAndLengthIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues
 from test.UdsTest import UdsTest
 import struct
 
@@ -180,3 +180,24 @@ class TestBaudrate(UdsTest):
 
 		with self.assertRaises(ValueError):
 			br = Baudrate(1, baudtype=0xFF)
+
+class TestIOMasks(UdsTest):
+	def test_oob_values(self):
+		with self.assertRaises(ValueError):
+			IOMasks(aaa='asd')
+
+		with self.assertRaises(ValueError):
+			IOMasks(1,2,3)
+
+	def test_make_dict(self):
+		m = IOMasks('aaa', 'bbb') # Correct syntax
+		self.assertEqual(m.get_dict(), {'aaa' : True, 'bbb' : True})
+
+		m = IOMasks('aaa', 'bbb', ccc=True, ddd=False) # Correct syntax
+		self.assertEqual(m.get_dict(), {'aaa' : True, 'bbb' : True, 'ccc':True, 'ddd':False})
+
+
+
+
+
+
