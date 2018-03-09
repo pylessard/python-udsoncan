@@ -5,6 +5,7 @@ import threading
 
 from udsoncan.Request import Request
 from udsoncan.Response import Response
+from udsoncan import TimeoutException
 
 class IsoTPConnection(object):
 	def __init__(self, interface, rxid, txid, tpsock=None):
@@ -64,7 +65,7 @@ class IsoTPConnection(object):
 	def wait_frame(self, timeout=2, exception=False):
 		if not self.opened:
 			if exception:
-				raise RuntimeException("Connection is not opened")
+				raise RuntimeError("Connection is not opened")
 			else:
 				return None
 
