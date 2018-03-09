@@ -59,67 +59,45 @@ class Dtc:
 		CheckAtNextHalt = 2
 		CheckImmediately = 4
 
+	class Status:
+		def __init__(self):
+			self.test_failed = False
+			self.test_failed_this_operation_cycle = False
+			self.pending = False
+			self.confirmed = False
+			self.test_not_completed_since_last_clear = False
+			self.test_failed_since_last_clear = False
+			self.test_not_completed_this_operation_cycle = False
+			self.warning_indicator_requested = False
 
-	def __init__(self, dtc):
+		def get_byte(self):
+			byte = 0
+			byte |= 0x1 	if self.test_failed else 0
+			byte |= 0x2 	if self.test_failed_this_operation_cycle else 0
+			byte |= 0x4 	if self.pending else 0
+			byte |= 0x8 	if self.confirmed else 0
+			byte |= 0x10 	if self.test_not_completed_since_last_clear else 0
+			byte |= 0x20 	if self.test_failed_since_last_clear else 0
+			byte |= 0x40 	if self.test_not_completed_this_operation_cycle else 0
+			byte |= 0x80 	if self.warning_indicator_requested else 0
 
+			return byte
+
+		def set_byte(self, byte):
+			self.test_failed 								= True if byte & 0x01 > 0 else False
+			self.test_failed_this_operation_cycle 			= True if byte & 0x02 > 0 else False
+			self.pending 									= True if byte & 0x04 > 0 else False
+			self.confirmed 									= True if byte & 0x08 > 0 else False
+			self.test_not_completed_since_last_clear 		= True if byte & 0x10 > 0 else False
+			self.test_failed_since_last_clear 				= True if byte & 0x20 > 0 else False
+			self.test_not_completed_this_operation_cycle	= True if byte & 0x40 > 0 else False
+			self.warning_indicator_requested 				= True if byte & 0x80 > 0 else False
+
+
+	def __init__(self, dtcid):
 		self.id = dtcid
-
-		self.testFailed = False
-		self.testFailedThisOperationCycle = False
-		self.pending = False
-		self.confirmed = False
-		self.testNotCompletedSinceLastClear = False
-		self.testFailedSinceLastClear = False
-		self.testNotCompletedThisOperationCycle = False
-		self.warningIndicatorRequested = False
-
-	def updateStatus(testFailed = None, testFailedThisOperationCycle = None, pending = None, confirmed = None, testNotCompletedSinceLastClear  = None, testFailedSinceLastClear = None, warningIndicatorRequested = None):
-		if testFailed is not None:
-			self.testFailed	=  testFailed
-
-		if testFailedThisOperationCycle is not None:
-			self.testFailedThisOperationCycle	= testFailedThisOperationCycle
-
-		if pending is not None:
-			self.pending	= pending
-
-		if confirmed is not None:
-			self.confirmed	= confirmed
-
-		if testNotCompletedSinceLastClear is not None:
-			self.testNotCompletedSinceLastClear	= testNotCompletedSinceLastClear
-
-		if testFailedSinceLastClear is not None:
-			self.testFailedSinceLastClear	= testFailedSinceLastClear
-
-		if testNotCompletedThisOperationCycle is not None:
-			self.testNotCompletedThisOperationCycle	= testNotCompletedThisOperationCycle
-
-		if warningIndicatorRequested is not None:
-			self.warningIndicatorRequested	= warningIndicatorRequested
-
-	@property
-	def status(self):
-		byte = 0
-		byte |= 0x1 if self.testFailed else 0
-		byte |= 0x2 if self.testFailedThisOperationCycle else 0
-		byte |= 0x4 if self.pending else 0
-		byte |= 0x8 if self.confirmed else 0
-		byte |= 0x10 if self.testNotCompletedSinceLastClear else 0
-		byte |= 0x20 if self.testFailedSinceLastClear else 0
-		byte |= 0x40 if self.testNotCompletedThisOperationCycle else 0
-		byte |= 0x80 if self.warningIndicatorRequested else 0
-
-	@status.setter
-	def status(self, byte):
-		self.testFailed 						= True if byte & 0x01 > 0 else False
-		self.testFailedThisOperationCycle 		= True if byte & 0x02 > 0 else False
-		self.pending 							= True if byte & 0x04 > 0 else False
-		self.confirmed 							= True if byte & 0x08 > 0 else False
-		self.testNotCompletedSinceLastClear 	= True if byte & 0x10 > 0 else False
-		self.testFailedSinceLastClear 			= True if byte & 0x20 > 0 else False
-		self.testNotCompletedThisOperationCycle = True if byte & 0x40 > 0 else False
-		self.warningIndicatorRequested 			= True if byte & 0x80 > 0 else False
+		self.status = Dtc.Status()
+		
 
 class AddressAndLengthIdentifier:
 	#As defined by ISO-14229:2006, Annex G

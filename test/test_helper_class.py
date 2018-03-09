@@ -1,4 +1,4 @@
-from udsoncan import DataFormatIdentifier, AddressAndLengthIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues
+from udsoncan import DataFormatIdentifier, AddressAndLengthIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc
 from test.UdsTest import UdsTest
 import struct
 
@@ -195,6 +195,132 @@ class TestIOMasks(UdsTest):
 
 		m = IOMasks('aaa', 'bbb', ccc=True, ddd=False) # Correct syntax
 		self.assertEqual(m.get_dict(), {'aaa' : True, 'bbb' : True, 'ccc':True, 'ddd':False})
+
+class TestDtc(UdsTest):
+	def test_init(self):
+		dtc = Dtc(0x1234)
+		self.assertEqual(dtc.id, 0x1234 )
+		self.assertEqual(dtc.status.get_byte(),0)
+
+		self.assertEqual(dtc.status.test_failed, False)
+		self.assertEqual(dtc.status.test_failed_this_operation_cycle, False)
+		self.assertEqual(dtc.status.pending, False)
+		self.assertEqual(dtc.status.confirmed, False)
+		self.assertEqual(dtc.status.test_not_completed_since_last_clear, False)
+		self.assertEqual(dtc.status.test_failed_since_last_clear, False)
+		self.assertEqual(dtc.status.test_not_completed_this_operation_cycle, False)
+		self.assertEqual(dtc.status.warning_indicator_requested, False)
+
+		with self.assertRaises(TypeError):
+			Dtc()
+
+	def test_set_status_with_byte_no_error(self):
+		dtc=Dtc(1)
+		for i in range(255):
+			dtc.status.set_byte(i)
+
+	def test_status_behaviour(self):
+		dtc=Dtc(1)
+
+		self.assertEqual(dtc.status.get_byte(), 0)
+		dtc.status.test_failed=True
+		self.assertEqual(dtc.status.get_byte(), 0x01)
+		dtc.status.test_failed_this_operation_cycle = True
+		self.assertEqual(dtc.status.get_byte(), 0x03)
+		dtc.status.pending = True
+		self.assertEqual(dtc.status.get_byte(), 0x07)
+		dtc.status.confirmed = True
+		self.assertEqual(dtc.status.get_byte(), 0x0F)
+		dtc.status.test_not_completed_since_last_clear = True
+		self.assertEqual(dtc.status.get_byte(), 0x1F)
+		dtc.status.test_failed_since_last_clear = True
+		self.assertEqual(dtc.status.get_byte(), 0x3F)
+		dtc.status.test_not_completed_this_operation_cycle = True
+		self.assertEqual(dtc.status.get_byte(), 0x7F)
+		dtc.status.warning_indicator_requested = True
+		self.assertEqual(dtc.status.get_byte(), 0xFF)
+		
+		dtc.status.set_byte(0x01)
+		self.assertEqual(dtc.status.test_failed, True)
+		self.assertEqual(dtc.status.test_failed_this_operation_cycle, False)
+		self.assertEqual(dtc.status.pending, False)
+		self.assertEqual(dtc.status.confirmed, False)
+		self.assertEqual(dtc.status.test_not_completed_since_last_clear, False)
+		self.assertEqual(dtc.status.test_failed_since_last_clear, False)
+		self.assertEqual(dtc.status.test_not_completed_this_operation_cycle, False)
+		self.assertEqual(dtc.status.warning_indicator_requested, False)
+
+		dtc.status.set_byte(0x03)
+		self.assertEqual(dtc.status.test_failed, True)
+		self.assertEqual(dtc.status.test_failed_this_operation_cycle, True)
+		self.assertEqual(dtc.status.pending, False)
+		self.assertEqual(dtc.status.confirmed, False)
+		self.assertEqual(dtc.status.test_not_completed_since_last_clear, False)
+		self.assertEqual(dtc.status.test_failed_since_last_clear, False)
+		self.assertEqual(dtc.status.test_not_completed_this_operation_cycle, False)
+		self.assertEqual(dtc.status.warning_indicator_requested, False)
+
+		dtc.status.set_byte(0x07)
+		self.assertEqual(dtc.status.test_failed, True)
+		self.assertEqual(dtc.status.test_failed_this_operation_cycle, True)
+		self.assertEqual(dtc.status.pending, True)
+		self.assertEqual(dtc.status.confirmed, False)
+		self.assertEqual(dtc.status.test_not_completed_since_last_clear, False)
+		self.assertEqual(dtc.status.test_failed_since_last_clear, False)
+		self.assertEqual(dtc.status.test_not_completed_this_operation_cycle, False)
+		self.assertEqual(dtc.status.warning_indicator_requested, False)
+
+		dtc.status.set_byte(0x0F)
+		self.assertEqual(dtc.status.test_failed, True)
+		self.assertEqual(dtc.status.test_failed_this_operation_cycle, True)
+		self.assertEqual(dtc.status.pending, True)
+		self.assertEqual(dtc.status.confirmed, True)
+		self.assertEqual(dtc.status.test_not_completed_since_last_clear, False)
+		self.assertEqual(dtc.status.test_failed_since_last_clear, False)
+		self.assertEqual(dtc.status.test_not_completed_this_operation_cycle, False)
+		self.assertEqual(dtc.status.warning_indicator_requested, False)
+
+		dtc.status.set_byte(0x1F)
+		self.assertEqual(dtc.status.test_failed, True)
+		self.assertEqual(dtc.status.test_failed_this_operation_cycle, True)
+		self.assertEqual(dtc.status.pending, True)
+		self.assertEqual(dtc.status.confirmed, True)
+		self.assertEqual(dtc.status.test_not_completed_since_last_clear, True)
+		self.assertEqual(dtc.status.test_failed_since_last_clear, False)
+		self.assertEqual(dtc.status.test_not_completed_this_operation_cycle, False)
+		self.assertEqual(dtc.status.warning_indicator_requested, False)
+
+		dtc.status.set_byte(0x3F)
+		self.assertEqual(dtc.status.test_failed, True)
+		self.assertEqual(dtc.status.test_failed_this_operation_cycle, True)
+		self.assertEqual(dtc.status.pending, True)
+		self.assertEqual(dtc.status.confirmed, True)
+		self.assertEqual(dtc.status.test_not_completed_since_last_clear, True)
+		self.assertEqual(dtc.status.test_failed_since_last_clear, True)
+		self.assertEqual(dtc.status.test_not_completed_this_operation_cycle, False)
+		self.assertEqual(dtc.status.warning_indicator_requested, False)
+
+		dtc.status.set_byte(0x7F)
+		self.assertEqual(dtc.status.test_failed, True)
+		self.assertEqual(dtc.status.test_failed_this_operation_cycle, True)
+		self.assertEqual(dtc.status.pending, True)
+		self.assertEqual(dtc.status.confirmed, True)
+		self.assertEqual(dtc.status.test_not_completed_since_last_clear, True)
+		self.assertEqual(dtc.status.test_failed_since_last_clear, True)
+		self.assertEqual(dtc.status.test_not_completed_this_operation_cycle, True)
+		self.assertEqual(dtc.status.warning_indicator_requested, False)
+
+		dtc.status.set_byte(0xFF)
+		self.assertEqual(dtc.status.test_failed, True)
+		self.assertEqual(dtc.status.test_failed_this_operation_cycle, True)
+		self.assertEqual(dtc.status.pending, True)
+		self.assertEqual(dtc.status.confirmed, True)
+		self.assertEqual(dtc.status.test_not_completed_since_last_clear, True)
+		self.assertEqual(dtc.status.test_failed_since_last_clear, True)
+		self.assertEqual(dtc.status.test_not_completed_this_operation_cycle, True)
+		self.assertEqual(dtc.status.warning_indicator_requested, True)
+
+
 
 
 
