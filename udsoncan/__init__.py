@@ -59,6 +59,24 @@ class Dtc:
 		CheckAtNextHalt = 2
 		CheckImmediately = 4
 
+	class Format:
+		ISO15031_6 = 0
+		ISO14229_1 = 1
+		SAE_J1939_73 = 2
+		ISO11992_4 = 3
+
+		@classmethod
+		def get_name(cls, given_id):
+			if given_id is None:
+				return ""
+
+			for member in inspect.getmembers(cls):
+				if isinstance(member[1], int):
+					if member[1] == given_id:
+						return member[0]
+						
+			return str(given_id)
+
 	class Status:
 		def __init__(self):
 			self.test_failed = False
@@ -81,9 +99,15 @@ class Dtc:
 			byte |= 0x40 	if self.test_not_completed_this_operation_cycle else 0
 			byte |= 0x80 	if self.warning_indicator_requested else 0
 
-			return byte
+			return struct.pack('B', byte)
 
 		def set_byte(self, byte):
+			if not isinstance(byte, int) and not isinstance(byte, bytes):
+				raise ValueError('Given byte must be an integer or bytes object.')
+
+			if isinstance(byte, bytes):
+				byte = struct.unpack('B', byte[0])
+
 			self.test_failed 								= True if byte & 0x01 > 0 else False
 			self.test_failed_this_operation_cycle 			= True if byte & 0x02 > 0 else False
 			self.pending 									= True if byte & 0x04 > 0 else False
@@ -97,6 +121,31 @@ class Dtc:
 	def __init__(self, dtcid):
 		self.id = dtcid
 		self.status = Dtc.Status()
+		self.snapshot = None  		# Not defined by ISO14229. Must be defined in config
+		self.extended_data = None 	# Not defined by ISO14229. Must be defined in config
+		self.severity = Dtc.Severity.NotAvailable
+
+	@property
+	def severity(self):
+		return self._severity
+
+	@severity.setter
+	def severity(self, val):
+		if not isinstance(val, int):
+			raise ValueError('Severity mus tbe an integer value')
+
+		if val <0 or val > 7:
+			raise ValueError('Severity is a 3 bits value and must be an integer between 0 and 7')
+
+		self._severity = val
+
+	class DtcSnapshot:
+		record_number = None
+		data = b''
+
+	class DtcExtendedData:
+		record_number = None
+		data = b''
 		
 
 class AddressAndLengthIdentifier:

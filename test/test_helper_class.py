@@ -200,7 +200,7 @@ class TestDtc(UdsTest):
 	def test_init(self):
 		dtc = Dtc(0x1234)
 		self.assertEqual(dtc.id, 0x1234 )
-		self.assertEqual(dtc.status.get_byte(),0)
+		self.assertEqual(dtc.status.get_byte(), b'\x00')
 
 		self.assertEqual(dtc.status.test_failed, False)
 		self.assertEqual(dtc.status.test_failed_this_operation_cycle, False)
@@ -222,23 +222,23 @@ class TestDtc(UdsTest):
 	def test_status_behaviour(self):
 		dtc=Dtc(1)
 
-		self.assertEqual(dtc.status.get_byte(), 0)
+		self.assertEqual(dtc.status.get_byte(), b'\x00')
 		dtc.status.test_failed=True
-		self.assertEqual(dtc.status.get_byte(), 0x01)
+		self.assertEqual(dtc.status.get_byte(), b'\x01')
 		dtc.status.test_failed_this_operation_cycle = True
-		self.assertEqual(dtc.status.get_byte(), 0x03)
+		self.assertEqual(dtc.status.get_byte(), b'\x03')
 		dtc.status.pending = True
-		self.assertEqual(dtc.status.get_byte(), 0x07)
+		self.assertEqual(dtc.status.get_byte(), b'\x07')
 		dtc.status.confirmed = True
-		self.assertEqual(dtc.status.get_byte(), 0x0F)
+		self.assertEqual(dtc.status.get_byte(), b'\x0F')
 		dtc.status.test_not_completed_since_last_clear = True
-		self.assertEqual(dtc.status.get_byte(), 0x1F)
+		self.assertEqual(dtc.status.get_byte(), b'\x1F')
 		dtc.status.test_failed_since_last_clear = True
-		self.assertEqual(dtc.status.get_byte(), 0x3F)
+		self.assertEqual(dtc.status.get_byte(), b'\x3F')
 		dtc.status.test_not_completed_this_operation_cycle = True
-		self.assertEqual(dtc.status.get_byte(), 0x7F)
+		self.assertEqual(dtc.status.get_byte(), b'\x7F')
 		dtc.status.warning_indicator_requested = True
-		self.assertEqual(dtc.status.get_byte(), 0xFF)
+		self.assertEqual(dtc.status.get_byte(), b'\xFF')
 		
 		dtc.status.set_byte(0x01)
 		self.assertEqual(dtc.status.test_failed, True)
@@ -319,6 +319,22 @@ class TestDtc(UdsTest):
 		self.assertEqual(dtc.status.test_failed_since_last_clear, True)
 		self.assertEqual(dtc.status.test_not_completed_this_operation_cycle, True)
 		self.assertEqual(dtc.status.warning_indicator_requested, True)
+
+	def test_severity(self):
+		dtc = Dtc(1)
+
+		dtc.severity = Dtc.Severity.NotAvailable
+		dtc.severity = Dtc.Severity.MaintenanceOnly
+		dtc.severity = Dtc.Severity.CheckAtNextHalt
+		dtc.severity = Dtc.Severity.CheckImmediately
+
+		with self.assertRaises(ValueError):
+			dtc.severity = -1
+
+		with self.assertRaises(ValueError):
+			dtc.severity = 8
+
+
 
 
 

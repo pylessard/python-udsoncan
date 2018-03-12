@@ -1,9 +1,17 @@
-from udsoncan import Response, Request, services, DidCodec, Routine, IOMasks
+from udsoncan import Response, Request, services, DidCodec, Routine, IOMasks, Dtc
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
 import struct
 import logging
 import math
+
+class DTCServerRepsonseContainer(object):
+	def __init__(self):
+		self.dtcs = []
+		self.status_availability = None
+		self.dtc_snapshot_map = {}
+		self.snapshots = []
+		self.extended_data = []
 
 class Client:
 	def __init__(self, conn, config=default_client_config, request_timeout = 1, heartbeat  = None):
@@ -12,6 +20,7 @@ class Client:
 		self.config = config
 		self.heartbeat = heartbeat
 		self.logger = logging.getLogger("UdsClient")
+		self.last_dtc_status_availability_mask = None
 
 	def __enter__(self):
 		self.open()
@@ -107,7 +116,7 @@ class Client:
 
 	def check_did_config(self, didlist):
 		didlist = [didlist] if not isinstance(didlist, list) else didlist
-		if not 'data_identifiers' in self.config or  not isinstance(self.config['data_identifiers'], dict):
+		if 'data_identifiers' not in self.config or  not isinstance(self.config['data_identifiers'], dict):
 			raise AttributeError('Configuration does not contains a valid data identifier description.')
 		didconfig = self.config['data_identifiers']
 
@@ -178,7 +187,6 @@ class Client:
 			raise ValueError("Output format cannot be %s. Use list or dict" % output_fmt)
 
 		offset = 0
-		done = False
 		received = {}
 		for did in didlist:
 			received[did] = False
@@ -219,7 +227,7 @@ class Client:
 			elif output_fmt == 'dict':
 				values[did] = val
 
-		notreceived = 0;
+		notreceived = 0
 		for k in received:
 			notreceived += 1 if k == False else 0
 
@@ -502,7 +510,7 @@ class Client:
 				masks_config = ioconfig[did]['mask']
 				given_masks = service.masks.get_dict()
 
-				numeric_val = 0;
+				numeric_val = 0
 				for mask_name in given_masks:
 					if mask_name not in masks_config:
 						raise ValueError('Cannot set mask bit for mask %s. The configuration does not define its position' % (mask_name))	
@@ -561,6 +569,152 @@ class Client:
 				raise UnexpectedResponseException(response, 'Response from server could not be decoded. Exception is : %s' % e)
 			
 			return decoded_data
+
+# ====  ReadDTCInformation
+
+
+	def get_dtc_by_status_mask(self, status_mask):
+		return self.get_dtc(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask)
+
+	def get_dtc_by_status_severity_mask(self, status_mask, severity_mask):
+		return self.get_dtc(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask, severity_mask=severity_mask)
+
+	
+	def get_dtc(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, snapshot_record_number=None, extended_data_record_number=None):
+		
+		request_subfn_no_param = [
+			services.ReadDTCInformation.reportSupportedDTC,
+			services.ReadDTCInformation.reportFirstTestFailedDTC,
+			services.ReadDTCInformation.reportFirstConfirmedDTC,
+			services.ReadDTCInformation.reportMostRecentTestFailedDTC,
+			services.ReadDTCInformation.reportMostRecentConfirmedDTC,
+			services.ReadDTCInformation.reportDTCFaultDetectionCounter,
+			services.ReadDTCInformation.reportDTCWithPermanentStatus,
+
+			services.ReadDTCInformation.reportDTCSnapshotIdentification	# Not so clear in documentation
+
+			]
+
+		request_subfn_status_mask = [
+			services.ReadDTCInformation.reportNumberOfDTCByStatusMask,
+			services.ReadDTCInformation.reportDTCByStatusMask,
+			services.ReadDTCInformation.reportMirrorMemoryDTCByStatusMask,
+			services.ReadDTCInformation.reportNumberOfMirrorMemoryDTCByStatusMask,
+			services.ReadDTCInformation.reportNumberOfEmissionsRelatedOBDDTCByStatusMask,
+			services.ReadDTCInformation.reportEmissionsRelatedOBDDTCByStatusMask
+		]
+
+		request_subfn_mask_record_plus_snapshot_record_number = [
+			services.ReadDTCInformation.reportDTCSnapshotRecordByDTCNumber
+		]
+
+		request_subfn_snapshot_record_number = [
+			services.ReadDTCInformation.reportDTCSnapshotRecordByRecordNumber
+		]
+
+		request_subfn_mask_record_plus_extdata_record_number = [
+			services.ReadDTCInformation.reportDTCExtendedDataRecordByDTCNumber,
+			services.ReadDTCInformation.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber
+		]
+
+		request_subfn_severity_plus_status_mask = [
+			services.ReadDTCInformation.reportNumberOfDTCBySeverityMaskRecord,
+			services.ReadDTCInformation.reportDTCBySeverityMaskRecord
+		]
+
+		request_subfn_mask_record = [
+			services.ReadDTCInformation.reportSeverityInformationOfDTC		
+			]
+
+		response_subfn_dtc_availability_mask_plus_dtc_record = [
+			services.ReadDTCInformation.reportDTCByStatusMask,
+			services.ReadDTCInformation.reportSupportedDTC,
+			services.ReadDTCInformation.reportFirstTestFailedDTC,
+			services.ReadDTCInformation.reportFirstConfirmedDTC,
+			services.ReadDTCInformation.reportMostRecentTestFailedDTC,
+			services.ReadDTCInformation.reportMostRecentConfirmedDTC,
+			services.ReadDTCInformation.reportMirrorMemoryDTCByStatusMask,
+			services.ReadDTCInformation.reportEmissionsRelatedOBDDTCByStatusMask,
+			services.ReadDTCInformation.reportDTCWithPermanentStatus
+		]
+
+		tolerate_zero_padding = self.config['tolerate_zero_padding'] if 'tolerate_zero_padding' in self.config else True
+		ignore_all_zero_dtc = self.config['ignore_all_zero_dtc'] if 'ignore_all_zero_dtc' in self.config else True
+
+		service = services.ReadDTCInformation(subfunction)
+		req = Request(service)
+
+		if service.subfunction in request_subfn_no_param:
+			pass
+		elif service.subfunction in request_subfn_status_mask:
+			if status_mask is None:
+				raise ValueError('status_mask must be provided for subfunction 0x%02x' % service.subfunction)
+				
+			if not isinstance(status_mask, int) or status_mask < 0 or status_mask > 0xFF:
+				raise ValueError('status_mask must be an integer between 0 and 0xFF')
+
+			req.data = struct.pack('B', (status_mask & 0xFF))
+		elif service.subfunction in request_subfn_mask_record_plus_snapshot_record_number:
+			pass
+		elif service.subfunction in request_subfn_snapshot_record_number:
+			pass
+		elif service.subfunction in request_subfn_mask_record_plus_extdata_record_number:
+			pass
+		elif service.subfunction in request_subfn_severity_plus_status_mask:
+			pass
+		elif service.subfunction in request_subfn_mask_record:
+			pass
+
+
+		response = self.send_request(req)
+		user_response = DTCServerRepsonseContainer()
+		
+		if len(response.data) < 1:
+			raise InvalidResponseException(response, 'Response must be at least 1 byte long (echo of subfunction)')
+
+
+		response_subfn = int(response.data[0])
+
+		if response_subfn != service.subfunction:
+			raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation subfunction gotten from server(0x%02x) does not match the value in the request subfunction (0x%02x)' % (response_subfn, service.subfunction))	
+
+		
+		if service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record:
+			if len(response.data) < 2:
+				raise InvalidResponseException(response, 'Response must be at least 2 byte long (echo of subfunction and DTCStatusAvailabilityMask)')
+
+			user_response.status_availability = response.data[1]
+
+			actual_byte = 2
+
+			while True:
+				if len(response.data) <= actual_byte:
+					break
+				elif len(response.data) < actual_byte+4:
+					missing_bytes = len(response.data)-actual_byte
+					if tolerate_zero_padding and response.data[actual_byte:] == b'\x00'*missing_bytes:
+						break
+					else:
+						raise InvalidResponseException('Incomplete DTC record. Missing %d bytes to response to complete the record' % (missing_bytes))
+				else:
+					dtc_bytes = response.data[actual_byte:actual_byte+4]
+					if dtc_bytes == b'\x00'*4 and ignore_all_zero_dtc:
+						pass # ignore
+					else:						
+						dtcid = 0
+						dtcid |= int(dtc_bytes[0]) << 16
+						dtcid |= int(dtc_bytes[1]) << 8
+						dtcid |= int(dtc_bytes[2]) << 0
+
+						dtc = Dtc(dtcid)
+						dtc.status.set_byte(dtc_bytes[3])
+
+					user_response.dtcs.append(dtc)
+
+				actual_byte += 4
+
+		return user_response
+
 
 	def send_request(self, request, timeout=-1, validate_response=True):
 		if timeout is not None and timeout < 0:
