@@ -75,7 +75,7 @@ class Dtc:
 					if member[1] == given_id:
 						return member[0]
 						
-			return str(given_id)
+			return None
 
 	class Status:
 		def __init__(self):

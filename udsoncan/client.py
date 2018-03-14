@@ -8,6 +8,8 @@ import math
 class DTCServerRepsonseContainer(object):
 	def __init__(self):
 		self.dtcs = []
+		self.dtc_count = 0
+		self.dtc_format = None
 		self.status_availability = None
 		self.dtc_snapshot_map = {}
 		self.snapshots = []
@@ -574,13 +576,15 @@ class Client:
 
 
 	def get_dtc_by_status_mask(self, status_mask):
-		return self.get_dtc(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask)
 
 	def get_dtc_by_status_severity_mask(self, status_mask, severity_mask):
-		return self.get_dtc(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask, severity_mask=severity_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask, severity_mask=severity_mask)
 
+	def get_number_of_dtc_by_status_mask(self, status_mask):
+		return self.read_dtc_information(services.ReadDTCInformation.reportNumberOfDTCByStatusMask, status_mask=status_mask)
 	
-	def get_dtc(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, snapshot_record_number=None, extended_data_record_number=None):
+	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, snapshot_record_number=None, extended_data_record_number=None):
 		
 #===== Requests
 		request_subfn_no_param = [
@@ -638,6 +642,13 @@ class Client:
 			services.ReadDTCInformation.reportMirrorMemoryDTCByStatusMask,
 			services.ReadDTCInformation.reportEmissionsRelatedOBDDTCByStatusMask,
 			services.ReadDTCInformation.reportDTCWithPermanentStatus
+		]
+
+		response_subfn_number_of_dtc = [
+			services.ReadDTCInformation.reportNumberOfDTCByStatusMask,
+			services.ReadDTCInformation.reportNumberOfDTCBySeverityMaskRecord,
+			services.ReadDTCInformation.reportNumberOfMirrorMemoryDTCByStatusMask,
+			services.ReadDTCInformation.reportNumberOfEmissionsRelatedOBDDTCByStatusMask,
 		]
 
 # ==== Config
@@ -717,6 +728,21 @@ class Client:
 						user_response.dtcs.append(dtc)
 
 				actual_byte += 4
+
+			user_response.dtc_count = len(user_response.dtcs)
+
+		elif service.subfunction in response_subfn_number_of_dtc:
+			if len(response.data) < 5:
+				raise InvalidResponseException(response, 'Response must be exactly 5 bytes long ')
+
+			user_response.status_availability = response.data[1]
+			user_response.dtc_format = response.data[2]
+
+			if Dtc.Format.get_name(user_response.dtc_format) is None:
+				self.logger.warning('Unknown DTC Format Identifier 0x%02x. Value should be between 0 and 3' % user_response.dtc_format)
+
+			user_response.dtc_count = struct.unpack('>H', response.data[3:5])[0]
+
 
 		return user_response
 

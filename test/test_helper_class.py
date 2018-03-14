@@ -201,6 +201,7 @@ class TestDtc(UdsTest):
 		dtc = Dtc(0x1234)
 		self.assertEqual(dtc.id, 0x1234 )
 		self.assertEqual(dtc.status.get_byte(), b'\x00')
+		self.assertEqual(dtc.status.get_byte_as_int(), 0x00)
 
 		self.assertEqual(dtc.status.test_failed, False)
 		self.assertEqual(dtc.status.test_failed_this_operation_cycle, False)

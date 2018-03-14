@@ -6,7 +6,76 @@ from test.ClientServerTest import ClientServerTest
 from udsoncan import Dtc
 
 class TestReportNumberOfDTCByStatusMask(ClientServerTest):	# Subfn = 0x1
-	pass
+
+	def wait_request_and_respond(self, bytes):
+		self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(bytes) 
+	
+#===================	
+	def test_normal_behaviour(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x01\x5A")
+		self.conn.fromuserqueue.put(b"\x59\x01\xFB\x01\x12\x34")
+
+	def _test_normal_behaviour(self):
+		response = self.udsclient.get_number_of_dtc_by_status_mask(0x5A)
+		self.assertEqual(response.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.dtc_count, 0x1234)
+
+#===================	
+	def test_normal_behaviour_harmless_extra_byte(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x01\x5A")
+		self.conn.fromuserqueue.put(b"\x59\x01\xFB\x01\x12\x34\x00\x11\x22")
+
+	def _test_normal_behaviour_harmless_extra_byte(self):
+		response = self.udsclient.get_number_of_dtc_by_status_mask(0x5A)
+		self.assertEqual(response.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.dtc_count, 0x1234)		
+
+#===================	
+	def test_bad_response_subfn(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x59\x02\xFB\x01\x12\x34")
+
+	def _test_bad_response_subfn(self):
+		with self.assertRaises(UnexpectedResponseException):
+			self.udsclient.get_number_of_dtc_by_status_mask(0x5A)
+
+#===================	
+	def test_bad_response_service(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x6F\x01\xFB\x01\x12\x34")
+
+	def _test_bad_response_service(self):
+		with self.assertRaises(UnexpectedResponseException):
+			self.udsclient.get_number_of_dtc_by_status_mask(0x5A)			
+
+
+#===================
+	def test_bad_length_response(self):
+		self.wait_request_and_respond(b"\x59")
+		self.wait_request_and_respond(b"\x59\x01")
+		self.wait_request_and_respond(b"\x59\x01\xFB")
+		self.wait_request_and_respond(b"\x59\x01\xFB\x01")
+		self.wait_request_and_respond(b"\x59\x01\xFB\x01\x12")
+
+	def _test_bad_length_response(self):
+		with self.assertRaises(InvalidResponseException):
+			self.udsclient.get_number_of_dtc_by_status_mask(0x5A)
+
+		with self.assertRaises(InvalidResponseException):
+			self.udsclient.get_number_of_dtc_by_status_mask(0x5A)
+
+		with self.assertRaises(InvalidResponseException):
+			self.udsclient.get_number_of_dtc_by_status_mask(0x5A)
+
+		with self.assertRaises(InvalidResponseException):
+			self.udsclient.get_number_of_dtc_by_status_mask(0x5A)
+
+		with self.assertRaises(InvalidResponseException):
+			self.udsclient.get_number_of_dtc_by_status_mask(0x5A)
+
 
 class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 
@@ -19,19 +88,21 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 		response = self.udsclient.get_dtc_by_status_mask(0x5A)
 		self.assertEqual(response.status_availability, 0xFB)
 		number_of_dtc = 3 if expect_all_zero_third_dtc else 2
+		
 		self.assertEqual(len(response.dtcs), number_of_dtc)
+		self.assertEqual(response.dtc_count, number_of_dtc)
 
 		self.assertEqual(response.dtcs[0].id, 0x123456)
-		self.assertEqual(response.dtcs[0].status.get_byte(), b'\x20')
+		self.assertEqual(response.dtcs[0].status.get_byte_as_int(), 0x20)
 		self.assertEqual(response.dtcs[0].severity, Dtc.Severity.NotAvailable)
 
 		self.assertEqual(response.dtcs[1].id, 0x123457)
-		self.assertEqual(response.dtcs[1].status.get_byte(), b'\x60')
+		self.assertEqual(response.dtcs[1].status.get_byte_as_int(), 0x60)
 		self.assertEqual(response.dtcs[1].severity, Dtc.Severity.NotAvailable)
 		
 		if expect_all_zero_third_dtc:
 			self.assertEqual(response.dtcs[2].id, 0)
-			self.assertEqual(response.dtcs[2].status.get_byte(), b'\x00')
+			self.assertEqual(response.dtcs[2].status.get_byte_as_int(), 0x00)
 			self.assertEqual(response.dtcs[2].severity, Dtc.Severity.NotAvailable)
 
 #===========================	
@@ -144,6 +215,15 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 	def _test_bad_response_subfunction(self):
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.get_dtc_by_status_mask(0x5A)
+
+#===========================
+	def test_bad_response_service(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x6F\x02\xFB")	
+
+	def _test_bad_response_service(self):
+		with self.assertRaises(UnexpectedResponseException):
+			self.udsclient.get_dtc_by_status_mask(0x5A)			
 
 #===========================
 	def test_bad_response_length(self):
