@@ -12,13 +12,24 @@ class TestReportNumberOfDTCByStatusMask(ClientServerTest):	# Subfn = 0x1
 		self.conn.fromuserqueue.put(bytes) 
 	
 #===================	
-	def test_normal_behaviour(self):
+	def test_normal_behaviour_param_int(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x19\x01\x5A")
 		self.conn.fromuserqueue.put(b"\x59\x01\xFB\x01\x12\x34")
 
-	def _test_normal_behaviour(self):
+	def _test_normal_behaviour_param_int(self):
 		response = self.udsclient.get_number_of_dtc_by_status_mask(0x5A)
+		self.assertEqual(response.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.dtc_count, 0x1234)
+
+#===================	
+	def test_normal_behaviour_param_instance(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x01\x5A")
+		self.conn.fromuserqueue.put(b"\x59\x01\xFB\x01\x12\x34")
+
+	def _test_normal_behaviour_param_instance(self):
+		response = self.udsclient.get_number_of_dtc_by_status_mask(Dtc.Status(test_failed_this_operation_cycle = True, confirmed = True, test_not_completed_since_last_clear = True, test_not_completed_this_operation_cycle = True))
 		self.assertEqual(response.dtc_format, Dtc.Format.ISO14229_1)
 		self.assertEqual(response.dtc_count, 0x1234)
 
@@ -76,6 +87,20 @@ class TestReportNumberOfDTCByStatusMask(ClientServerTest):	# Subfn = 0x1
 		with self.assertRaises(InvalidResponseException):
 			self.udsclient.get_number_of_dtc_by_status_mask(0x5A)
 
+#===================	
+	def test_oob_value(self):
+		pass
+
+	def _test_oob_value(self):
+		with self.assertRaises(ValueError):
+			self.udsclient.get_number_of_dtc_by_status_mask(0x100)
+
+		with self.assertRaises(ValueError):
+			self.udsclient.get_number_of_dtc_by_status_mask(-1)
+
+		with self.assertRaises(ValueError):
+			self.udsclient.get_number_of_dtc_by_status_mask('aaa')
+
 
 class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 
@@ -94,16 +119,16 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 
 		self.assertEqual(response.dtcs[0].id, 0x123456)
 		self.assertEqual(response.dtcs[0].status.get_byte_as_int(), 0x20)
-		self.assertEqual(response.dtcs[0].severity, Dtc.Severity.NotAvailable)
+		self.assertEqual(response.dtcs[0].severity.get_byte_as_int(), 0x00)
 
 		self.assertEqual(response.dtcs[1].id, 0x123457)
 		self.assertEqual(response.dtcs[1].status.get_byte_as_int(), 0x60)
-		self.assertEqual(response.dtcs[1].severity, Dtc.Severity.NotAvailable)
+		self.assertEqual(response.dtcs[1].severity.get_byte_as_int(), 0x00)
 		
 		if expect_all_zero_third_dtc:
 			self.assertEqual(response.dtcs[2].id, 0)
 			self.assertEqual(response.dtcs[2].status.get_byte_as_int(), 0x00)
-			self.assertEqual(response.dtcs[2].severity, Dtc.Severity.NotAvailable)
+			self.assertEqual(response.dtcs[2].severity.get_byte_as_int(), 0x00)
 
 #===========================	
 	def test_normal_behaviour(self):
@@ -113,6 +138,15 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 
 	def _test_normal_behaviour(self):
 		self.do_client_fixed_dtc()
+
+#===========================	
+	def test_normal_behaviour_param_instance(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x02\x5A")
+		self.conn.fromuserqueue.put(b"\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60")	
+
+	def _test_normal_behaviour_param_instance(self):
+		self.udsclient.get_dtc_by_status_mask(Dtc.Status(test_failed_this_operation_cycle = True, confirmed = True, test_not_completed_since_last_clear = True, test_not_completed_this_operation_cycle = True))
 
 #===========================
 	def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
@@ -239,9 +273,20 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 
 		with self.assertRaises(InvalidResponseException):
 			self.udsclient.get_dtc_by_status_mask(0x5A)
-		
 
+#===================	
+	def test_oob_value(self):
+		pass
 
+	def _test_oob_value(self):
+		with self.assertRaises(ValueError):
+			self.udsclient.get_dtc_by_status_mask(0x100)
+
+		with self.assertRaises(ValueError):
+			self.udsclient.get_dtc_by_status_mask(-1)
+
+		with self.assertRaises(ValueError):
+			self.udsclient.get_dtc_by_status_mask('aaa')
 
 
 
@@ -258,7 +303,108 @@ class TestReportDTCExtendedDataRecordByDTCNumber(ClientServerTest):	# Subfn = 0x
 	pass
 
 class TestReportNumberOfDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x7
-	pass
+	
+	def wait_request_and_respond(self, bytes):
+		self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(bytes) 
+	
+#===================	
+	def test_normal_behaviour_param_int(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x07\xC0\x01")
+		self.conn.fromuserqueue.put(b"\x59\x07\xFB\x01\x12\x34")
+
+	def _test_normal_behaviour_param_int(self):
+		response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
+		self.assertEqual(response.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.dtc_count, 0x1234)
+
+#===================	
+	def test_normal_behaviour_param_instance(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x07\xC0\x01")
+		self.conn.fromuserqueue.put(b"\x59\x07\xFB\x01\x12\x34")
+
+	def _test_normal_behaviour_param_instance(self):
+		response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = Dtc.Status(test_failed=True), severity_mask=Dtc.Severity(check_immediately=True, check_at_next_exit=True))
+		self.assertEqual(response.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.dtc_count, 0x1234)
+
+#===================	
+	def test_normal_behaviour_harmless_extra_byte(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x59\x07\xFB\x01\x12\x34\x00\x11\x22")
+
+	def _test_normal_behaviour_harmless_extra_byte(self):
+		response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
+		self.assertEqual(response.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.dtc_count, 0x1234)		
+
+#===================	
+	def test_bad_response_subfn(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x59\x08\xFB\x01\x12\x34")
+
+	def _test_bad_response_subfn(self):
+		with self.assertRaises(UnexpectedResponseException):
+			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
+
+#===================	
+	def test_bad_response_service(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x6F\x07\xFB\x01\x12\x34")
+
+	def _test_bad_response_service(self):
+		with self.assertRaises(UnexpectedResponseException):
+			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
+
+
+#===================
+	def test_bad_length_response(self):
+		self.wait_request_and_respond(b"\x59")
+		self.wait_request_and_respond(b"\x59\x07")
+		self.wait_request_and_respond(b"\x59\x07\xFB")
+		self.wait_request_and_respond(b"\x59\x07\xFB\x01")
+		self.wait_request_and_respond(b"\x59\x07\xFB\x01\x12")
+
+	def _test_bad_length_response(self):
+		with self.assertRaises(InvalidResponseException):
+			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
+
+		with self.assertRaises(InvalidResponseException):
+			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
+
+		with self.assertRaises(InvalidResponseException):
+			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
+
+		with self.assertRaises(InvalidResponseException):
+			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
+
+		with self.assertRaises(InvalidResponseException):
+			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
+
+#===================	
+	def test_oob_value(self):
+		pass
+
+	def _test_oob_value(self):
+		with self.assertRaises(ValueError):
+			self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x100, severity_mask=0x4)
+
+		with self.assertRaises(ValueError):
+			self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = -1, severity_mask=0x4)
+
+		with self.assertRaises(ValueError):
+			self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 'a', severity_mask=0x4)
+
+		with self.assertRaises(ValueError):
+			self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x5A, severity_mask=0x100)
+
+		with self.assertRaises(ValueError):
+			self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x5A, severity_mask=-1)
+
+		with self.assertRaises(ValueError):
+			self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x5A, severity_mask='a')
 
 class TestReportDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x8
 	pass

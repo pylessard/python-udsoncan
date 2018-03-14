@@ -78,15 +78,15 @@ class Dtc:
 			return None
 
 	class Status:
-		def __init__(self):
-			self.test_failed = False
-			self.test_failed_this_operation_cycle = False
-			self.pending = False
-			self.confirmed = False
-			self.test_not_completed_since_last_clear = False
-			self.test_failed_since_last_clear = False
-			self.test_not_completed_this_operation_cycle = False
-			self.warning_indicator_requested = False
+		def __init__(self, test_failed=False, test_failed_this_operation_cycle=False, pending=False, confirmed=False, test_not_completed_since_last_clear=False, test_failed_since_last_clear=False, test_not_completed_this_operation_cycle=False, warning_indicator_requested=False):
+			self.test_failed 								= test_failed
+			self.test_failed_this_operation_cycle 			= test_failed_this_operation_cycle
+			self.pending 									= pending
+			self.confirmed 									= confirmed
+			self.test_not_completed_since_last_clear 		= test_not_completed_since_last_clear
+			self.test_failed_since_last_clear 				= test_failed_since_last_clear
+			self.test_not_completed_this_operation_cycle 	= test_not_completed_this_operation_cycle
+			self.warning_indicator_requested 				= warning_indicator_requested
 
 		def get_byte_as_int(self):
 			byte = 0
@@ -120,29 +120,48 @@ class Dtc:
 			self.test_not_completed_this_operation_cycle	= True if byte & 0x40 > 0 else False
 			self.warning_indicator_requested 				= True if byte & 0x80 > 0 else False
 
+	class Severity:
+		def __init__(self, maintenance_only=False, check_at_next_exit=False, check_immediately=False):
+			self.maintenance_only 		= maintenance_only
+			self.check_at_next_exit 	= check_at_next_exit
+			self.check_immediately 		= check_immediately
+
+		def get_byte_as_int(self):
+			byte = 0
+			byte |= 0x20 	if self.maintenance_only else 0
+			byte |= 0x40 	if self.check_at_next_exit else 0
+			byte |= 0x80 	if self.check_immediately else 0
+
+			return byte
+
+		def get_byte(self):
+			return struct.pack('B', self.get_byte_as_int())
+
+		def set_byte(self, byte):
+			if not isinstance(byte, int) and not isinstance(byte, bytes):
+				raise ValueError('Given byte must be an integer or bytes object.')
+
+			if isinstance(byte, bytes):
+				byte = struct.unpack('B', byte[0])
+
+			self.maintenance_only 			= True if byte & 0x20 > 0 else False
+			self.check_at_next_exit 		= True if byte & 0x40 > 0 else False
+			self.check_immediately 			= True if byte & 0x80 > 0 else False
+
+		@property
+		def available(self):
+			return True if self.get_byte_as_int() > 0 else False
+			
 	def __init__(self, dtcid):
 		self.id = dtcid
 		self.status = Dtc.Status()
 		self.snapshot = None  		# Not defined by ISO14229. Must be defined in config
 		self.extended_data = None 	# Not defined by ISO14229. Must be defined in config
-		self.severity = Dtc.Severity.NotAvailable
+		self.severity = Dtc.Severity()
 
-	@property
-	def severity(self):
-		return self._severity
-
-	@severity.setter
-	def severity(self, val):
-		if not isinstance(val, int):
-			raise ValueError('Severity mus tbe an integer value')
-
-		if val <0 or val > 7:
-			raise ValueError('Severity is a 3 bits value and must be an integer between 0 and 7')
-
-		self._severity = val
-
+	
 	def __repr__(self):
-		return '<DTC ID=0x%06x, Status=0x%02x, Severity=0x%02x at 0x%08x>' % (self.id, self.status.get_byte_as_int(), self.severity, id(self))
+		return '<DTC ID=0x%06x, Status=0x%02x, Severity=0x%02x at 0x%08x>' % (self.id, self.status.get_byte_as_int(), self.severity.get_byte_as_int(), id(self))
 
 	class DtcSnapshot:
 		record_number = None

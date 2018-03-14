@@ -584,8 +584,17 @@ class Client:
 	def get_number_of_dtc_by_status_mask(self, status_mask):
 		return self.read_dtc_information(services.ReadDTCInformation.reportNumberOfDTCByStatusMask, status_mask=status_mask)
 	
+	def get_number_of_dtc_by_status_severity_mask(self, status_mask, severity_mask):
+		return self.read_dtc_information(services.ReadDTCInformation.reportNumberOfDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
+	
 	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, snapshot_record_number=None, extended_data_record_number=None):
-		
+#===== Process params		
+		if status_mask is not None and isinstance(status_mask, Dtc.Status):
+			status_mask = status_mask.get_byte_as_int()
+
+		if severity_mask is not None and isinstance(severity_mask, Dtc.Severity):
+			severity_mask = severity_mask.get_byte_as_int()
+
 #===== Requests
 		request_subfn_no_param = [
 			services.ReadDTCInformation.reportSupportedDTC,
@@ -666,7 +675,7 @@ class Client:
 				raise ValueError('status_mask must be provided for subfunction 0x%02x' % service.subfunction)
 				
 			if not isinstance(status_mask, int) or status_mask < 0 or status_mask > 0xFF:
-				raise ValueError('status_mask must be an integer between 0 and 0xFF')
+				raise ValueError('status_mask must be a Dtc.Status instance or an integer between 0 and 0xFF')
 
 			req.data = struct.pack('B', (status_mask & 0xFF))
 		elif service.subfunction in request_subfn_mask_record_plus_snapshot_record_number:
@@ -676,7 +685,20 @@ class Client:
 		elif service.subfunction in request_subfn_mask_record_plus_extdata_record_number:
 			pass
 		elif service.subfunction in request_subfn_severity_plus_status_mask:
-			pass
+			if status_mask is None:
+				raise ValueError('status_mask must be provided for subfunction 0x%02x' % service.subfunction)
+				
+			if not isinstance(status_mask, int) or status_mask < 0 or status_mask > 0xFF:
+				raise ValueError('status_mask must be a Dtc.Status instance or an integer between 0 and 0xFF')
+
+			if severity_mask is None:
+				raise ValueError('severity_mask must be provided for subfunction 0x%02x' % service.subfunction)
+				
+			if not isinstance(severity_mask, int) or severity_mask < 0 or severity_mask > 0xFF:
+				raise ValueError('severity_mask must be a Dtc.Severity instance or an integer between 0 and 0xFF')
+
+			req.data = struct.pack('B', (severity_mask & 0xFF))
+			req.data += struct.pack('B', (status_mask & 0xFF))
 		elif service.subfunction in request_subfn_mask_record:
 			pass
 
