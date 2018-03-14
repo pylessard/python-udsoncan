@@ -88,7 +88,7 @@ class Dtc:
 			self.test_not_completed_this_operation_cycle = False
 			self.warning_indicator_requested = False
 
-		def get_byte(self):
+		def get_byte_as_int(self):
 			byte = 0
 			byte |= 0x1 	if self.test_failed else 0
 			byte |= 0x2 	if self.test_failed_this_operation_cycle else 0
@@ -99,7 +99,10 @@ class Dtc:
 			byte |= 0x40 	if self.test_not_completed_this_operation_cycle else 0
 			byte |= 0x80 	if self.warning_indicator_requested else 0
 
-			return struct.pack('B', byte)
+			return byte
+
+		def get_byte(self):
+			return struct.pack('B', self.get_byte_as_int())
 
 		def set_byte(self, byte):
 			if not isinstance(byte, int) and not isinstance(byte, bytes):
@@ -116,7 +119,6 @@ class Dtc:
 			self.test_failed_since_last_clear 				= True if byte & 0x20 > 0 else False
 			self.test_not_completed_this_operation_cycle	= True if byte & 0x40 > 0 else False
 			self.warning_indicator_requested 				= True if byte & 0x80 > 0 else False
-
 
 	def __init__(self, dtcid):
 		self.id = dtcid
@@ -138,6 +140,9 @@ class Dtc:
 			raise ValueError('Severity is a 3 bits value and must be an integer between 0 and 7')
 
 		self._severity = val
+
+	def __repr__(self):
+		return '<DTC ID=0x%06x, Status=0x%02x, Severity=0x%02x at 0x%08x>' % (self.id, self.status.get_byte_as_int(), self.severity, id(self))
 
 	class DtcSnapshot:
 		record_number = None

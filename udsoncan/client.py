@@ -582,6 +582,7 @@ class Client:
 	
 	def get_dtc(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, snapshot_record_number=None, extended_data_record_number=None):
 		
+#===== Requests
 		request_subfn_no_param = [
 			services.ReadDTCInformation.reportSupportedDTC,
 			services.ReadDTCInformation.reportFirstTestFailedDTC,
@@ -626,6 +627,7 @@ class Client:
 			services.ReadDTCInformation.reportSeverityInformationOfDTC		
 			]
 
+# ===== Responses
 		response_subfn_dtc_availability_mask_plus_dtc_record = [
 			services.ReadDTCInformation.reportDTCByStatusMask,
 			services.ReadDTCInformation.reportSupportedDTC,
@@ -638,9 +640,11 @@ class Client:
 			services.ReadDTCInformation.reportDTCWithPermanentStatus
 		]
 
+# ==== Config
 		tolerate_zero_padding = self.config['tolerate_zero_padding'] if 'tolerate_zero_padding' in self.config else True
 		ignore_all_zero_dtc = self.config['ignore_all_zero_dtc'] if 'ignore_all_zero_dtc' in self.config else True
 
+# ==== Craft Request
 		service = services.ReadDTCInformation(subfunction)
 		req = Request(service)
 
@@ -666,13 +670,14 @@ class Client:
 			pass
 
 
+# ==== Get response
 		response = self.send_request(req)
 		user_response = DTCServerRepsonseContainer()
 		
 		if len(response.data) < 1:
 			raise InvalidResponseException(response, 'Response must be at least 1 byte long (echo of subfunction)')
 
-
+# ==== Validate response
 		response_subfn = int(response.data[0])
 
 		if response_subfn != service.subfunction:
@@ -695,7 +700,7 @@ class Client:
 					if tolerate_zero_padding and response.data[actual_byte:] == b'\x00'*missing_bytes:
 						break
 					else:
-						raise InvalidResponseException('Incomplete DTC record. Missing %d bytes to response to complete the record' % (missing_bytes))
+						raise InvalidResponseException(response, 'Incomplete DTC record. Missing %d bytes to response to complete the record' % (missing_bytes))
 				else:
 					dtc_bytes = response.data[actual_byte:actual_byte+4]
 					if dtc_bytes == b'\x00'*4 and ignore_all_zero_dtc:
@@ -709,7 +714,7 @@ class Client:
 						dtc = Dtc(dtcid)
 						dtc.status.set_byte(dtc_bytes[3])
 
-					user_response.dtcs.append(dtc)
+						user_response.dtcs.append(dtc)
 
 				actual_byte += 4
 
