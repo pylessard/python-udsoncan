@@ -10,7 +10,7 @@ class TestDiagnosticSessionControl(ClientServerTest):
 
 #========================================
 	def test_dsc_success(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x01")
 		self.conn.fromuserqueue.put(b"\x50\x01\x99\x88")	# Positive response
 
@@ -20,7 +20,7 @@ class TestDiagnosticSessionControl(ClientServerTest):
 
 #========================================
 	def test_dsc_denied(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x08")
 		self.conn.fromuserqueue.put(b"\x7F\x10\x12") # Subfunction not supported
 
@@ -36,7 +36,7 @@ class TestDiagnosticSessionControl(ClientServerTest):
 
 #========================================
 	def test_dsc_bad_subfunction(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x01")
 		self.conn.fromuserqueue.put(b"\x50\x02")	# Positive response
 
@@ -46,7 +46,7 @@ class TestDiagnosticSessionControl(ClientServerTest):
 
 #========================================
 	def test_dsc_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x02")
 		self.conn.fromuserqueue.put(b"\x00\x02") #Inexistent Service
 
@@ -57,7 +57,7 @@ class TestDiagnosticSessionControl(ClientServerTest):
 
 #========================================
 	def test_ecu_reset_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x55")
 		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
 

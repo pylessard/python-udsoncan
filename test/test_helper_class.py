@@ -202,6 +202,8 @@ class TestDtc(UdsTest):
 		self.assertEqual(dtc.id, 0x1234 )
 		self.assertEqual(dtc.status.get_byte(), b'\x00')
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x00)
+		self.assertEqual(dtc.severity.get_byte(), b'\x00')
+		self.assertEqual(dtc.severity.get_byte_as_int(), 0x00)
 
 		self.assertEqual(dtc.status.test_failed, False)
 		self.assertEqual(dtc.status.test_failed_this_operation_cycle, False)
@@ -321,26 +323,35 @@ class TestDtc(UdsTest):
 		self.assertEqual(dtc.status.test_not_completed_this_operation_cycle, True)
 		self.assertEqual(dtc.status.warning_indicator_requested, True)
 
-	def test_severity(self):
-		dtc = Dtc(1)
+	def test_set_severity_with_byte_no_error(self):
+		dtc=Dtc(1)
+		for i in range(255):
+			dtc.severity.set_byte(i)
 
-		dtc.severity = Dtc.Severity.NotAvailable
-		dtc.severity = Dtc.Severity.MaintenanceOnly
-		dtc.severity = Dtc.Severity.CheckAtNextHalt
-		dtc.severity = Dtc.Severity.CheckImmediately
+	def test_severity_behaviour(self):
+		dtc=Dtc(1)
 
-		with self.assertRaises(ValueError):
-			dtc.severity = -1
-
-		with self.assertRaises(ValueError):
-			dtc.severity = 8
-
-
-
-
-
-
-
-
-
-
+		self.assertEqual(dtc.severity.get_byte_as_int(), 0x00)
+		dtc.severity.maintenance_only=True
+		self.assertEqual(dtc.severity.get_byte_as_int(), 0x20)
+		dtc.severity.check_at_next_exit = True
+		self.assertEqual(dtc.severity.get_byte_as_int(), 0x60)
+		dtc.severity.check_immediately = True
+		self.assertEqual(dtc.severity.get_byte_as_int(), 0xE0)
+		
+		
+		dtc.severity.set_byte(0x20)
+		self.assertEqual(dtc.severity.maintenance_only, True)
+		self.assertEqual(dtc.severity.check_at_next_exit, False)
+		self.assertEqual(dtc.severity.check_immediately, False)
+		
+		dtc.severity.set_byte(0x60)
+		self.assertEqual(dtc.severity.maintenance_only, True)
+		self.assertEqual(dtc.severity.check_at_next_exit, True)
+		self.assertEqual(dtc.severity.check_immediately, False)
+		
+		dtc.severity.set_byte(0xE0)
+		self.assertEqual(dtc.severity.maintenance_only, True)
+		self.assertEqual(dtc.severity.check_at_next_exit, True)
+		self.assertEqual(dtc.severity.check_immediately, True)
+		

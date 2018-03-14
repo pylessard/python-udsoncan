@@ -30,7 +30,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_rdbi_single_success(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x22\x00\x01")
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34")	# Positive response
 
@@ -40,7 +40,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_rdbi_multiple_success(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x22\x00\x01\x00\x02\x00\x03")
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
 
@@ -52,13 +52,13 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_rdbi_multiple_zero_padding1_success(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00")				# Positive response
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00")			# Positive response
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00")		# Positive response
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00\x00")	# Positive response
 
 	def _test_rdbi_multiple_zero_padding1_success(self):
@@ -89,13 +89,13 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_rdbi_multiple_zero_padding_not_tolerated(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00")				# Positive response
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00")			# Positive response
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00")		# Positive response
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00\x00")	# Positive response
 
 	def _test_rdbi_multiple_zero_padding_not_tolerated(self):
@@ -114,9 +114,9 @@ class TestReadDataByIdentifier(ClientServerTest):
 			
 #========================================
 	def test_rdbi_output_format(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
 
 	def _test_rdbi_output_format(self):
@@ -130,7 +130,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_rdbi_incomplete_response(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03")	# Positive response
 
 	def _test_rdbi_incomplete_response(self):
@@ -139,7 +139,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_rdbi_unknown_did(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x09\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
 
 	def _test_rdbi_unknown_did(self):
@@ -148,7 +148,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 	
 #========================================
 	def test_rdbi_unwanted_did(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
 
 	def _test_rdbi_unwanted_did(self):
@@ -157,7 +157,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_rdbi_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x00\x01\x12\x34")	# Service is inexistant
 
 	def _test_rdbi_invalidservice(self):
@@ -166,7 +166,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_rdbi_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x50\x00\x01\x12\x34")	# Valid service, but not the one requested
 
 	def _test_rdbi_wrongservice(self):

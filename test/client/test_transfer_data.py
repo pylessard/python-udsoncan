@@ -10,7 +10,7 @@ class TestTransferData(ClientServerTest):
 
 #========================================
 	def test_transfer_data_success(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x36\x22\x12\x34\x56")
 		self.conn.fromuserqueue.put(b"\x76\x22\x89\xab\xcd\xef")	# Positive response
 
@@ -20,7 +20,7 @@ class TestTransferData(ClientServerTest):
 
 #========================================
 	def test_transfer_data_no_data_ok(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x36\x22")
 		self.conn.fromuserqueue.put(b"\x76\x22")	# Positive response
 
@@ -30,7 +30,7 @@ class TestTransferData(ClientServerTest):
 
 #========================================
 	def test_transfer_data_denied(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7F\x36\x73") # wrong block sequence number
 
 	def _test_transfer_data_denied(self):
@@ -44,7 +44,7 @@ class TestTransferData(ClientServerTest):
 
 #========================================
 	def test_transfer_data_bad_sequence_number(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x76\x23\x89\xab\xcd\xef")	# Positive response
 
 	def _test_transfer_data_bad_sequence_number(self):
@@ -54,7 +54,7 @@ class TestTransferData(ClientServerTest):
 
 #========================================
 	def test_transfer_data_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x55") #Inexistent Service
 
 	def _test_transfer_data_invalidservice(self):
@@ -63,7 +63,7 @@ class TestTransferData(ClientServerTest):
 
 #========================================
 	def test_transfer_data_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
 
 	def _test_transfer_data_wrongservice(self):

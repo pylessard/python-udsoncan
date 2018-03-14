@@ -10,7 +10,7 @@ class TestRequestTransferExit(ClientServerTest):
 
 #========================================
 	def test_request_transfer_exit_success(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x37\x12\x34\x56")
 		self.conn.fromuserqueue.put(b"\x77\x89\xab\xcd\xef")	# Positive response
 
@@ -20,7 +20,7 @@ class TestRequestTransferExit(ClientServerTest):
 
 #========================================
 	def test_request_transfer_exit_no_data_ok(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x37")
 		self.conn.fromuserqueue.put(b"\x77")	# Positive response
 
@@ -30,7 +30,7 @@ class TestRequestTransferExit(ClientServerTest):
 
 #========================================
 	def test_request_transfer_exit_denied(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7F\x37\x24") # reset sequence error
 
 	def _test_request_transfer_exit_denied(self):
@@ -44,7 +44,7 @@ class TestRequestTransferExit(ClientServerTest):
 
 #========================================
 	def test_request_transfer_exit_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x55") #Inexistent Service
 
 	def _test_request_transfer_exit_invalidservice(self):
@@ -53,7 +53,7 @@ class TestRequestTransferExit(ClientServerTest):
 
 #========================================
 	def test_request_transfer_exit_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
 
 	def _test_request_transfer_exit_wrongservice(self):

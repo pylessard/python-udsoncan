@@ -10,7 +10,7 @@ class TestCommunicationControl(ClientServerTest):
 
 #========================================
 	def test_comcontrol_enable_node(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x28\x00\x01")
 		self.conn.fromuserqueue.put(b"\x68\x00")	# Positive response
 
@@ -22,7 +22,7 @@ class TestCommunicationControl(ClientServerTest):
 
 #========================================
 	def test_comcontrol_disable_subnet(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x28\x03\x33")
 		self.conn.fromuserqueue.put(b"\x68\x03")	# Positive response
 
@@ -34,7 +34,7 @@ class TestCommunicationControl(ClientServerTest):
 
 #========================================
 	def test_comcontrol_negative_response(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7F\x28\x31") 	# Request Out Of Range
 
 	def _test_comcontrol_negative_response(self):
@@ -45,7 +45,7 @@ class TestCommunicationControl(ClientServerTest):
 
 #========================================
 	def test_set_params_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x22") #Inexistent Service
 
 	def _test_set_params_invalidservice(self):
@@ -56,7 +56,7 @@ class TestCommunicationControl(ClientServerTest):
 
 #========================================
 	def test_comcontrol_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x22") # Valid but wrong service (Tester Present)
 
 	def _test_comcontrol_wrongservice(self):
@@ -67,7 +67,7 @@ class TestCommunicationControl(ClientServerTest):
 
 #========================================
 	def test_comcontrol_bad_control_type(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x68\x08") # Valid but bad control type
 
 	def _test_comcontrol_bad_control_type(self):

@@ -10,7 +10,7 @@ class TestAccessTimingParameter(ClientServerTest):
 
 #========================================
 	def test_read_extended_params_success(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x83\x01")
 		self.conn.fromuserqueue.put(b"\xC3\x01\x99\x88\x77\x66")	# Positive response
 
@@ -21,7 +21,7 @@ class TestAccessTimingParameter(ClientServerTest):
 
 #========================================
 	def test_read_active_params_success(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x83\x03")
 		self.conn.fromuserqueue.put(b"\xC3\x03\x99\x88\x77\x66")	# Positive response
 
@@ -32,7 +32,7 @@ class TestAccessTimingParameter(ClientServerTest):
 
 #========================================
 	def test_set_params_success(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x83\x04\x11\x22\x33\x44")
 		self.conn.fromuserqueue.put(b"\xC3\x04")	# Positive response
 
@@ -42,7 +42,7 @@ class TestAccessTimingParameter(ClientServerTest):
 
 #========================================
 	def test_set_params_success(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x83\x02")
 		self.conn.fromuserqueue.put(b"\xC3\x02")	# Positive response
 
@@ -53,7 +53,7 @@ class TestAccessTimingParameter(ClientServerTest):
 
 #========================================
 	def test_set_params_denied(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7F\x83\x31") #Request Out Of Range
 
 	def _test_set_params_denied(self):
@@ -62,7 +62,7 @@ class TestAccessTimingParameter(ClientServerTest):
 
 #========================================
 	def test_set_params_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x22") #Inexistent Service
 
 	def _test_set_params_invalidservice(self):
@@ -71,7 +71,7 @@ class TestAccessTimingParameter(ClientServerTest):
 
 #========================================
 	def test_routine_control_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x22") # Valid but wrong service (Tester Present)
 
 	def _test_routine_control_wrongservice(self):
@@ -80,7 +80,7 @@ class TestAccessTimingParameter(ClientServerTest):
 
 #========================================
 	def test_access_timing_params_bad_access_type(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\xC3\x23") # Valid but access type
 
 	def _test_access_timing_params_bad_access_type(self):

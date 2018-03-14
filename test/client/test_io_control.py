@@ -59,7 +59,7 @@ class TestIOControl(ClientServerTest):
 #========================================
 #As defined by ISO-14229:2006, section 12.2.5.2 (Example #1)
 	def test_io_control_single_reset(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x32\x01")
 		self.conn.fromuserqueue.put(b"\x6F\x01\x32\x01\x4B")	# Positive response
 
@@ -69,7 +69,7 @@ class TestIOControl(ClientServerTest):
 
 #========================================
 	def test_io_control_no_control_param(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x32\x78")
 		self.conn.fromuserqueue.put(b"\x6F\x01\x32\x4B")
 
@@ -79,7 +79,7 @@ class TestIOControl(ClientServerTest):
 
 #========================================
 	def test_io_control_with_repsonse_record(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x04\x56\x03\x11\x01\x22\x02")
 		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04")	# Positive response with 0x333 and 0x444 as response data
 
@@ -89,11 +89,11 @@ class TestIOControl(ClientServerTest):
 
 #========================================
 	def test_io_control_with_repsonse_record_zero_padding_tolerated(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00")
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00")
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00\x00")
 
 	def _test_io_control_with_repsonse_record_zero_padding_tolerated(self):
@@ -110,11 +110,11 @@ class TestIOControl(ClientServerTest):
 #========================================
 
 	def test_io_control_with_repsonse_record_zero_padding_not_tolerated(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00")
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00")
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00\x00")
 
 	def _test_io_control_with_repsonse_record_zero_padding_not_tolerated(self):
@@ -130,7 +130,7 @@ class TestIOControl(ClientServerTest):
 
 #========================================
 	def test_io_control_composite_did_dict(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x55\x03\x07\x12\x34\x45\x99\x00\xA0")
 		self.conn.fromuserqueue.put(b"\x6F\x01\x55\x03\x07\x02\xEE\x12\x59")
 
@@ -148,7 +148,7 @@ class TestIOControl(ClientServerTest):
 
 #========================================
 	def test_io_control_composite_did_list(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x55\x03\x07\x12\x34\x45\x99\x00\xA0")
 		self.conn.fromuserqueue.put(b"\x6F\x01\x55\x03\x07\x02\xEE\x12\x59")	
 
@@ -175,7 +175,7 @@ class TestIOControl(ClientServerTest):
 	
 #========================================
 	def test_io_control_mask_all_set1(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x55\x03\x07\x12\x34\x45\x99\xFF\xFF")
 		self.conn.fromuserqueue.put(b"\x6F\x01\x55\x03\x07\x02\xEE\x12\x59")	
 
@@ -185,7 +185,7 @@ class TestIOControl(ClientServerTest):
 
 #========================================
 	def test_io_control_mask_all_set0(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x55\x03\x07\x12\x34\x45\x99\x00\x00")
 		self.conn.fromuserqueue.put(b"\x6F\x01\x55\x03\x07\x02\xEE\x12\x59")	
 
@@ -196,7 +196,7 @@ class TestIOControl(ClientServerTest):
 
 #========================================
 	def test_io_control_no_mask(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x55\x03\x07\x12\x34\x45\x99")
 		self.conn.fromuserqueue.put(b"\x6F\x01\x55\x03\x07\x02\xEE\x12\x59")	
 
@@ -262,7 +262,7 @@ class TestIOControl(ClientServerTest):
 
 #========================================
 	def test_io_control_bad_response_too_much_data(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x01\x32\x01\x4B\xAA")	# Last byte is extra
 
 	def _test_io_control_bad_response_too_much_data(self):
@@ -271,7 +271,7 @@ class TestIOControl(ClientServerTest):
 
 #========================================
 	def test_io_control_bad_response_wrong_control_param(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x01\x32\x04\x4B")	# 0x04 should be 0x03
 
 	def _test_io_control_bad_response_wrong_control_param(self):

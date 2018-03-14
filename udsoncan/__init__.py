@@ -53,12 +53,6 @@ class SecurityLevel(object):
 		self.levelid = levelid & 0xFE
 
 class Dtc:
-	class Severity:
-		NotAvailable = 0
-		MaintenanceOnly = 1
-		CheckAtNextHalt = 2
-		CheckImmediately = 4
-
 	class Format:
 		ISO15031_6 = 0
 		ISO14229_1 = 1

@@ -30,7 +30,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_wdbi_single_success1(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2E\x00\x01\x12\x34")
 		self.conn.fromuserqueue.put(b"\x6E\x00\x01")	# Positive response
 
@@ -40,7 +40,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_wdbi_single_success2(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2E\x00\x02\x34\x12")
 		self.conn.fromuserqueue.put(b"\x6E\x00\x02")	# Positive response
 
@@ -50,7 +50,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_wdbi_incomplete_response(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6E\x00")	#Incomplete response
 
 	def _test_wdbi_incomplete_response(self):
@@ -59,7 +59,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_wdbi_unknown_did(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6E\x00\x09")	# Positive response
 
 	def _test_wdbi_unknown_did(self):
@@ -68,7 +68,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 	
 #========================================
 	def test_wdbi_unwanted_did(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6E\x00\x02")	# Positive response
 
 	def _test_wdbi_unwanted_did(self):
@@ -77,7 +77,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_wdbi_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x00\x01")	# Service is inexistant
 
 	def _test_wdbi_invalidservice(self):
@@ -86,7 +86,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 #========================================
 	def test_wdbi_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x50\x00\x01")	# Valid service, but not the one requested
 
 	def _test_wdbi_wrongservice(self):

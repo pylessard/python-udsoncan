@@ -10,7 +10,7 @@ class TestLinkContorl(ClientServerTest):
 
 #========================================
 	def test_linkcontrol_verify_fixed(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x87\x01\x11")
 		self.conn.fromuserqueue.put(b"\xC7\x01")	# Positive response
 
@@ -20,7 +20,7 @@ class TestLinkContorl(ClientServerTest):
 
 #========================================
 	def test_linkcontrol_verify_fixed_from_specific(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x87\x01\x11")
 		self.conn.fromuserqueue.put(b"\xC7\x01")	# Positive response
 
@@ -30,7 +30,7 @@ class TestLinkContorl(ClientServerTest):
 
 #========================================
 	def test_linkcontrol_verify_specific(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x87\x02\x12\x34\x56")
 		self.conn.fromuserqueue.put(b"\xC7\x02")	# Positive response
 
@@ -41,7 +41,7 @@ class TestLinkContorl(ClientServerTest):
 
 #========================================
 	def test_linkcontrol_verify_specific_from_fixed(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x87\x02\x07\xA1\x20")
 		self.conn.fromuserqueue.put(b"\xC7\x02")	# Positive response
 
@@ -51,7 +51,7 @@ class TestLinkContorl(ClientServerTest):
 
 #========================================
 	def test_linkcontrol_custom_control_type(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x87\x55")
 		self.conn.fromuserqueue.put(b"\xC7\x55")	# Positive response
 
@@ -61,7 +61,7 @@ class TestLinkContorl(ClientServerTest):
 
 #========================================
 	def test_linkcontrol_negative_response(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7F\x87\x31") 	# Request Out Of Range
 
 	def _test_linkcontrol_negative_response(self):
@@ -70,7 +70,7 @@ class TestLinkContorl(ClientServerTest):
 
 #========================================
 	def test_linkcontrol_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x22") 	# Request Out Of Range
 
 	def _test_linkcontrol_invalidservice(self):
@@ -79,7 +79,7 @@ class TestLinkContorl(ClientServerTest):
 
 #========================================
 	def test_linkcontrol_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.5)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x22") # Valid but wrong service (Tester Present)
 
 	def _test_linkcontrol_wrongservice(self):
@@ -88,7 +88,7 @@ class TestLinkContorl(ClientServerTest):
 
 #========================================
 	def test_linkcontrol_bad_control_type(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\xC7\x08") # Valid but bad control type
 
 	def _test_linkcontrol_bad_control_type(self):

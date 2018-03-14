@@ -10,7 +10,7 @@ class TestRequestDownload(ClientServerTest):
 
 #========================================
 	def test_request_download_success(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x34\x00\x12\x12\x34\xFF")
 		self.conn.fromuserqueue.put(b"\x74\x20\xab\xcd")	# Positive response
 
@@ -21,7 +21,7 @@ class TestRequestDownload(ClientServerTest):
 
 #========================================
 	def test_request_download_config_format(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x34\x00\x24\x00\x00\x12\x34\x00\xFF")	# dfi = 24 and 0 padding
 		self.conn.fromuserqueue.put(b"\x74\x20\xab\xcd")	# Positive response
 
@@ -33,7 +33,7 @@ class TestRequestDownload(ClientServerTest):
 
 #========================================
 	def test_request_download_success_lfid(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x34\x00\x12\x12\x34\xFF")
 		self.conn.fromuserqueue.put(b"\x74\x23\xab\xcd")	# Positive response
 
@@ -44,7 +44,7 @@ class TestRequestDownload(ClientServerTest):
 
 #========================================
 	def test_request_download_success_dfi(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x34\x52\x12\x12\x34\xFF")
 		self.conn.fromuserqueue.put(b"\x74\x20\xab\xcd")	# Positive response
 
@@ -56,7 +56,7 @@ class TestRequestDownload(ClientServerTest):
 
 #========================================
 	def test_incomplete_nblock_response(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x74\x40\xab\xcd")	# Missing 2 bytes to complete number of block
 
 	def _test_incomplete_nblock_response(self):
@@ -66,7 +66,7 @@ class TestRequestDownload(ClientServerTest):
 
 #========================================
 	def test_request_download_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x20\x12\x34") #Inexistent Service
 
 	def _test_request_download_invalidservice(self):
@@ -76,7 +76,7 @@ class TestRequestDownload(ClientServerTest):
 
 #========================================
 	def test_request_download_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.3)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x20\x12\x34") # Valid but wrong service (Tester Present)
 
 	def _test_request_download_wrongservice(self):

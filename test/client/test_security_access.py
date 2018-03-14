@@ -9,7 +9,7 @@ class TestRequestSeed(ClientServerTest):
 
 #========================================
 	def test_request_seed_success(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x27\x05")
 		self.conn.fromuserqueue.put(b"\x67\x05\x99\x88\x77\x66")	# Positive response
 
@@ -19,7 +19,7 @@ class TestRequestSeed(ClientServerTest):
 
 #========================================
 	def test_request_seed_denied(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x27\x05")
 		self.conn.fromuserqueue.put(b"\x7F\x27\x22")	# Conditions Not Correct
 
@@ -34,7 +34,7 @@ class TestRequestSeed(ClientServerTest):
 
 #========================================
 	def test_request_seed_bad_subfn(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x27\x05")
 		self.conn.fromuserqueue.put(b"\x67\x06\x99\x88\x77\x66")	# Positive response with wrong subfunction
 
@@ -44,7 +44,7 @@ class TestRequestSeed(ClientServerTest):
 
 #========================================
 	def test_request_seed_incomplete_response(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x27\x05")
 		self.conn.fromuserqueue.put(b"\x67\x05")	# Positive response with no seed
 
@@ -54,7 +54,7 @@ class TestRequestSeed(ClientServerTest):
 
 #========================================
 	def test_request_seed_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x27\x05")
 		self.conn.fromuserqueue.put(b"\x00\x05") #Inexistent Service
 
@@ -64,7 +64,7 @@ class TestRequestSeed(ClientServerTest):
 
 #========================================
 	def test_request_seed_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x27\x05")
 		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
 
@@ -91,7 +91,7 @@ class TestSendKey(ClientServerTest):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
 	def test_send_key_success(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x27\x06\x11\x22\x33\x44")
 		self.conn.fromuserqueue.put(b"\x67\x06")	# Positive response
 
@@ -101,7 +101,7 @@ class TestSendKey(ClientServerTest):
 
 #========================================
 	def test_send_key_denied(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x27\x06\x11\x22\x33\x44")
 		self.conn.fromuserqueue.put(b"\x7F\x27\x35")	# InvalidKey
 
@@ -116,7 +116,7 @@ class TestSendKey(ClientServerTest):
 
 #========================================
 	def test_send_key_bad_subfn(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x27\x06\x11\x22\x33\x44")
 		self.conn.fromuserqueue.put(b"\x67\x08\x99\x88\x77\x66")	# Positive response with wrong subfunction
 
@@ -126,7 +126,7 @@ class TestSendKey(ClientServerTest):
 
 #========================================
 	def test_send_key_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x27\x06\x11\x22\x33\x44")
 		self.conn.fromuserqueue.put(b"\x00\x06") #Inexistent Service
 
@@ -136,7 +136,7 @@ class TestSendKey(ClientServerTest):
 
 #========================================
 	def test_send_key_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x27\x06\x11\x22\x33\x44")
 		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
 
@@ -170,10 +170,10 @@ class TestUnlockSecurityService(ClientServerTest):
 
 	def test_unlock_success(self):
 		for i in range(2):
-			request = self.conn.touserqueue.get(timeout=1)
+			request = self.conn.touserqueue.get(timeout=0.2)
 			self.assertEqual(request, b"\x27\x07")		# Request seed
 			self.conn.fromuserqueue.put(b"\x67\x07\x11\x22\x33\x44")	# Positive response
-			request = self.conn.touserqueue.get(timeout=1)
+			request = self.conn.touserqueue.get(timeout=0.2)
 			self.assertEqual(request, b"\x27\x08\xEE\xDD\xCC\xBB")
 			self.conn.fromuserqueue.put(b"\x67\x08")	# Positive response
 

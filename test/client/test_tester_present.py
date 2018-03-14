@@ -9,7 +9,7 @@ class TestTesterPresent(ClientServerTest):
 		ClientServerTest.__init__(self, *args, **kwargs)
 #========================================
 	def test_tester_present_success(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x3E\x00")
 		self.conn.fromuserqueue.put(b"\x7E\x00")	# Positive response
 
@@ -19,7 +19,7 @@ class TestTesterPresent(ClientServerTest):
 
 #========================================
 	def test_tester_present_denied(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x3E\x00")
 		self.conn.fromuserqueue.put(b"\x7F\x3E\x13") # IMLOIF
 
@@ -34,7 +34,7 @@ class TestTesterPresent(ClientServerTest):
 
 #========================================
 	def test_tester_present_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x3E\x00")
 		self.conn.fromuserqueue.put(b"\x00\x00") #Inexistent Service
 
@@ -44,7 +44,7 @@ class TestTesterPresent(ClientServerTest):
 
 #========================================
 	def test_tester_present_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x3E\x00")
 		self.conn.fromuserqueue.put(b"\x50\x00") # Valid but wrong service (Tester Present)
 

@@ -10,7 +10,7 @@ class TestRoutineControl(ClientServerTest):
 
 #========================================
 	def test_start_routine_success(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x31\x01\x00\x12\x45\x67\x89\xaa")
 		self.conn.fromuserqueue.put(b"\x71\x01\x00\x12")	# Positive response
 
@@ -21,7 +21,7 @@ class TestRoutineControl(ClientServerTest):
 
 #========================================
 	def test_stop_routine_success(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x31\x02\x12\x34\x45\x67\x89\xaa")
 		self.conn.fromuserqueue.put(b"\x71\x02\x12\x34")	# Positive response
 
@@ -32,7 +32,7 @@ class TestRoutineControl(ClientServerTest):
 
 #========================================
 	def test_get_routine_result_success(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x31\x03\x12\x34\x45\x67\x89\xaa")
 		self.conn.fromuserqueue.put(b"\x71\x03\x12\x34")	# Positive response
 
@@ -44,7 +44,7 @@ class TestRoutineControl(ClientServerTest):
 
 #========================================
 	def test_routine_control_denied(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7F\x31\x72") #General Programming FAilure
 
 	def _test_routine_control_denied(self):
@@ -58,7 +58,7 @@ class TestRoutineControl(ClientServerTest):
 
 #========================================
 	def test_routine_control_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x11\x12\x34") #Inexistent Service
 
 	def _test_routine_control_invalidservice(self):
@@ -67,7 +67,7 @@ class TestRoutineControl(ClientServerTest):
 
 #========================================
 	def test_routine_control_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x11\x12\x34") # Valid but wrong service (Tester Present)
 
 	def _test_routine_control_wrongservice(self):
@@ -76,7 +76,7 @@ class TestRoutineControl(ClientServerTest):
 
 #========================================
 	def test_routine_control_bad_controltype(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x71\x12\x12\x34") # Valid but wrong service (Tester Present)
 
 	def _test_routine_control_bad_controltype(self):
@@ -86,7 +86,7 @@ class TestRoutineControl(ClientServerTest):
 
 #========================================
 	def test_routine_control_bad_routine_id(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x71\x11\x12\x35") # Valid but wrong service (Tester Present)
 
 	def _test_routine_control_bad_routine_id(self):

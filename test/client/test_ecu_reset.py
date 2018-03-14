@@ -10,7 +10,7 @@ class TestECUReset(ClientServerTest):
 
 #========================================
 	def test_ecu_reset_success(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x11\x55")
 		self.conn.fromuserqueue.put(b"\x51\x55")	# Positive response
 
@@ -20,7 +20,7 @@ class TestECUReset(ClientServerTest):
 
 #========================================
 	def test_ecu_reset_success_pdt(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x11\x04\x23")
 		self.conn.fromuserqueue.put(b"\x51\x04")	# Positive response 
 
@@ -30,7 +30,7 @@ class TestECUReset(ClientServerTest):
 
 #========================================
 	def test_ecu_reset_denied(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x11\x55")
 		self.conn.fromuserqueue.put(b"\x7F\x11\x33") #Security Access Denied
 
@@ -45,7 +45,7 @@ class TestECUReset(ClientServerTest):
 
 #========================================
 	def test_ecu_reset_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x11\x55")
 		self.conn.fromuserqueue.put(b"\x00\x55") #Inexistent Service
 
@@ -55,7 +55,7 @@ class TestECUReset(ClientServerTest):
 
 #========================================
 	def test_ecu_reset_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=1)
+		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x11\x55")
 		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
 
