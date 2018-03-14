@@ -579,7 +579,7 @@ class Client:
 		return self.read_dtc_information(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask)
 
 	def get_dtc_by_status_severity_mask(self, status_mask, severity_mask):
-		return self.read_dtc_information(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask, severity_mask=severity_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.reportDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 
 	def get_number_of_dtc_by_status_mask(self, status_mask):
 		return self.read_dtc_information(services.ReadDTCInformation.reportNumberOfDTCByStatusMask, status_mask=status_mask)
@@ -660,6 +660,11 @@ class Client:
 			services.ReadDTCInformation.reportNumberOfEmissionsRelatedOBDDTCByStatusMask,
 		]
 
+		response_subfn_dtc_availability_mask_plus_dtc_record_with_severity = [
+			services.ReadDTCInformation.reportDTCBySeverityMaskRecord,
+			services.ReadDTCInformation.reportSeverityInformationOfDTC
+		]
+
 # ==== Config
 		tolerate_zero_padding = self.config['tolerate_zero_padding'] if 'tolerate_zero_padding' in self.config else True
 		ignore_all_zero_dtc = self.config['ignore_all_zero_dtc'] if 'ignore_all_zero_dtc' in self.config else True
@@ -685,6 +690,7 @@ class Client:
 		elif service.subfunction in request_subfn_mask_record_plus_extdata_record_number:
 			pass
 		elif service.subfunction in request_subfn_severity_plus_status_mask:
+
 			if status_mask is None:
 				raise ValueError('status_mask must be provided for subfunction 0x%02x' % service.subfunction)
 				
@@ -717,7 +723,14 @@ class Client:
 			raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation subfunction gotten from server(0x%02x) does not match the value in the request subfunction (0x%02x)' % (response_subfn, service.subfunction))	
 
 		
-		if service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record:
+		if service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record or service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record_with_severity:
+
+			if service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record:
+				dtc_size = 4
+			elif service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record_with_severity:
+				dtc_size = 6
+
+
 			if len(response.data) < 2:
 				raise InvalidResponseException(response, 'Response must be at least 2 byte long (echo of subfunction and DTCStatusAvailabilityMask)')
 
@@ -728,28 +741,39 @@ class Client:
 			while True:
 				if len(response.data) <= actual_byte:
 					break
-				elif len(response.data) < actual_byte+4:
+				elif len(response.data) < actual_byte+dtc_size:
 					missing_bytes = len(response.data)-actual_byte
 					if tolerate_zero_padding and response.data[actual_byte:] == b'\x00'*missing_bytes:
 						break
 					else:
 						raise InvalidResponseException(response, 'Incomplete DTC record. Missing %d bytes to response to complete the record' % (missing_bytes))
 				else:
-					dtc_bytes = response.data[actual_byte:actual_byte+4]
-					if dtc_bytes == b'\x00'*4 and ignore_all_zero_dtc:
+					dtc_bytes = response.data[actual_byte:actual_byte+dtc_size]
+					if dtc_bytes == b'\x00'*dtc_size and ignore_all_zero_dtc:
 						pass # ignore
 					else:						
 						dtcid = 0
-						dtcid |= int(dtc_bytes[0]) << 16
-						dtcid |= int(dtc_bytes[1]) << 8
-						dtcid |= int(dtc_bytes[2]) << 0
+						if service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record:
+							dtcid |= int(dtc_bytes[0]) << 16
+							dtcid |= int(dtc_bytes[1]) << 8
+							dtcid |= int(dtc_bytes[2]) << 0
 
-						dtc = Dtc(dtcid)
-						dtc.status.set_byte(dtc_bytes[3])
+							dtc = Dtc(dtcid)
+							dtc.status.set_byte(dtc_bytes[3])
+						elif service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record_with_severity:
+							
+							dtcid |= int(dtc_bytes[2]) << 16
+							dtcid |= int(dtc_bytes[3]) << 8
+							dtcid |= int(dtc_bytes[4]) << 0
+
+							dtc = Dtc(dtcid)
+							dtc.severity.set_byte(dtc_bytes[0])
+							dtc.functional_unit = dtc_bytes[1]
+							dtc.status.set_byte(dtc_bytes[5])
 
 						user_response.dtcs.append(dtc)
 
-				actual_byte += 4
+				actual_byte += dtc_size
 
 			user_response.dtc_count = len(user_response.dtcs)
 
