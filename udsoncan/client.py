@@ -587,13 +587,19 @@ class Client:
 	def get_number_of_dtc_by_status_severity_mask(self, status_mask, severity_mask):
 		return self.read_dtc_information(services.ReadDTCInformation.reportNumberOfDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 	
-	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, snapshot_record_number=None, extended_data_record_number=None):
+	def get_dtc_severity(self, dtc):
+		return self.read_dtc_information(services.ReadDTCInformation.reportSeverityInformationOfDTC, dtc=dtc)
+
+	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, dtc=None, snapshot_record_number=None, extended_data_record_number=None):
 #===== Process params		
 		if status_mask is not None and isinstance(status_mask, Dtc.Status):
 			status_mask = status_mask.get_byte_as_int()
 
 		if severity_mask is not None and isinstance(severity_mask, Dtc.Severity):
 			severity_mask = severity_mask.get_byte_as_int()
+
+		if dtc is not None and isinstance(dtc, Dtc):
+			dtc = dtc.id
 
 #===== Requests
 		request_subfn_no_param = [
@@ -706,8 +712,16 @@ class Client:
 			req.data = struct.pack('B', (severity_mask & 0xFF))
 			req.data += struct.pack('B', (status_mask & 0xFF))
 		elif service.subfunction in request_subfn_mask_record:
-			pass
+			if dtc is None:
+				raise ValueError('A dtc value must be provided for subfunction 0x%02x' % service.subfunction)
 
+			if not isinstance(dtc, int) or dtc < 0 or dtc > 0xFFFFFF:
+				raise ValueError('dtc parameter must be an instance of Dtcor an integer between 0 and 0xFFFFFF')
+
+			req.data = b''
+			req.data += struct.pack('B', (dtc >> 16) & 0xFF)
+			req.data += struct.pack('B', (dtc >> 8) & 0xFF)
+			req.data += struct.pack('B', (dtc >> 0) & 0xFF)
 
 # ==== Get response
 		response = self.send_request(req)
@@ -716,7 +730,7 @@ class Client:
 		if len(response.data) < 1:
 			raise InvalidResponseException(response, 'Response must be at least 1 byte long (echo of subfunction)')
 
-# ==== Validate response
+# ==== Parse and validate response
 		response_subfn = int(response.data[0])
 
 		if response_subfn != service.subfunction:
@@ -746,7 +760,8 @@ class Client:
 					if tolerate_zero_padding and response.data[actual_byte:] == b'\x00'*missing_bytes:
 						break
 					else:
-						raise InvalidResponseException(response, 'Incomplete DTC record. Missing %d bytes to response to complete the record' % (missing_bytes))
+						if service.subfunction != services.ReadDTCInformation.reportSeverityInformationOfDTC or actual_byte == 2: 
+							raise InvalidResponseException(response, 'Incomplete DTC record. Missing %d bytes to response to complete the record' % (missing_bytes))
 				else:
 					dtc_bytes = response.data[actual_byte:actual_byte+dtc_size]
 					if dtc_bytes == b'\x00'*dtc_size and ignore_all_zero_dtc:

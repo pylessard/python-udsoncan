@@ -17,3 +17,7 @@ class ClientServerTest(ThreadableTest):
 
 	def clientTearDown(self):
 		self.udsclient.close()
+
+	def wait_request_and_respond(self, bytes):
+		self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(bytes) 
