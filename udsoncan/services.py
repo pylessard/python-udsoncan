@@ -483,7 +483,7 @@ class ReadDTCInformation(BaseService):
 	reportNumberOfDTCBySeverityMaskRecord = 7
 	reportDTCBySeverityMaskRecord = 8
 	reportSeverityInformationOfDTC = 9
-	reportSupportedDTC = 0xA
+	reportSupportedDTCs = 0xA
 	reportFirstTestFailedDTC = 0xB
 	reportFirstConfirmedDTC = 0xC
 	reportMostRecentTestFailedDTC = 0xD

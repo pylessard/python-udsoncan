@@ -590,6 +590,9 @@ class Client:
 	def get_dtc_severity(self, dtc):
 		return self.read_dtc_information(services.ReadDTCInformation.reportSeverityInformationOfDTC, dtc=dtc)
 
+	def get_supported_dtc(self):
+		return self.read_dtc_information(services.ReadDTCInformation.reportSupportedDTCs)
+
 	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, dtc=None, snapshot_record_number=None, extended_data_record_number=None):
 #===== Process params		
 		if status_mask is not None and isinstance(status_mask, Dtc.Status):
@@ -603,7 +606,7 @@ class Client:
 
 #===== Requests
 		request_subfn_no_param = [
-			services.ReadDTCInformation.reportSupportedDTC,
+			services.ReadDTCInformation.reportSupportedDTCs,
 			services.ReadDTCInformation.reportFirstTestFailedDTC,
 			services.ReadDTCInformation.reportFirstConfirmedDTC,
 			services.ReadDTCInformation.reportMostRecentTestFailedDTC,
@@ -649,7 +652,7 @@ class Client:
 # ===== Responses
 		response_subfn_dtc_availability_mask_plus_dtc_record = [
 			services.ReadDTCInformation.reportDTCByStatusMask,
-			services.ReadDTCInformation.reportSupportedDTC,
+			services.ReadDTCInformation.reportSupportedDTCs,
 			services.ReadDTCInformation.reportFirstTestFailedDTC,
 			services.ReadDTCInformation.reportFirstConfirmedDTC,
 			services.ReadDTCInformation.reportMostRecentTestFailedDTC,
@@ -760,6 +763,7 @@ class Client:
 					if tolerate_zero_padding and response.data[actual_byte:] == b'\x00'*missing_bytes:
 						break
 					else:
+						# We purposely ignore extra byte for subfunction reportSeverityInformationOfDTC as it is supposed to returns 0 or 1 DTC.
 						if service.subfunction != services.ReadDTCInformation.reportSeverityInformationOfDTC or actual_byte == 2: 
 							raise InvalidResponseException(response, 'Incomplete DTC record. Missing %d bytes to response to complete the record' % (missing_bytes))
 				else:

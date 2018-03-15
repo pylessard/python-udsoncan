@@ -726,7 +726,163 @@ class TestReportSeverityInformationOfDTC(ClientServerTest):	# Subfn = 0x9
 
 
 class TestReportSupportedDTC(ClientServerTest):	# Subfn =- 0xA
-	pass
+	
+	def do_client_fixed_dtc(self, expect_all_zero_fourth_dtc=False):
+		response = self.udsclient.get_supported_dtc()
+		self.assertEqual(response.status_availability, 0x7F)
+		number_of_dtc = 4 if expect_all_zero_fourth_dtc else 3
+		
+		self.assertEqual(len(response.dtcs), number_of_dtc)
+		self.assertEqual(response.dtc_count, number_of_dtc)
+
+		self.assertEqual(response.dtcs[0].id, 0x123456)
+		self.assertEqual(response.dtcs[0].status.get_byte_as_int(), 0x24)
+		self.assertEqual(response.dtcs[0].severity.get_byte_as_int(), 0x00)
+
+		self.assertEqual(response.dtcs[1].id, 0x234505)
+		self.assertEqual(response.dtcs[1].status.get_byte_as_int(), 0x00)
+		self.assertEqual(response.dtcs[1].severity.get_byte_as_int(), 0x00)
+
+
+		self.assertEqual(response.dtcs[2].id, 0xabcd01)
+		self.assertEqual(response.dtcs[2].status.get_byte_as_int(), 0x2F)
+		self.assertEqual(response.dtcs[2].severity.get_byte_as_int(), 0x00)		
+		
+		if expect_all_zero_fourth_dtc:
+			self.assertEqual(response.dtcs[3].id, 0)
+			self.assertEqual(response.dtcs[3].status.get_byte_as_int(), 0x00)
+			self.assertEqual(response.dtcs[3].severity.get_byte_as_int(), 0x00)
+
+#===========================	
+	def test_normal_behaviour(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x0A")
+		self.conn.fromuserqueue.put(b"\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F")	
+
+	def _test_normal_behaviour(self):
+		self.do_client_fixed_dtc()
+
+#===========================
+	def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00\x00\x00')
+
+	def _test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
+		self.udsclient.config['tolerate_zero_padding'] = True
+		self.udsclient.config['ignore_all_zero_dtc'] = True
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=False)
+
+#===========================
+	def test_normal_behaviour_zeropadding_ok_consider_allzero(self):
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00\x00\x00')
+	
+	def _test_normal_behaviour_zeropadding_ok_consider_allzero(self):
+		self.udsclient.config['tolerate_zero_padding'] = True
+		self.udsclient.config['ignore_all_zero_dtc'] = False
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=True)
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=True)	
+
+#===========================
+	def test_normal_behaviour_zeropadding_notok_ignore_allzero(self):
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00\x00\x00')
+
+	def _test_normal_behaviour_zeropadding_notok_ignore_allzero(self):
+		self.udsclient.config['tolerate_zero_padding'] = False
+		self.udsclient.config['ignore_all_zero_dtc'] = True
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+		
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=False)
+
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()	
+
+#===========================
+	def test_normal_behaviour_zeropadding_notok_consider_allzero(self):
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x0A\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00\x00\x00\x00')
+
+	def _test_normal_behaviour_zeropadding_notok_consider_allzero(self):
+		self.udsclient.config['tolerate_zero_padding'] = False
+		self.udsclient.config['ignore_all_zero_dtc'] = False
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+		
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+
+		self.do_client_fixed_dtc(expect_all_zero_fourth_dtc=True)	
+
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()	
+
+#===========================
+	def test_no_dtc(self):
+		self.wait_request_and_respond(b"\x59\x0A\x7F")	
+
+	def _test_no_dtc(self):
+		response = self.udsclient.get_supported_dtc()
+		self.assertEqual(len(response.dtcs), 0)
+		self.assertEqual(response.dtc_count, 0)
+
+#===========================
+	def test_bad_response_subfunction(self):
+		self.wait_request_and_respond(b"\x59\x0B\x7F")	
+
+	def _test_bad_response_subfunction(self):
+		with self.assertRaises(UnexpectedResponseException):
+			self.udsclient.get_supported_dtc()
+
+#===========================
+	def test_bad_response_service(self):
+		self.wait_request_and_respond(b"\x6F\x0A\x7F")	
+
+	def _test_bad_response_service(self):
+		with self.assertRaises(UnexpectedResponseException):
+			self.udsclient.get_supported_dtc()			
+
+#===========================
+	def test_bad_response_length(self):
+		self.wait_request_and_respond(b"\x59")
+		self.wait_request_and_respond(b"\x59\x0A")	
+
+	def _test_bad_response_length(self):
+		with self.assertRaises(InvalidResponseException):
+			self.udsclient.get_supported_dtc()
+
+		with self.assertRaises(InvalidResponseException):
+			self.udsclient.get_supported_dtc()
+
 
 class TestReportFirstTestFailedDTC(ClientServerTest):	# Subfn = 0xB
 	pass
