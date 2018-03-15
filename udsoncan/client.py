@@ -593,6 +593,21 @@ class Client:
 	def get_supported_dtc(self):
 		return self.read_dtc_information(services.ReadDTCInformation.reportSupportedDTCs)
 
+	def get_first_test_failed_dtc(self):
+		return self.read_dtc_information(services.ReadDTCInformation.reportFirstTestFailedDTC)
+
+	def get_first_confirmed_dtc(self):
+		return self.read_dtc_information(services.ReadDTCInformation.reportFirstConfirmedDTC)
+
+	def get_most_recent_test_failed_dtc(self):
+		return self.read_dtc_information(services.ReadDTCInformation.reportMostRecentTestFailedDTC)
+
+	def get_most_recent_confirmed_dtc(self):
+		return self.read_dtc_information(services.ReadDTCInformation.reportMostRecentConfirmedDTC)
+
+	def get_dtc_with_permanent_status(self):
+		return self.read_dtc_information(services.ReadDTCInformation.reportDTCWithPermanentStatus)
+
 	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, dtc=None, snapshot_record_number=None, extended_data_record_number=None):
 #===== Process params		
 		if status_mask is not None and isinstance(status_mask, Dtc.Status):
