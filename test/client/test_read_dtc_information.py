@@ -889,8 +889,11 @@ class TestReportMirrorMemoryDTCByStatusMask(ClientServerTest, GenericTestStatusM
 class TestReportMirrorMemoryDTCExtendedDataRecordByDTCNumber(ClientServerTest):	# Subfn = 0x10
 	pass
 
-class TestReportNumberOfMirrorMemoryDTCByStatusMask(ClientServerTest):	# Subfn = 0x11
-	pass
+class TestReportNumberOfMirrorMemoryDTCByStatusMask(ClientServerTest, GenericTest_RequestStatusMask_ResponseNumberOfDTC):	# Subfn = 0x11
+	def __init__(self, *args, **kwargs):
+		ClientServerTest.__init__(self, *args, **kwargs)
+		GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x11, client_function = 'get_mirror_number_of_dtc_by_status_mask')
+
 
 class TestReportNumberOfEmissionsRelatedOBDDTCByStatusMask(ClientServerTest):	# Subfn = 0x12
 	pass
