@@ -153,6 +153,7 @@ class Dtc:
 		self.extended_data = None 	# Not defined by ISO14229. Must be defined in config
 		self.severity = Dtc.Severity()
 		self.functional_unit = None 	# Implementation specific (ISO 14229 D.4)
+		self.fault_counter = None
 
 	
 	def __repr__(self):

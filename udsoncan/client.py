@@ -620,6 +620,9 @@ class Client:
 	def get_dtc_with_permanent_status(self):
 		return self.read_dtc_information(services.ReadDTCInformation.reportDTCWithPermanentStatus)
 
+	def get_dtc_fault_counter(self):
+		return self.read_dtc_information(services.ReadDTCInformation.reportDTCFaultDetectionCounter)
+
 	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, dtc=None, snapshot_record_number=None, extended_data_record_number=None):
 #===== Process params		
 		if status_mask is not None and isinstance(status_mask, Dtc.Status):
@@ -700,6 +703,10 @@ class Client:
 			services.ReadDTCInformation.reportDTCBySeverityMaskRecord,
 			services.ReadDTCInformation.reportSeverityInformationOfDTC
 		]
+		
+		response_subfn_dtc_plus_fault_counter = [
+			services.ReadDTCInformation.reportDTCFaultDetectionCounter
+		]
 
 # ==== Config
 		tolerate_zero_padding = self.config['tolerate_zero_padding'] if 'tolerate_zero_padding' in self.config else True
@@ -767,13 +774,12 @@ class Client:
 			raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation subfunction gotten from server(0x%02x) does not match the value in the request subfunction (0x%02x)' % (response_subfn, service.subfunction))	
 
 		
-		if service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record or service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record_with_severity:
+		if service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record + response_subfn_dtc_availability_mask_plus_dtc_record_with_severity:
 
 			if service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record:
 				dtc_size = 4
 			elif service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record_with_severity:
 				dtc_size = 6
-
 
 			if len(response.data) < 2:
 				raise InvalidResponseException(response, 'Response must be at least 2 byte long (echo of subfunction and DTCStatusAvailabilityMask)')
@@ -816,9 +822,45 @@ class Client:
 							dtc.severity.set_byte(dtc_bytes[0])
 							dtc.functional_unit = dtc_bytes[1]
 							dtc.status.set_byte(dtc_bytes[5])
-
 						user_response.dtcs.append(dtc)
+							
+				actual_byte += dtc_size
 
+			user_response.dtc_count = len(user_response.dtcs)
+
+		elif service.subfunction in response_subfn_dtc_plus_fault_counter:
+			dtc_size = 4
+			if len(response.data) < 1:
+				raise InvalidResponseException(response, 'Response must be at least 1 byte long (echo of subfunction)')
+
+			actual_byte = 1
+
+			while True:
+				if len(response.data) <= actual_byte:
+					break
+				elif len(response.data) < actual_byte+dtc_size:
+					missing_bytes = len(response.data)-actual_byte
+					if tolerate_zero_padding and response.data[actual_byte:] == b'\x00'*missing_bytes:
+						break
+					else:
+						raise InvalidResponseException(response, 'Incomplete DTC record. Missing %d bytes to response to complete the record' % (missing_bytes))
+				else:
+					dtc_bytes = response.data[actual_byte:actual_byte+dtc_size]
+					if dtc_bytes == b'\x00'*dtc_size and ignore_all_zero_dtc:
+						pass # ignore
+					else:						
+						dtcid = 0
+						dtcid |= int(dtc_bytes[0]) << 16
+						dtcid |= int(dtc_bytes[1]) << 8
+						dtcid |= int(dtc_bytes[2]) << 0
+
+						dtc = Dtc(dtcid)
+						dtc.fault_counter = dtc_bytes[3]
+
+						if dtc.fault_counter >= 0x7F or dtc.fault_counter < 0x01:
+							self.logger.warning('Server returned a fault counter value of 0x%02x for DTC id 0x%06x while value should be between 0x01 and 0x7E.' % (dtc.fault_counter, dtc.id))
+						user_response.dtcs.append(dtc)
+							
 				actual_byte += dtc_size
 
 			user_response.dtc_count = len(user_response.dtcs)
