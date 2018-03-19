@@ -149,7 +149,7 @@ class Dtc:
 	def __init__(self, dtcid):
 		self.id = dtcid
 		self.status = Dtc.Status()
-		self.snapshot = None  		# Not defined by ISO14229. Must be defined in config
+		self.snapshots = None  		# Not defined by ISO14229. Must be defined in config
 		self.extended_data = None 	# Not defined by ISO14229. Must be defined in config
 		self.severity = Dtc.Severity()
 		self.functional_unit = None 	# Implementation specific (ISO 14229 D.4)

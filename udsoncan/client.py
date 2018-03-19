@@ -12,7 +12,6 @@ class DTCServerRepsonseContainer(object):
 		self.dtc_format = None
 		self.status_availability = None
 		self.dtc_snapshot_map = {}
-		self.snapshots = []
 		self.extended_data = []
 
 class Client:
@@ -623,6 +622,9 @@ class Client:
 	def get_dtc_fault_counter(self):
 		return self.read_dtc_information(services.ReadDTCInformation.reportDTCFaultDetectionCounter)
 
+	def get_dtc_snapshot_identification(self):
+		return self.read_dtc_information(services.ReadDTCInformation.reportDTCSnapshotIdentification)
+
 	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, dtc=None, snapshot_record_number=None, extended_data_record_number=None):
 #===== Process params		
 		if status_mask is not None and isinstance(status_mask, Dtc.Status):
@@ -644,7 +646,10 @@ class Client:
 			services.ReadDTCInformation.reportDTCFaultDetectionCounter,
 			services.ReadDTCInformation.reportDTCWithPermanentStatus,
 
-			services.ReadDTCInformation.reportDTCSnapshotIdentification	# Not so clear in documentation
+			# Documentation is confusing about reportDTCSnapshotIdentification subfunction.
+			# It is presented with reportDTCSnapshotRecordByDTCNumber (2 params) but a footnote says that these 2 parameters
+			# are not to be provided for reportDTCSnapshotIdentification. Therefore, it is the same as other no-params subfn
+			services.ReadDTCInformation.reportDTCSnapshotIdentification	
 
 			]
 
@@ -708,6 +713,10 @@ class Client:
 			services.ReadDTCInformation.reportDTCFaultDetectionCounter
 		]
 
+		response_subfn_dtc_plus_sapshot_record = [
+			services.ReadDTCInformation.reportDTCSnapshotIdentification
+		]
+
 # ==== Config
 		tolerate_zero_padding = self.config['tolerate_zero_padding'] if 'tolerate_zero_padding' in self.config else True
 		ignore_all_zero_dtc = self.config['ignore_all_zero_dtc'] if 'ignore_all_zero_dtc' in self.config else True
@@ -727,7 +736,24 @@ class Client:
 
 			req.data = struct.pack('B', (status_mask & 0xFF))
 		elif service.subfunction in request_subfn_mask_record_plus_snapshot_record_number:
-			pass
+			if dtc is None:
+				raise ValueError('A dtc value must be provided for subfunction 0x%02x' % service.subfunction)
+
+			if not isinstance(dtc, int) or dtc < 0 or dtc > 0xFFFFFF:
+				raise ValueError('dtc parameter must be an instance of Dtcor an integer between 0 and 0xFFFFFF')
+
+			if snapshot_record_number is None:
+				raise ValueError('snapshot_record_number must be provided for subfunction 0x%02x' % service.subfunction)
+
+			if not isinstance(snapshot_record_number, int) or status_mask < 0 or status_mask > 0xFF:
+				raise ValueError('snapshot_record_number must be an integer between 0 and 0xFF')
+
+			req.data = b''
+			req.data += struct.pack('B', (dtc >> 16) & 0xFF)
+			req.data += struct.pack('B', (dtc >> 8) & 0xFF)
+			req.data += struct.pack('B', (dtc >> 0) & 0xFF)
+			req.data += struct.pack('B', snapshot_record_number)
+
 		elif service.subfunction in request_subfn_snapshot_record_number:
 			pass
 		elif service.subfunction in request_subfn_mask_record_plus_extdata_record_number:
@@ -828,13 +854,13 @@ class Client:
 
 			user_response.dtc_count = len(user_response.dtcs)
 
-		elif service.subfunction in response_subfn_dtc_plus_fault_counter:
+		elif service.subfunction in response_subfn_dtc_plus_fault_counter + response_subfn_dtc_plus_sapshot_record:
 			dtc_size = 4
 			if len(response.data) < 1:
 				raise InvalidResponseException(response, 'Response must be at least 1 byte long (echo of subfunction)')
 
 			actual_byte = 1
-
+			dtc_map = dict()
 			while True:
 				if len(response.data) <= actual_byte:
 					break
@@ -854,12 +880,30 @@ class Client:
 						dtcid |= int(dtc_bytes[1]) << 8
 						dtcid |= int(dtc_bytes[2]) << 0
 
-						dtc = Dtc(dtcid)
-						dtc.fault_counter = dtc_bytes[3]
+						dtc_created = False
+						if dtcid in dtc_map and service.subfunction in response_subfn_dtc_plus_sapshot_record:
+							dtc = dtc_map[dtcid]
+						else:
+							dtc = Dtc(dtcid)
+							dtc_map[dtcid] = dtc
+							dtc_created = True
 
-						if dtc.fault_counter >= 0x7F or dtc.fault_counter < 0x01:
-							self.logger.warning('Server returned a fault counter value of 0x%02x for DTC id 0x%06x while value should be between 0x01 and 0x7E.' % (dtc.fault_counter, dtc.id))
-						user_response.dtcs.append(dtc)
+						if service.subfunction in response_subfn_dtc_plus_fault_counter:
+							dtc.fault_counter = dtc_bytes[3]
+
+							if dtc.fault_counter >= 0x7F or dtc.fault_counter < 0x01:
+								self.logger.warning('Server returned a fault counter value of 0x%02x for DTC id 0x%06x while value should be between 0x01 and 0x7E.' % (dtc.fault_counter, dtc.id))
+
+						elif service.subfunction in response_subfn_dtc_plus_sapshot_record:
+							record_number = dtc_bytes[3]
+
+							if dtc.snapshots is None:
+								dtc.snapshots = []
+
+							dtc.snapshots.append(record_number)
+						
+						if dtc_created:
+							user_response.dtcs.append(dtc)
 							
 				actual_byte += dtc_size
 

@@ -138,6 +138,19 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 	def _test_normal_behaviour(self):
 		self.do_client_fixed_dtc()
 
+	def test_dtc_duplicate(self):
+		self.wait_request_and_respond(b"\x59"+self.sb+b"\xFB\x12\x34\x56\x20\x12\x34\x56\x60")
+
+	def _test_dtc_duplicate(self):
+		response = getattr(self.udsclient, self.client_function).__call__(0x5A)
+		self.assertEqual(len(response.dtcs), 2)	# We want both of them. Server should avoid duplicate
+
+		self.assertEqual(response.dtcs[0].id, 0x123456)
+		self.assertEqual(response.dtcs[0].status.get_byte_as_int(), 0x20)
+
+		self.assertEqual(response.dtcs[1].id, 0x123456)
+		self.assertEqual(response.dtcs[1].status.get_byte_as_int(), 0x60)
+
 	def test_normal_behaviour_param_instance(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x19"+self.sb+b"\x5A")
@@ -282,9 +295,151 @@ class TestReportDTCByStatusMask(ClientServerTest, GenericTestStatusMaskRequest_D
 		ClientServerTest.__init__(self, *args, **kwargs)
 		GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x2, client_function = 'get_dtc_by_status_mask')
 
-
 class TestReportDTCSnapshotIdentification(ClientServerTest):	# Subfn = 0x3
-	pass
+	def do_client_fixed_dtc(self, expect_all_zero_third_dtc=False):
+		response = self.udsclient.get_dtc_snapshot_identification()
+		number_of_dtc = 3 if expect_all_zero_third_dtc else 2
+		
+		self.assertEqual(len(response.dtcs), number_of_dtc)
+		self.assertEqual(response.dtc_count, number_of_dtc)
+
+		self.assertEqual(response.dtcs[0].id, 0x123456)		
+		self.assertEqual(len(response.dtcs[0].snapshots), 2)
+		self.assertEqual(response.dtcs[0].snapshots[0], 1)
+		self.assertEqual(response.dtcs[0].snapshots[1], 2)
+
+		self.assertEqual(response.dtcs[1].id, 0x789abc)		
+		self.assertEqual(len(response.dtcs[1].snapshots), 1)
+		self.assertEqual(response.dtcs[1].snapshots[0], 3)
+		
+		if expect_all_zero_third_dtc:
+			self.assertEqual(response.dtcs[2].id, 0)		
+			self.assertEqual(len(response.dtcs[2].snapshots), 1)
+			self.assertEqual(response.dtcs[2].snapshots[0], 0)
+
+	def test_normal_behaviour(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x03")
+		self.conn.fromuserqueue.put(b"\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03")	
+
+	def _test_normal_behaviour(self):
+		self.do_client_fixed_dtc()
+
+	def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00\x00\x00')
+
+	def _test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
+		self.udsclient.config['tolerate_zero_padding'] = True
+		self.udsclient.config['ignore_all_zero_dtc'] = True
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=False)
+
+	def test_normal_behaviour_zeropadding_ok_consider_allzero(self):
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00\x00\x00')
+	
+	def _test_normal_behaviour_zeropadding_ok_consider_allzero(self):
+		self.udsclient.config['tolerate_zero_padding'] = True
+		self.udsclient.config['ignore_all_zero_dtc'] = False
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=False)
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=True)
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=True)	
+
+	def test_normal_behaviour_zeropadding_notok_ignore_allzero(self):
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00\x00\x00')
+
+	def _test_normal_behaviour_zeropadding_notok_ignore_allzero(self):
+		self.udsclient.config['tolerate_zero_padding'] = False
+		self.udsclient.config['ignore_all_zero_dtc'] = True
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+		
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=False)
+
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()	
+
+	def test_normal_behaviour_zeropadding_notok_consider_allzero(self):
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12\x34\x56\x02\x78\x9a\xbc\x03\x00\x00\x00\x00\x00')
+
+	def _test_normal_behaviour_zeropadding_notok_consider_allzero(self):
+		self.udsclient.config['tolerate_zero_padding'] = False
+		self.udsclient.config['ignore_all_zero_dtc'] = False
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+		
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()
+
+		self.do_client_fixed_dtc(expect_all_zero_third_dtc=True)	
+
+		with self.assertRaises(InvalidResponseException):
+			self.do_client_fixed_dtc()	
+
+	def test_no_dtc(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x59\x03")	
+
+	def _test_no_dtc(self):
+		response = response = self.udsclient.get_dtc_snapshot_identification()
+		self.assertEqual(len(response.dtcs), 0)
+
+	def test_bad_response_subfunction(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x59\x04")	
+
+	def _test_bad_response_subfunction(self):
+		with self.assertRaises(UnexpectedResponseException):
+			response = self.udsclient.get_dtc_snapshot_identification()
+
+	def test_bad_response_service(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x6F\x03")	
+
+	def _test_bad_response_service(self):
+		with self.assertRaises(UnexpectedResponseException):
+			response = self.udsclient.get_dtc_snapshot_identification()
+
+	def test_bad_response_length(self):
+		self.wait_request_and_respond(b'\x59')	
+		self.wait_request_and_respond(b'\x59\x03\x12')	
+		self.wait_request_and_respond(b'\x59\x03\x12\x34')	
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56')	
+		self.wait_request_and_respond(b'\x59\x03\x12\x34\x56\x01\x12')	
+
+	def _test_bad_response_length(self):
+		for i in range(5):
+			with self.assertRaises(InvalidResponseException):
+				response = self.udsclient.get_dtc_snapshot_identification()
 
 class TestReportDTCSnapshotRecordByDTCNumber(ClientServerTest):	# Subfn = 0x4
 	pass
@@ -429,6 +584,23 @@ class TestReportDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x8
 
 	def _test_normal_behaviour_param_instance(self):
 		self.udsclient.get_dtc_by_status_severity_mask(status_mask = Dtc.Status(test_failed=True), severity_mask=Dtc.Severity(check_immediately=True, check_at_next_exit=True))
+
+	def test_dtc_duplicate(self):
+		self.wait_request_and_respond(b'\x59\x08\xFB\x80\x99\x12\x34\x56\x20\x40\x88\x12\x34\x56\x60')
+
+	def _test_dtc_duplicate(self):
+		response = self.udsclient.get_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
+		self.assertEqual(len(response.dtcs), 2)	# We want both of them. Server should avoid duplicate
+
+		self.assertEqual(response.dtcs[0].id, 0x123456)
+		self.assertEqual(response.dtcs[0].status.get_byte_as_int(), 0x20)
+		self.assertEqual(response.dtcs[0].severity.get_byte_as_int(), 0x80)
+		self.assertEqual(response.dtcs[0].functional_unit, 0x99)
+
+		self.assertEqual(response.dtcs[1].id, 0x123456)
+		self.assertEqual(response.dtcs[1].status.get_byte_as_int(), 0x60)
+		self.assertEqual(response.dtcs[1].severity.get_byte_as_int(), 0x40)
+		self.assertEqual(response.dtcs[1].functional_unit, 0x88)
 
 	def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
 		self.wait_request_and_respond(b'\x59\x08\xFB\x80\x99\x12\x34\x56\x20\x40\x88\x12\x34\x57\x60\x00')
@@ -740,6 +912,19 @@ class GenericTestNoParamRequest_DtcAndStatusMaskResponse():
 	def _test_normal_behaviour(self):
 		self.do_client_fixed_dtc()
 
+	def test_dtc_duplicate(self):
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\x7F\x12\x34\x56\x24\x12\x34\x56\x25')
+
+	def _test_dtc_duplicate(self):
+		response = getattr(self.udsclient, self.client_function).__call__()
+		self.assertEqual(len(response.dtcs), 2)	# We want both of them. Server should avoid duplicate
+
+		self.assertEqual(response.dtcs[0].id, 0x123456)
+		self.assertEqual(response.dtcs[0].status.get_byte_as_int(), 0x24)
+
+		self.assertEqual(response.dtcs[1].id, 0x123456)
+		self.assertEqual(response.dtcs[1].status.get_byte_as_int(), 0x25)
+
 	def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
 		self.wait_request_and_respond(b'\x59'+self.sb+b'\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00')
 		self.wait_request_and_respond(b'\x59'+self.sb+b'\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F\x00\x00')
@@ -934,6 +1119,18 @@ class TestReportDTCFaultDetectionCounter(ClientServerTest):	# Subfn = 0x14
 	def _test_normal_behaviour(self):
 		self.do_client_fixed_dtc()
 
+	def test_dtc_duplicate(self):
+		self.wait_request_and_respond(b'\x59\x14\x12\x34\x56\x01\x12\x34\x56\x7E')
+
+	def _test_dtc_duplicate(self):
+		response = self.udsclient.get_dtc_fault_counter()
+		self.assertEqual(len(response.dtcs), 2)	# We want both of them. Server should avoid duplicate
+
+		self.assertEqual(response.dtcs[0].id, 0x123456)
+		self.assertEqual(response.dtcs[0].fault_counter, 0x01)
+
+		self.assertEqual(response.dtcs[1].id, 0x123456)
+		self.assertEqual(response.dtcs[1].fault_counter, 0x7E)
 
 	def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
 		self.wait_request_and_respond(b'\x59\x14\x12\x34\x56\x01\x12\x34\x57\x7E\x00')
