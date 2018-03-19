@@ -578,6 +578,9 @@ class Client:
 	def get_dtc_by_status_mask(self, status_mask):
 		return self.read_dtc_information(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask)
 
+	def get_mirror_dtc_by_status_mask(self, status_mask):
+		return self.read_dtc_information(services.ReadDTCInformation.reportMirrorMemoryDTCByStatusMask, status_mask=status_mask)
+
 	def get_dtc_by_status_severity_mask(self, status_mask, severity_mask):
 		return self.read_dtc_information(services.ReadDTCInformation.reportDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 

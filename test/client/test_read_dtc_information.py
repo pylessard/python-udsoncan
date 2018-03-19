@@ -99,7 +99,7 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 
 
 	def do_client_fixed_dtc(self, expect_all_zero_third_dtc=False):
-		response = self.udsclient.get_dtc_by_status_mask(0x5A)
+		response = getattr(self.udsclient, self.client_function).__call__(0x5A)
 		self.assertEqual(response.status_availability, 0xFB)
 		number_of_dtc = 3 if expect_all_zero_third_dtc else 2
 		
@@ -133,7 +133,7 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 		self.conn.fromuserqueue.put(b"\x59"+self.sb+b"\xFB\x12\x34\x56\x20\x12\x34\x57\x60")	
 
 	def _test_normal_behaviour_param_instance(self):
-		self.udsclient.get_dtc_by_status_mask(Dtc.Status(test_failed_this_operation_cycle = True, confirmed = True, test_not_completed_since_last_clear = True, test_not_completed_this_operation_cycle = True))
+		getattr(self.udsclient, self.client_function).__call__(Dtc.Status(test_failed_this_operation_cycle = True, confirmed = True, test_not_completed_since_last_clear = True, test_not_completed_this_operation_cycle = True))
 
 	def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
 		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00')
@@ -220,7 +220,7 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 		self.conn.fromuserqueue.put(b"\x59"+self.sb+b"\xFB")	
 
 	def _test_no_dtc(self):
-		response = self.udsclient.get_dtc_by_status_mask(0x5A)
+		response = getattr(self.udsclient, self.client_function).__call__(0x5A)
 		self.assertEqual(len(response.dtcs), 0)
 
 	def test_bad_response_subfunction(self):
@@ -229,7 +229,7 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 
 	def _test_bad_response_subfunction(self):
 		with self.assertRaises(UnexpectedResponseException):
-			self.udsclient.get_dtc_by_status_mask(0x5A)
+			getattr(self.udsclient, self.client_function).__call__(0x5A)
 
 	def test_bad_response_service(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -237,7 +237,7 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 
 	def _test_bad_response_service(self):
 		with self.assertRaises(UnexpectedResponseException):
-			self.udsclient.get_dtc_by_status_mask(0x5A)			
+			getattr(self.udsclient, self.client_function).__call__(0x5A)			
 
 	def test_bad_response_length(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -248,23 +248,23 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 
 	def _test_bad_response_length(self):
 		with self.assertRaises(InvalidResponseException):
-			self.udsclient.get_dtc_by_status_mask(0x5A)
+			getattr(self.udsclient, self.client_function).__call__(0x5A)
 
 		with self.assertRaises(InvalidResponseException):
-			self.udsclient.get_dtc_by_status_mask(0x5A)
+			getattr(self.udsclient, self.client_function).__call__(0x5A)
 
 	def test_oob_value(self):
 		pass
 
 	def _test_oob_value(self):
 		with self.assertRaises(ValueError):
-			self.udsclient.get_dtc_by_status_mask(0x100)
+			getattr(self.udsclient, self.client_function).__call__(0x100)
 
 		with self.assertRaises(ValueError):
-			self.udsclient.get_dtc_by_status_mask(-1)
+			getattr(self.udsclient, self.client_function).__call__(-1)
 
 		with self.assertRaises(ValueError):
-			self.udsclient.get_dtc_by_status_mask('aaa')
+			getattr(self.udsclient, self.client_function).__call__('aaa')
 
 class TestReportDTCByStatusMask(ClientServerTest, GenericTestStatusMaskRequest_DtcAndStatusMaskResponse):	# Subfn = 0x2
 	def __init__(self, *args, **kwargs):
@@ -869,8 +869,11 @@ class TestReportMostRecentConfirmedDTC(ClientServerTest, GenericTestNoParamReque
 		GenericTestNoParamRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0xE, client_function = 'get_most_recent_confirmed_dtc')
 
 
-class TestReportMirrorMemoryDTCByStatusMask(ClientServerTest):	# Subfn = 0xF
-	pass
+class TestReportMirrorMemoryDTCByStatusMask(ClientServerTest, GenericTestStatusMaskRequest_DtcAndStatusMaskResponse):	# Subfn = 0xF
+	def __init__(self, *args, **kwargs):
+		ClientServerTest.__init__(self, *args, **kwargs)
+		GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0xf, client_function = 'get_mirror_dtc_by_status_mask')
+		
 
 class TestReportMirrorMemoryDTCExtendedDataRecordByDTCNumber(ClientServerTest):	# Subfn = 0x10
 	pass
