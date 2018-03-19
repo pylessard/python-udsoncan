@@ -901,8 +901,11 @@ class TestReportNumberOfEmissionsRelatedOBDDTCByStatusMask(ClientServerTest, Gen
 		GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x12, client_function = 'get_number_of_emission_dtc_by_status_mask')
 
 
-class TestReportEmissionsRelatedOBDDTCByStatusMask(ClientServerTest):	# Subfn = 0x13
-	pass
+class TestReportEmissionsRelatedOBDDTCByStatusMask(ClientServerTest, GenericTestStatusMaskRequest_DtcAndStatusMaskResponse):	# Subfn = 0x13
+	def __init__(self, *args, **kwargs):
+		ClientServerTest.__init__(self, *args, **kwargs)
+		GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x13, client_function = 'get_emission_dtc_by_status_mask')
+
 
 class TestReportDTCFaultDetectionCounter(ClientServerTest):	# Subfn = 0x14
 	pass

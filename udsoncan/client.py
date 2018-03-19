@@ -578,6 +578,9 @@ class Client:
 	def get_dtc_by_status_mask(self, status_mask):
 		return self.read_dtc_information(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask)
 
+	def get_emission_dtc_by_status_mask(self, status_mask):
+		return self.read_dtc_information(services.ReadDTCInformation.reportEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
+
 	def get_mirrormemory_dtc_by_status_mask(self, status_mask):
 		return self.read_dtc_information(services.ReadDTCInformation.reportMirrorMemoryDTCByStatusMask, status_mask=status_mask)
 
