@@ -91,7 +91,12 @@ class TestReportNumberOfDTCByStatusMask(ClientServerTest):	# Subfn = 0x1
 		with self.assertRaises(ValueError):
 			self.udsclient.get_number_of_dtc_by_status_mask('aaa')
 
-class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
+class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
+	def __init__(self, subfunction, client_function):
+		self.sb = struct.pack('B', subfunction)
+		self.badsb = struct.pack('B', subfunction+1)
+		self.client_function = client_function
+
 
 	def do_client_fixed_dtc(self, expect_all_zero_third_dtc=False):
 		response = self.udsclient.get_dtc_by_status_mask(0x5A)
@@ -116,26 +121,26 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 
 	def test_normal_behaviour(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
-		self.assertEqual(request, b"\x19\x02\x5A")
-		self.conn.fromuserqueue.put(b"\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60")	
+		self.assertEqual(request, b"\x19"+self.sb+b"\x5A")
+		self.conn.fromuserqueue.put(b"\x59"+self.sb+b"\xFB\x12\x34\x56\x20\x12\x34\x57\x60")	
 
 	def _test_normal_behaviour(self):
 		self.do_client_fixed_dtc()
 
 	def test_normal_behaviour_param_instance(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
-		self.assertEqual(request, b"\x19\x02\x5A")
-		self.conn.fromuserqueue.put(b"\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60")	
+		self.assertEqual(request, b"\x19"+self.sb+b"\x5A")
+		self.conn.fromuserqueue.put(b"\x59"+self.sb+b"\xFB\x12\x34\x56\x20\x12\x34\x57\x60")	
 
 	def _test_normal_behaviour_param_instance(self):
 		self.udsclient.get_dtc_by_status_mask(Dtc.Status(test_failed_this_operation_cycle = True, confirmed = True, test_not_completed_since_last_clear = True, test_not_completed_this_operation_cycle = True))
 
 	def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00\x00')
 
 	def _test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
 		self.udsclient.config['tolerate_zero_padding'] = True
@@ -147,11 +152,11 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 		self.do_client_fixed_dtc(expect_all_zero_third_dtc=False)
 
 	def test_normal_behaviour_zeropadding_ok_consider_allzero(self):
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00\x00')
 	
 	def _test_normal_behaviour_zeropadding_ok_consider_allzero(self):
 		self.udsclient.config['tolerate_zero_padding'] = True
@@ -163,11 +168,11 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 		self.do_client_fixed_dtc(expect_all_zero_third_dtc=True)	
 
 	def test_normal_behaviour_zeropadding_notok_ignore_allzero(self):
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00\x00')
 
 	def _test_normal_behaviour_zeropadding_notok_ignore_allzero(self):
 		self.udsclient.config['tolerate_zero_padding'] = False
@@ -187,11 +192,11 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 			self.do_client_fixed_dtc()	
 
 	def test_normal_behaviour_zeropadding_notok_consider_allzero(self):
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00')
-		self.wait_request_and_respond(b'\x59\x02\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00')
+		self.wait_request_and_respond(b'\x59'+self.sb+b'\xFB\x12\x34\x56\x20\x12\x34\x57\x60\x00\x00\x00\x00\x00')
 
 	def _test_normal_behaviour_zeropadding_notok_consider_allzero(self):
 		self.udsclient.config['tolerate_zero_padding'] = False
@@ -212,7 +217,7 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 
 	def test_no_dtc(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59\x02\xFB")	
+		self.conn.fromuserqueue.put(b"\x59"+self.sb+b"\xFB")	
 
 	def _test_no_dtc(self):
 		response = self.udsclient.get_dtc_by_status_mask(0x5A)
@@ -220,7 +225,7 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 
 	def test_bad_response_subfunction(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59\x03\xFB")	
+		self.conn.fromuserqueue.put(b"\x59"+self.badsb+b"\xFB")	
 
 	def _test_bad_response_subfunction(self):
 		with self.assertRaises(UnexpectedResponseException):
@@ -228,7 +233,7 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 
 	def test_bad_response_service(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x02\xFB")	
+		self.conn.fromuserqueue.put(b"\x6F"+self.sb+b"\xFB")	
 
 	def _test_bad_response_service(self):
 		with self.assertRaises(UnexpectedResponseException):
@@ -239,7 +244,7 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 		self.conn.fromuserqueue.put(b"\x59")
 
 		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59\x02")	
+		self.conn.fromuserqueue.put(b"\x59"+self.sb)	
 
 	def _test_bad_response_length(self):
 		with self.assertRaises(InvalidResponseException):
@@ -260,6 +265,11 @@ class TestReportDTCByStatusMask(ClientServerTest):	# Subfn = 0x2
 
 		with self.assertRaises(ValueError):
 			self.udsclient.get_dtc_by_status_mask('aaa')
+
+class TestReportDTCByStatusMask(ClientServerTest, GenericTestStatusMaskRequest_DtcAndStatusMaskResponse):	# Subfn = 0x2
+	def __init__(self, *args, **kwargs):
+		ClientServerTest.__init__(self, *args, **kwargs)
+		GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x2, client_function = 'get_dtc_by_status_mask')
 
 
 class TestReportDTCSnapshotIdentification(ClientServerTest):	# Subfn = 0x3
