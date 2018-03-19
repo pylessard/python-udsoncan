@@ -34,9 +34,7 @@ class GenericTest_RequestStatusMask_ResponseNumberOfDTC():
 		self.assertEqual(response.dtc_count, 0x1234)
 
 	def test_normal_behaviour_harmless_extra_byte(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.assertEqual(request, b"\x19"+self.sb+b"\x5A")
-		self.conn.fromuserqueue.put(b"\x59"+self.sb+b"\xFB\x01\x12\x34\x00\x11\x22")
+		self.wait_request_and_respond(b"\x59"+self.sb+b"\xFB\x01\x12\x34\x00\x11\x22")
 
 	def _test_normal_behaviour_harmless_extra_byte(self):
 		response = getattr(self.udsclient, self.client_function).__call__(0x5A)
@@ -44,16 +42,14 @@ class GenericTest_RequestStatusMask_ResponseNumberOfDTC():
 		self.assertEqual(response.dtc_count, 0x1234)		
 
 	def test_bad_response_subfn(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59"+self.badsb+b"\xFB\x01\x12\x34")
+		self.wait_request_and_respond(b"\x59"+self.badsb+b"\xFB\x01\x12\x34")
 
 	def _test_bad_response_subfn(self):
 		with self.assertRaises(UnexpectedResponseException):
 			getattr(self.udsclient, self.client_function).__call__(0x5A)
 
 	def test_bad_response_service(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F"+self.sb+b"\xFB\x01\x12\x34")
+		self.wait_request_and_respond(b"\x6F"+self.sb+b"\xFB\x01\x12\x34")
 
 	def _test_bad_response_service(self):
 		with self.assertRaises(UnexpectedResponseException):
@@ -68,20 +64,9 @@ class GenericTest_RequestStatusMask_ResponseNumberOfDTC():
 		self.wait_request_and_respond(b"\x59"+self.sb+b"\xFB\x01\x12")
 
 	def _test_bad_length_response(self):
-		with self.assertRaises(InvalidResponseException):
-			getattr(self.udsclient, self.client_function).__call__(0x5A)
-
-		with self.assertRaises(InvalidResponseException):
-			getattr(self.udsclient, self.client_function).__call__(0x5A)
-
-		with self.assertRaises(InvalidResponseException):
-			getattr(self.udsclient, self.client_function).__call__(0x5A)
-
-		with self.assertRaises(InvalidResponseException):
-			getattr(self.udsclient, self.client_function).__call__(0x5A)
-
-		with self.assertRaises(InvalidResponseException):
-			getattr(self.udsclient, self.client_function).__call__(0x5A)
+		for i in range(5):
+			with self.assertRaises(InvalidResponseException):
+				getattr(self.udsclient, self.client_function).__call__(0x5A)
 
 	def test_oob_value(self):
 		pass
@@ -240,35 +225,29 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 			self.do_client_fixed_dtc()	
 
 	def test_no_dtc(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59"+self.sb+b"\xFB")	
+		self.wait_request_and_respond(b"\x59"+self.sb+b"\xFB")	
 
 	def _test_no_dtc(self):
 		response = getattr(self.udsclient, self.client_function).__call__(0x5A)
 		self.assertEqual(len(response.dtcs), 0)
 
 	def test_bad_response_subfunction(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59"+self.badsb+b"\xFB")	
+		self.wait_request_and_respond(b"\x59"+self.badsb+b"\xFB")	
 
 	def _test_bad_response_subfunction(self):
 		with self.assertRaises(UnexpectedResponseException):
 			getattr(self.udsclient, self.client_function).__call__(0x5A)
 
 	def test_bad_response_service(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F"+self.sb+b"\xFB")	
+		self.wait_request_and_respond(b"\x6F"+self.sb+b"\xFB")	
 
 	def _test_bad_response_service(self):
 		with self.assertRaises(UnexpectedResponseException):
 			getattr(self.udsclient, self.client_function).__call__(0x5A)			
 
 	def test_bad_response_length(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59")
-
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59"+self.sb)	
+		self.wait_request_and_respond(b"\x59")
+		self.wait_request_and_respond(b"\x59"+self.sb)	
 
 	def _test_bad_response_length(self):
 		with self.assertRaises(InvalidResponseException):
@@ -406,24 +385,21 @@ class TestReportDTCSnapshotIdentification(ClientServerTest):	# Subfn = 0x3
 			self.do_client_fixed_dtc()	
 
 	def test_no_dtc(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59\x03")	
+		self.wait_request_and_respond(b"\x59\x03")	
 
 	def _test_no_dtc(self):
 		response = response = self.udsclient.get_dtc_snapshot_identification()
 		self.assertEqual(len(response.dtcs), 0)
 
 	def test_bad_response_subfunction(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59\x04")	
+		self.wait_request_and_respond(b"\x59\x04")	
 
 	def _test_bad_response_subfunction(self):
 		with self.assertRaises(UnexpectedResponseException):
 			response = self.udsclient.get_dtc_snapshot_identification()
 
 	def test_bad_response_service(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x03")	
+		self.wait_request_and_respond(b"\x6F\x03")	
 
 	def _test_bad_response_service(self):
 		with self.assertRaises(UnexpectedResponseException):
@@ -473,8 +449,7 @@ class TestReportNumberOfDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x7
 		self.assertEqual(response.dtc_count, 0x1234)
 
 	def test_normal_behaviour_harmless_extra_byte(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59\x07\xFB\x01\x12\x34\x00\x11\x22")
+		self.wait_request_and_respond(b"\x59\x07\xFB\x01\x12\x34\x00\x11\x22")
 
 	def _test_normal_behaviour_harmless_extra_byte(self):
 		response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
@@ -482,16 +457,14 @@ class TestReportNumberOfDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x7
 		self.assertEqual(response.dtc_count, 0x1234)		
 
 	def test_bad_response_subfn(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x59\x08\xFB\x01\x12\x34")
+		self.wait_request_and_respond(b"\x59\x08\xFB\x01\x12\x34")
 
 	def _test_bad_response_subfn(self):
 		with self.assertRaises(UnexpectedResponseException):
 			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
 
 	def test_bad_response_service(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x07\xFB\x01\x12\x34")
+		self.wait_request_and_respond(b"\x6F\x07\xFB\x01\x12\x34")
 
 	def _test_bad_response_service(self):
 		with self.assertRaises(UnexpectedResponseException):
@@ -506,20 +479,9 @@ class TestReportNumberOfDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x7
 		self.wait_request_and_respond(b"\x59\x07\xFB\x01\x12")
 
 	def _test_bad_length_response(self):
-		with self.assertRaises(InvalidResponseException):
-			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
-
-		with self.assertRaises(InvalidResponseException):
-			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
-
-		with self.assertRaises(InvalidResponseException):
-			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
-
-		with self.assertRaises(InvalidResponseException):
-			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
-
-		with self.assertRaises(InvalidResponseException):
-			response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
+		for i in range(5):
+			with self.assertRaises(InvalidResponseException):
+				response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
 
 	def test_oob_value(self):
 		pass
