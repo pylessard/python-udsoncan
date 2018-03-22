@@ -623,7 +623,7 @@ class Client:
 	def get_dtc_snapshot_identification(self):
 		return self.read_dtc_information(services.ReadDTCInformation.reportDTCSnapshotIdentification)
 
-	def get_dtc_snapshot_by_dtc_number(self, dtc, record_number):
+	def get_dtc_snapshot_by_dtc_number(self, dtc, record_number=0xFF):
 		return self.read_dtc_information(services.ReadDTCInformation.reportDTCSnapshotRecordByDTCNumber, dtc=dtc, snapshot_record_number=record_number)
 
 	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None):
