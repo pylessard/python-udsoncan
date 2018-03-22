@@ -24,8 +24,8 @@ class Request:
 
 		self.suppress_positive_response = suppress_positive_response
 		
-		if data is not None and not isinstance(data, str):
-			raise ValueError("data must be a valid string")
+		if data is not None and not isinstance(data, bytes):
+			raise ValueError("data must be a valid bytes object")
 
 		self.data = data
 

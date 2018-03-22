@@ -149,7 +149,7 @@ class Dtc:
 	def __init__(self, dtcid):
 		self.id = dtcid
 		self.status = Dtc.Status()
-		self.snapshots = None  		# Not defined by ISO14229. Must be defined in config
+		self.snapshots = []  		# Not defined by ISO14229. Must be defined in config
 		self.extended_data = None 	# Not defined by ISO14229. Must be defined in config
 		self.severity = Dtc.Severity()
 		self.functional_unit = None 	# Implementation specific (ISO 14229 D.4)
@@ -159,11 +159,16 @@ class Dtc:
 	def __repr__(self):
 		return '<DTC ID=0x%06x, Status=0x%02x, Severity=0x%02x at 0x%08x>' % (self.id, self.status.get_byte_as_int(), self.severity.get_byte_as_int(), id(self))
 
-	class DtcSnapshot:
+	class Snapshot:
 		record_number = None
-		data = b''
+		did = None
+		data = None
+		raw_data = b''
 
-	class DtcExtendedData:
+		def decode(self):
+			return self.codec.decode(self.data)
+
+	class ExtendedData:
 		record_number = None
 		data = b''
 		

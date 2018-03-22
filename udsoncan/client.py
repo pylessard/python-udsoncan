@@ -192,18 +192,17 @@ class Client:
 		for did in didlist:
 			received[did] = False
 		
-		tolerate_zero_padding = self.config['tolerate_zero_padding'] if 'tolerate_zero_padding' in self.config else True
 		while True:
 			if len(response.data) <= offset:
 				break
 
 			if len(response.data) <= offset +1:
-				if tolerate_zero_padding and response.data[-1] == 0:
+				if self.config['tolerate_zero_padding'] and response.data[-1] == 0:
 					break
 				raise UnexpectedResponseException(response, "Response given by server is incomplete.")
 
 			did = struct.unpack('>H', response.data[offset:offset+2])[0]
-			if did == 0 and did not in didconfig and tolerate_zero_padding:
+			if did == 0 and did not in didconfig and self.config['tolerate_zero_padding']:
 				if response.data[offset:] == b'\x00' * (len(response.data) - offset):
 					break
 
@@ -546,13 +545,12 @@ class Client:
 			next_byte +=1
 
 		if len(response.data) >= next_byte:
-			tolerate_zero_padding = self.config['tolerate_zero_padding'] if 'tolerate_zero_padding' in self.config else True
 			remaining_data = response.data[next_byte:]
 			size_ok = True 
 			
 			if len(remaining_data) > len(codec):
 				if remaining_data[len(codec):] == b'\x00' * (len(remaining_data) - len(codec)):
-					if tolerate_zero_padding:
+					if self.config['tolerate_zero_padding']:
 						remaining_data = remaining_data[0:len(codec)]
 					else:
 						size_ok = False
@@ -625,7 +623,10 @@ class Client:
 	def get_dtc_snapshot_identification(self):
 		return self.read_dtc_information(services.ReadDTCInformation.reportDTCSnapshotIdentification)
 
-	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None, dtc_mask=None, dtc=None, snapshot_record_number=None, extended_data_record_number=None):
+	def get_dtc_snapshot_by_dtc_number(self, dtc, record_number):
+		return self.read_dtc_information(services.ReadDTCInformation.reportDTCSnapshotRecordByDTCNumber, dtc=dtc, snapshot_record_number=record_number)
+
+	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None):
 #===== Process params		
 		if status_mask is not None and isinstance(status_mask, Dtc.Status):
 			status_mask = status_mask.get_byte_as_int()
@@ -717,8 +718,11 @@ class Client:
 			services.ReadDTCInformation.reportDTCSnapshotIdentification
 		]
 
+		response_sbfn_dtc_status_snapshots_records = [
+			services.ReadDTCInformation.reportDTCSnapshotRecordByDTCNumber
+		]
+
 # ==== Config
-		tolerate_zero_padding = self.config['tolerate_zero_padding'] if 'tolerate_zero_padding' in self.config else True
 		ignore_all_zero_dtc = self.config['ignore_all_zero_dtc'] if 'ignore_all_zero_dtc' in self.config else True
 
 # ==== Craft Request
@@ -739,13 +743,13 @@ class Client:
 			if dtc is None:
 				raise ValueError('A dtc value must be provided for subfunction 0x%02x' % service.subfunction)
 
-			if not isinstance(dtc, int) or dtc < 0 or dtc > 0xFFFFFF:
+			if not isinstance(dtc, int) or (isinstance(dtc, int) and (dtc < 0 or dtc > 0xFFFFFF)):
 				raise ValueError('dtc parameter must be an instance of Dtcor an integer between 0 and 0xFFFFFF')
 
 			if snapshot_record_number is None:
 				raise ValueError('snapshot_record_number must be provided for subfunction 0x%02x' % service.subfunction)
 
-			if not isinstance(snapshot_record_number, int) or status_mask < 0 or status_mask > 0xFF:
+			if not isinstance(snapshot_record_number, int) or (isinstance(snapshot_record_number, int) and (snapshot_record_number < 0 or snapshot_record_number > 0xFF)):
 				raise ValueError('snapshot_record_number must be an integer between 0 and 0xFF')
 
 			req.data = b''
@@ -819,7 +823,7 @@ class Client:
 					break
 				elif len(response.data) < actual_byte+dtc_size:
 					missing_bytes = len(response.data)-actual_byte
-					if tolerate_zero_padding and response.data[actual_byte:] == b'\x00'*missing_bytes:
+					if self.config['tolerate_zero_padding'] and response.data[actual_byte:] == b'\x00'*missing_bytes:
 						break
 					else:
 						# We purposely ignore extra byte for subfunction reportSeverityInformationOfDTC as it is supposed to returns 0 or 1 DTC.
@@ -866,7 +870,7 @@ class Client:
 					break
 				elif len(response.data) < actual_byte+dtc_size:
 					missing_bytes = len(response.data)-actual_byte
-					if tolerate_zero_padding and response.data[actual_byte:] == b'\x00'*missing_bytes:
+					if self.config['tolerate_zero_padding'] and response.data[actual_byte:] == b'\x00'*missing_bytes:
 						break
 					else:
 						raise InvalidResponseException(response, 'Incomplete DTC record. Missing %d bytes to response to complete the record' % (missing_bytes))
@@ -920,6 +924,82 @@ class Client:
 				self.logger.warning('Unknown DTC Format Identifier 0x%02x. Value should be between 0 and 3' % user_response.dtc_format)
 
 			user_response.dtc_count = struct.unpack('>H', response.data[3:5])[0]
+		elif service.subfunction in response_sbfn_dtc_status_snapshots_records:
+			if len(response.data) < 5:
+				raise InvalidResponseException(response, 'Response must be at least 5 bytes long ')
+
+			dtcid = 0
+			dtcid |= int(response.data[1]) << 16
+			dtcid |= int(response.data[2]) << 8
+			dtcid |= int(response.data[3]) << 0
+
+			if dtc != dtcid:
+				error_msg = 'Server returned snapshot with DTC ID 0x%06x while client requested for 0x%06x' % (dtcid, dtc)
+				raise UnexpectedResponseException(response, error_msg)
+
+			dtc = Dtc(dtcid)
+			dtc.status.set_byte(response.data[4])
+
+			actual_byte = 5
+			if self.config['dtc_snapshot_did_size'] > 8 or self.config['dtc_snapshot_did_size'] < 1:
+				raise RuntimeError('Configuration "dtc_snapshot_did_size" must be an integer between 1 and 8')
+			while True:
+				if len(response.data) <= actual_byte:
+					break
+
+				remaining_data = response.data[actual_byte:]
+				if self.config['tolerate_zero_padding'] and remaining_data == b'\x00' * len(remaining_data):
+					break
+					
+				if len(remaining_data) < 2:
+					raise InvalidResponseException(response, 'Incomplete response from server. Missing "number of identifier" and following data')
+
+				record_number = remaining_data[0]
+				number_of_did = remaining_data[1]
+
+				if number_of_did == 0:
+					error_msg = 'Server returned snapshot record #%d with no data identifier included' % (record_number)
+					self.logger.warning(error_msg)
+					raise InvalidResponseException(response, error_msg) 
+
+				if (snapshot_record_number != 0xFF and record_number != snapshot_record_number):
+					error_msg = 'Server returned snapshot with record number 0x%02x while client requested for 0x%02x' % (record_number, snapshot_record_number)
+					self.logger.warning(error_msg)
+					raise UnexpectedResponseException(response, error_msg) 
+
+
+				if len(remaining_data) < 2 + self.config['dtc_snapshot_did_size']:
+					raise InvalidResponseException(response, 'Incomplete response from server. Missing DID number and associated data.')
+
+				actual_byte += 2
+				for i in range(number_of_did):
+					remaining_data = response.data[actual_byte:]
+					snapshot = Dtc.Snapshot()
+					snapshot.record_number = record_number
+
+					did = 0
+					for j in range(self.config['dtc_snapshot_did_size']):
+						offset = self.config['dtc_snapshot_did_size']-1-j
+						did |= (remaining_data[offset] << (8*j))
+					
+					snapshot.did = did
+					didconfig = self.check_did_config(did)
+					codec = DidCodec.from_config(didconfig[did])
+					
+					data_offset =  self.config['dtc_snapshot_did_size'];
+					if len(remaining_data[data_offset:]) < len(codec):
+						raise InvalidResponseException(response, 'Incomplete response. Data for DID 0x%04x is only %d bytes while %d bytes is expected' % (did, len(remaining_data[data_offset:]), len(codec)))
+
+					snapshot.raw_data = remaining_data[data_offset:data_offset + len(codec)]
+					snapshot.data = codec.decode(snapshot.raw_data)
+
+					dtc.snapshots.append(snapshot)
+
+					actual_byte += self.config['dtc_snapshot_did_size'] + len(codec)
+
+
+			user_response.dtcs.append(dtc)
+			user_response.dtc_count = 1
 
 
 		return user_response

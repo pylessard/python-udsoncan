@@ -1,5 +1,5 @@
 from udsoncan.client import Client
-from udsoncan import services
+from udsoncan import services, DidCodec
 from udsoncan.exceptions import *
 
 from test.ClientServerTest import ClientServerTest
@@ -85,7 +85,6 @@ class TestReportNumberOfDTCByStatusMask(ClientServerTest, GenericTest_RequestSta
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 		GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x1, client_function = 'get_number_of_dtc_by_status_mask')
-
 
 class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 	def __init__(self, subfunction, client_function):
@@ -418,7 +417,331 @@ class TestReportDTCSnapshotIdentification(ClientServerTest):	# Subfn = 0x3
 				response = self.udsclient.get_dtc_snapshot_identification()
 
 class TestReportDTCSnapshotRecordByDTCNumber(ClientServerTest):	# Subfn = 0x4
-	pass
+	
+	class Codec4711(DidCodec):
+		def encode(self, did_value):
+			return struct.pack('>BBHB', did_value['ect'], did_value['tp'], did_value['rpm'], did_value['map'])
+
+		def decode(self, did_payload):
+			v = dict(ect=0, tp=0, rpm=0, map=0)
+			(v['ect'], v['tp'], v['rpm'], v['map']) = struct.unpack('>BBHB', did_payload)
+			return v
+
+		def __len__(self):
+			return 5
+
+	class Codec4455(DidCodec):
+		def encode(self, did_value):
+			return struct.pack('>H', did_value)
+
+		def decode(self, did_payload):
+			return struct.unpack('>H', did_payload)[0]
+
+		def __len__(self):
+			return 2
+
+	def postClientSetUp(self):
+		self.udsclient.config["data_identifiers"] = {
+			0x4455 : self.__class__.Codec4455,
+			0x4711 : self.__class__.Codec4711,
+			0x6789 : 'BBB'
+		}
+
+	def single_snapshot_assert_response(self, response):
+		self.assertEqual(len(response.dtcs), 1)
+		self.assertEqual(response.dtc_count, 1)
+
+		dtc = response.dtcs[0]
+
+		self.assertEqual(dtc.id, 0x123456)
+		self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
+
+		self.assertEqual(len(dtc.snapshots), 1)
+		snapshot = dtc.snapshots[0]
+
+		self.assertTrue(isinstance(snapshot, Dtc.Snapshot))
+		self.assertEqual(snapshot.record_number, 0x02)	
+		self.assertEqual(snapshot.did, 0x4711)	
+
+		self.assertEqual(dtc.snapshots[0].data['ect'], 0xA6)	# Engine Coolant Temp
+		self.assertEqual(dtc.snapshots[0].data['tp'], 0x66)		# Throttle Position
+		self.assertEqual(dtc.snapshots[0].data['rpm'], 0x750)	# Engine speed
+		self.assertEqual(dtc.snapshots[0].data['map'], 0x20)  	# Manifoled Absolute Value
+
+	def single_snapshot_2_dids_assert_response(self, response):
+		self.assertEqual(len(response.dtcs), 1)
+		self.assertEqual(response.dtc_count, 1)
+
+		dtc = response.dtcs[0]
+
+		self.assertEqual(dtc.id, 0x123456)
+		self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
+
+		self.assertEqual(len(dtc.snapshots), 2)
+
+		self.assertTrue(isinstance(dtc.snapshots[0], Dtc.Snapshot))
+		self.assertEqual(dtc.snapshots[0].record_number, 0x02)	
+		self.assertEqual(dtc.snapshots[0].did, 0x4711)	
+
+		self.assertTrue(isinstance(dtc.snapshots[1], Dtc.Snapshot))
+		self.assertEqual(dtc.snapshots[1].record_number, 0x02)	
+		self.assertEqual(dtc.snapshots[1].did, 0x6789)	
+
+
+		self.assertEqual(dtc.snapshots[0].data['ect'], 0xA6)	# Engine Coolant Temp
+		self.assertEqual(dtc.snapshots[0].data['tp'], 0x66)		# Throttle Position
+		self.assertEqual(dtc.snapshots[0].data['rpm'], 0x750)	# Engine speed
+		self.assertEqual(dtc.snapshots[0].data['map'], 0x20)  	# Manifoled Absolute Value
+
+		self.assertEqual(dtc.snapshots[1].data[0], 0x99)
+		self.assertEqual(dtc.snapshots[1].data[1], 0x88)
+		self.assertEqual(dtc.snapshots[1].data[2], 0x77)
+
+
+	def test_single_snapshot(self): # Example provided in standard
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x04\x12\x34\x56\x02")
+		self.conn.fromuserqueue.put(b"\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20")
+
+	def _test_single_snapshot(self):
+		response = self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=2)
+		self.single_snapshot_assert_response(response)
+
+	def test_single_snapshot_with_instance_param(self): # Example provided in standard
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x04\x12\x34\x56\x02")
+		self.conn.fromuserqueue.put(b"\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20")
+
+	def _test_single_snapshot_with_instance_param(self):
+		response = self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=Dtc(0x123456), record_number=2)
+		self.single_snapshot_assert_response(response)
+
+	def test_single_snapshot_zeropadding_ok(self): # Example provided in standard
+		data = b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20'
+		self.udsclient.config['tolerate_zero_padding'] = True
+		self.wait_request_and_respond(data + b'\x00')
+		self.wait_request_and_respond(data + b'\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00\x00\x00')
+
+	def _test_single_snapshot_zeropadding_ok(self):
+		for i in range(7):
+			response = self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=2)
+			self.single_snapshot_assert_response(response)
+
+	def test_single_snapshot_zeropadding_notok(self): # Example provided in standard
+		data = b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20'
+		self.udsclient.config['tolerate_zero_padding'] = False
+		self.wait_request_and_respond(data + b'\x00')
+		self.wait_request_and_respond(data + b'\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00\x00\x00')
+
+	def _test_single_snapshot_zeropadding_notok(self):
+		for i in range (7):
+			with self.assertRaises(InvalidResponseException):
+				self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=2)
+
+	def test_single_snapshot_2_did(self): # Example provided in standard
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x04\x12\x34\x56\x02")
+		self.conn.fromuserqueue.put(b"\x59\x04\x12\x34\x56\x24\x02\x02\x47\x11\xa6\x66\x07\x50\x20\x67\x89\x99\x88\x77")
+
+	def _test_single_snapshot_2_did(self):
+		response = self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=2)
+		self.single_snapshot_2_dids_assert_response(response)
+
+	def _test_multiple_snapshot_multiple_did(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x19\x04\x12\x34\x56\xFF")
+		self.conn.fromuserqueue.put(b"\x59\x04\x12\x34\x56\x24\x02\x02\x47\x11\xa6\x66\x07\x50\x20\x67\x89\x99\x88\x77\x03\x01\x44\x55\x43\x21")
+
+	def _test_multiple_snapshot_multiple_did(self):
+		response = self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0xFF)
+
+		self.assertEqual(len(response.dtcs), 1)
+		self.assertEqual(response.dtc_count, 1)
+
+		dtc = response.dtcs[0]
+
+		self.assertEqual(dtc.id, 0x123456)
+		self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
+
+		self.assertEqual(len(dtc.snapshots), 3)
+
+		self.assertTrue(isinstance(dtc.snapshots[0], Dtc.Snapshot))
+		self.assertEqual(dtc.snapshots[0].record_number, 0x02)	
+		self.assertEqual(dtc.snapshots[0].did, 0x4711)	
+
+		self.assertTrue(isinstance(dtc.snapshots[1], Dtc.Snapshot))
+		self.assertEqual(dtc.snapshots[1].record_number, 0x02)	
+		self.assertEqual(dtc.snapshots[1].did, 0x6789)
+
+		self.assertTrue(isinstance(dtc.snapshots[2], Dtc.Snapshot))
+		self.assertEqual(dtc.snapshots[2].record_number, 0x02)	
+		self.assertEqual(dtc.snapshots[2].did, 0x4455)	
+
+		# data
+		self.assertEqual(dtc.snapshots[0].data['ect'], 0xA6)		# Engine Coolant Temp
+		self.assertEqual(dtc.snapshots[0].data['tp'], 0x66)		# Throttle Position
+		self.assertEqual(dtc.snapshots[0].data['rpm'], 0x750)	# Engine speed
+		self.assertEqual(dtc.snapshots[0].data['map'], 0x20)  	# Manifoled Absolute Value
+
+		self.assertEqual(dtc.snapshots[1].data[0], 0x99)
+		self.assertEqual(dtc.snapshots[1].data[1], 0x88)
+		self.assertEqual(dtc.snapshots[1].data[2], 0x77)
+
+		self.assertEqual(dtc.snapshots[2].data, 0x4321)
+
+	def test_invalid_length_incomplete_dtc(self):
+		self.wait_request_and_respond(b'\x59\x04\x12')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34')
+
+	def _test_invalid_length_incomplete_dtc(self):
+		for i in range(2):
+			with self.assertRaises(InvalidResponseException):
+				self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02)
+	
+	def test_invalid_length_missing_status(self):
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56')
+
+	def _test_invalid_length_missing_status(self):
+		with self.assertRaises(InvalidResponseException):
+			self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02)
+
+	def test_invalid_length_missing_identifier_number(self):
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03')
+
+	def _test_invalid_length_missing_identifier_number(self):
+		for i in range(2):
+			with self.assertRaises(InvalidResponseException):
+				self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02)
+
+	def test_invalid_length_missing_did(self):
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03\x01')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03\x01\x67')
+
+	def _test_invalid_length_missing_did(self):
+		for i in range(4):
+			with self.assertRaises(InvalidResponseException):
+				self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0xFF)
+
+	def test_invalid_length_missing_data(self):
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03\x01\x67\x89')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03\x01\x67\x89\x99')
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03\x01\x67\x89\x99\x88')
+
+	def _test_invalid_length_missing_data(self):
+		for i in range(9):
+			with self.assertRaises(InvalidResponseException):
+				self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0xff)
+
+	def test_bad_subfunction(self):
+		self.wait_request_and_respond(b'\x59\x05\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20')
+
+	def _test_bad_subfunction(self):
+		with self.assertRaises(UnexpectedResponseException):
+			self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02)
+
+	def test_bad_dtc(self):
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x57\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20')
+
+	def _test_bad_dtc(self):
+		with self.assertRaises(UnexpectedResponseException):
+			self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02)
+
+	def test_bad_record_number(self):
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24\x03\x01\x47\x11\xa6\x66\x07\x50\x20')
+
+	def _test_bad_record_number(self):
+		with self.assertRaises(UnexpectedResponseException):
+			self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02)
+
+	def test_no_record(self):
+		self.wait_request_and_respond(b'\x59\x04\x12\x34\x56\x24')
+
+	def _test_no_record(self):
+		response = self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02)
+		
+		self.assertEqual(len(response.dtcs), 1)
+		self.assertEqual(response.dtc_count, 1)
+		dtc = response.dtcs[0]
+		self.assertEqual(dtc.id, 0x123456)
+		self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
+		self.assertEqual(len(dtc.snapshots), 0)
+
+	def test_no_record_zero_padding_ok(self):
+		data = b'\x59\x04\x12\x34\x56\x24'
+		self.wait_request_and_respond(data + b'\x00')
+		self.wait_request_and_respond(data + b'\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00\x00\x00\x00')
+
+	def _test_no_record_zero_padding_ok(self):
+		self.udsclient.config['tolerate_zero_padding'] = True
+		for i in range(8):
+			response = self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02)
+			
+			self.assertEqual(len(response.dtcs), 1)
+			self.assertEqual(response.dtc_count, 1)
+			dtc = response.dtcs[0]
+			self.assertEqual(dtc.id, 0x123456)
+			self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
+			self.assertEqual(len(dtc.snapshots), 0)
+
+	def test_no_record_zero_padding_not_ok(self):
+		data = b'\x59\x04\x12\x34\x56\x24'
+		self.wait_request_and_respond(data + b'\x00')
+		self.wait_request_and_respond(data + b'\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00\x00\x00')
+		self.wait_request_and_respond(data + b'\x00\x00\x00\x00\x00\x00\x00\x00')
+
+	def _test_no_record_zero_padding_not_ok(self):
+		self.udsclient.config['tolerate_zero_padding'] = False
+		for i in range(8):
+			with self.assertRaises(InvalidResponseException):
+				self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02)
+
+
+	def test_oob_values(self):
+		pass
+
+	def _test_oob_values(self):
+		with self.assertRaises(ValueError):
+			self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=-1, record_number=0x02)
+		
+		with self.assertRaises(ValueError):
+			self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x1000000, record_number=0x02)
+		
+		with self.assertRaises(ValueError):
+			self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=-1)
+		
+		with self.assertRaises(ValueError):
+			self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x100)
+
 
 class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
 	pass
@@ -1020,19 +1343,16 @@ class TestReportMostRecentTestFailedDTC(ClientServerTest, GenericTestNoParamRequ
 		ClientServerTest.__init__(self, *args, **kwargs)
 		GenericTestNoParamRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0xD, client_function = 'get_most_recent_test_failed_dtc')
 
-
 class TestReportMostRecentConfirmedDTC(ClientServerTest, GenericTestNoParamRequest_DtcAndStatusMaskResponse):	# Subfn = 0xE
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 		GenericTestNoParamRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0xE, client_function = 'get_most_recent_confirmed_dtc')
-
 
 class TestReportMirrorMemoryDTCByStatusMask(ClientServerTest, GenericTestStatusMaskRequest_DtcAndStatusMaskResponse):	# Subfn = 0xF
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 		GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0xf, client_function = 'get_mirrormemory_dtc_by_status_mask')
 		
-
 class TestReportMirrorMemoryDTCExtendedDataRecordByDTCNumber(ClientServerTest):	# Subfn = 0x10
 	pass
 
@@ -1041,18 +1361,15 @@ class TestReportNumberOfMirrorMemoryDTCByStatusMask(ClientServerTest, GenericTes
 		ClientServerTest.__init__(self, *args, **kwargs)
 		GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x11, client_function = 'get_mirrormemory_number_of_dtc_by_status_mask')
 
-
 class TestReportNumberOfEmissionsRelatedOBDDTCByStatusMask(ClientServerTest, GenericTest_RequestStatusMask_ResponseNumberOfDTC):	# Subfn = 0x12
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 		GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x12, client_function = 'get_number_of_emission_dtc_by_status_mask')
 
-
 class TestReportEmissionsRelatedOBDDTCByStatusMask(ClientServerTest, GenericTestStatusMaskRequest_DtcAndStatusMaskResponse):	# Subfn = 0x13
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 		GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x13, client_function = 'get_emission_dtc_by_status_mask')
-
 
 class TestReportDTCFaultDetectionCounter(ClientServerTest):	# Subfn = 0x14
 	
