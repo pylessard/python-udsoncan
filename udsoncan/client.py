@@ -569,8 +569,27 @@ class Client:
 			
 			return decoded_data
 
-# ====  ReadDTCInformation
+	def control_dtc_setting(self, setting_type, data=None):
+		service = services.ControlDTCSetting(setting_type, data)
+		req = Request(service)
 
+		if service.data is not None:
+			req.data = service.data
+
+		response = self.send_request(req)
+
+		if len(response.data) < 1:
+			raise InvalidResponseException(response, 'Response data must be at least 1 byte, received %d bytes' % len(response.data))
+
+		received = response.data[0]
+		expected = service.setting_type
+
+		if received != expected:
+			raise UnexpectedResponseException(response, "Setting type of response (0x%02x) does not match request control type (0x%02x)" % (received, expected))
+
+		return response
+
+# ====  ReadDTCInformation
 
 	def get_dtc_by_status_mask(self, status_mask):
 		return self.read_dtc_information(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask)
@@ -637,7 +656,7 @@ class Client:
 
 
 	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None, data_size=None):
-#===== Process params		
+# Process params		
 		if status_mask is not None and isinstance(status_mask, Dtc.Status):
 			status_mask = status_mask.get_byte_as_int()
 

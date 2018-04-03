@@ -280,8 +280,39 @@ class ControlDTCSetting(BaseService):
 							Response.Code.RequestOutOfRange
 							]
 
-	def __init__(self):
-		pass
+	on = 1
+	off = 2
+
+	@classmethod
+	def name_from_setting_type(cls, setting_type):
+		if setting_type == 1:
+			return 'on'
+		elif setting_type == 2:
+			return 'off'
+		elif setting_type >= 0x40 and setting_type <= 0x5F:
+			return 'vehicleManufacturerSpecific'
+		elif setting_type >= 0x60 and setting_type <= 0x7E:
+			return 'systemSupplierSpecific'
+		elif setting_type >= 0 and setting_type<= 0x7F:
+			return 'ISOSAEReserved'
+
+	def __init__(self, setting_type, data = None):
+
+		if not isinstance(setting_type, int):
+			raise ValueError('setting_type must be an integer')
+
+		if setting_type < 0 or setting_type > 0x7F:
+			raise ValueError('setting_type must be an integer between 0 and 0x7F')
+
+		if data is not None:
+			if not isinstance(data, bytes):
+				raise ValueError('data must be a valid bytes object')
+
+		self.setting_type = setting_type
+		self.data = data
+
+	def subfunction_id(self):
+		return self.setting_type
 
 class ResponseOnEvent(BaseService):
 	_sid = 0x86
