@@ -150,7 +150,7 @@ class Dtc:
 		self.id = dtcid
 		self.status = Dtc.Status()
 		self.snapshots = []  		# Not defined by ISO14229. Must be defined in config
-		self.extended_data = None 	# Not defined by ISO14229. Must be defined in config
+		self.extended_data = [] 	# Not defined by ISO14229. Must be defined in config
 		self.severity = Dtc.Severity()
 		self.functional_unit = None 	# Implementation specific (ISO 14229 D.4)
 		self.fault_counter = None
@@ -170,7 +170,7 @@ class Dtc:
 
 	class ExtendedData:
 		record_number = None
-		data = b''
+		raw_data = b''
 		
 
 class AddressAndLengthIdentifier:

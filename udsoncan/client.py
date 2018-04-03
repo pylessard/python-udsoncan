@@ -629,7 +629,14 @@ class Client:
 	def get_dtc_snapshot_by_record_number(self, record_number):
 		return self.read_dtc_information(services.ReadDTCInformation.reportDTCSnapshotRecordByRecordNumber, snapshot_record_number=record_number)
 
-	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None):
+	def get_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
+		return self.read_dtc_information(services.ReadDTCInformation.reportDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number,data_size=data_size)
+
+	def get_mirrormemory_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
+		return self.read_dtc_information(services.ReadDTCInformation.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number, data_size=data_size)
+
+
+	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None, data_size=None):
 #===== Process params		
 		if status_mask is not None and isinstance(status_mask, Dtc.Status):
 			status_mask = status_mask.get_byte_as_int()
@@ -729,6 +736,10 @@ class Client:
 			services.ReadDTCInformation.reportDTCSnapshotRecordByRecordNumber
 		]
 
+		response_subfn_mask_record_plus_extdata = [
+			services.ReadDTCInformation.reportDTCExtendedDataRecordByDTCNumber,
+			services.ReadDTCInformation.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber
+		]
 # ==== Config
 		ignore_all_zero_dtc = self.config['ignore_all_zero_dtc'] if 'ignore_all_zero_dtc' in self.config else True
 
@@ -775,7 +786,32 @@ class Client:
 			req.data = struct.pack('B', snapshot_record_number)
 
 		elif service.subfunction in request_subfn_mask_record_plus_extdata_record_number:
-			pass
+			if dtc is None:
+				raise ValueError('A dtc value must be provided for subfunction 0x%02x' % service.subfunction)
+
+			if not isinstance(dtc, int) or dtc < 0 or dtc > 0xFFFFFF:
+				raise ValueError('dtc parameter must be an instance of Dtcor an integer between 0 and 0xFFFFFF')
+
+			if extended_data_record_number is None:
+				raise ValueError('extended_data_record_number must be provided for subfunction 0x%02x' % service.subfunction)
+
+			if not isinstance(extended_data_record_number, int) or (isinstance(extended_data_record_number, int) and (extended_data_record_number < 0 or extended_data_record_number > 0xFF)):
+				raise ValueError('extended_data_record_number must be an integer between 0 and 0xFF')
+			if data_size is None and 'extended_data_size' in self.config and dtc in self.config['extended_data_size']:
+				data_size = self.config['extended_data_size'][dtc]
+			
+			if data_size is None:
+				raise ValueError('data_size must be provided or config[extended_data_size][dtc] must be set as length of data is not given by the server.')
+
+			if not isinstance(data_size, int) or (isinstance(data_size, int) and data_size <= 0):
+				raise ValueError('data_size or config[extended_data_size][dtc] must be a non-zero positive integer')
+
+			req.data = b''
+			req.data += struct.pack('B', (dtc >> 16) & 0xFF)
+			req.data += struct.pack('B', (dtc >> 8) & 0xFF)
+			req.data += struct.pack('B', (dtc >> 0) & 0xFF)
+			req.data += struct.pack('B', extended_data_record_number)
+
 		elif service.subfunction in request_subfn_severity_plus_status_mask:
 
 			if status_mask is None:
@@ -1103,7 +1139,48 @@ class Client:
 				user_response.dtcs.append(dtc)
 				first_loop = False
 			user_response.dtc_count = len(user_response.dtcs)
+		elif service.subfunction in response_subfn_mask_record_plus_extdata:
 
+			if len(response.data) < 5: 
+				raise InvalidResponseException(response, 'Incomplete response from server. Missing DTCAndStatusRecord')
+
+			dtcid = 0
+			dtcid |= int(response.data[1]) << 16
+			dtcid |= int(response.data[2]) << 8
+			dtcid |= int(response.data[3]) << 0
+
+			dtc = Dtc(dtcid)
+			dtc.status.set_byte(response.data[4])
+
+			actual_byte = 5
+			while actual_byte < len(response.data):
+				remaining_data = response.data[actual_byte:]
+				record_number = remaining_data[0]
+
+				if record_number == 0:
+					if remaining_data == b'\x00' * len(remaining_data) and self.config['tolerate_zero_padding']:
+						break
+					else:
+						raise InvalidResponseException(response, 'Extended data record number given by the server is 0 but this value is a reserved value.')
+
+				if record_number != extended_data_record_number and  extended_data_record_number < 0xF0:	# Standard specifies that values between 0xF0 and 0xFF are for reporting groups (more than one record)
+					raise UnexpectedResponseException(response, 'Extended data record number given by the server (0x%02x) does not match the record number requested by the client (0x%02x)' % (record_number, extended_data_record_number))
+
+				actual_byte +=1
+				remaining_data = response.data[actual_byte:]
+				if len(remaining_data) < data_size:
+					raise InvalidResponseException(response, 'Incomplete response from server. Length of extended data for DTC 0x%06x with record number 0x%02x is %d bytes but smaller than given data_size of %d bytes' % (dtcid, record_number, len(remaining_data), data_size))
+
+				exdata = Dtc.ExtendedData()
+				exdata.record_number = record_number
+				exdata.raw_data = remaining_data[0:data_size]
+
+				dtc.extended_data.append(exdata)
+
+				actual_byte+= data_size
+
+			user_response.dtcs.append(dtc)
+			user_response.dtc_count = len(user_response.dtcs)
 
 		return user_response
 
