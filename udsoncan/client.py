@@ -600,6 +600,16 @@ class Client:
 
 		response = self.send_request(req)
 
+		if len(response.data) < memory_location.memorysize:
+			raise UnexpectedResponseException(response, 'Data block given by the server is too short. Client requested for %d bytes but only received %d bytes' % (memory_location.memorysize, len(response.data)))
+
+		if len(response.data) > memory_location.memorysize:
+			extra_bytes = len(response.data) - memory_location.memorysize
+			if response.data[memory_location.memorysize:] == b'\x00' * extra_bytes and self.config['tolerate_zero_padding']:
+				response.data = response.data[0:memory_location.memorysize]	# trim exceeding zeros
+			else:
+				raise UnexpectedResponseException(response, 'Data block given by the server is too long. Client requested for %d bytes but received %d bytes' % (memory_location.memorysize, len(response.data)))
+
 		return response.data
 
 # ====  ReadDTCInformation
