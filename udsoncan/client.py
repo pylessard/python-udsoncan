@@ -589,6 +589,19 @@ class Client:
 
 		return response
 
+	def read_memory_by_address(self, memory_location):
+		service = services.ReadMemoryByAddress(memory_location)
+		req = Request(service)
+
+		req.data = b''
+		req.data += service.memory_location.ali.get_byte() # AddressAndLengthIdentifier
+		req.data += service.memory_location.get_address_bytes()
+		req.data += service.memory_location.get_memorysize_bytes()
+
+		response = self.send_request(req)
+
+		return response.data
+
 # ====  ReadDTCInformation
 
 	def get_dtc_by_status_mask(self, status_mask):
