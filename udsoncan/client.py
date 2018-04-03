@@ -4,6 +4,7 @@ from udsoncan.configs import default_client_config
 import struct
 import logging
 import math
+import binascii
 
 class DTCServerRepsonseContainer(object):
 	def __init__(self):
@@ -611,6 +612,44 @@ class Client:
 				raise UnexpectedResponseException(response, 'Data block given by the server is too long. Client requested for %d bytes but received %d bytes' % (memory_location.memorysize, len(response.data)))
 
 		return response.data
+
+	def write_memory_by_address(self, memory_location, data):
+		service = services.WriteMemoryByAddress(memory_location, data)
+		req = Request(service)
+
+		if len(service.data) != service.memory_location.memorysize:
+			self.logger.warning('WriteMemoryByAddress: data block length (%d bytes) does not match MemoryLocation size (%d bytes)' % (len(service.data, service.memory_location.memorysize)))
+
+		ali_byte 			= service.memory_location.ali.get_byte()   # AddressAndLengthIdentifier
+		address_bytes 		= service.memory_location.get_address_bytes()
+		memorysize_bytes 	=  service.memory_location.get_memorysize_bytes()
+
+		req.data = ali_byte + address_bytes + memorysize_bytes + service.data
+
+		response = self.send_request(req)
+
+		expected_response_size = len(ali_byte) + len(address_bytes) + len(memorysize_bytes)
+		if len(response.data) < expected_response_size:
+			raise InvalidResponseException('Repsonse should be at least %d bytes' % (expected_response_size))
+
+		offset = 0
+
+		response_ali_byte = response.data[offset:offset+len(ali_byte)]
+		offset += len(ali_byte)
+		if response_ali_byte != ali_byte:
+			raise UnexpectedResponseException(response, 'AddressAndLengthIdentifier echoed back by the server (%s) does not match the one requested by the client (%s)' % (binascii.hexlify(response_ali_byte), binascii.hexlify(ali_byte)) )
+		
+		response_address_bytes = response.data[offset:offset+len(address_bytes)]
+		offset+=len(address_bytes)
+		if response_address_bytes != address_bytes:
+			raise UnexpectedResponseException(response, 'Address echoed back by the server (%s) does not match the one requested by the client (%s)' % (binascii.hexlify(response_address_bytes), binascii.hexlify(address_bytes)) )
+
+		response_memorysize_bytes = response.data[offset:offset+len(memorysize_bytes)]
+		offset+=len(memorysize_bytes)
+		if response_memorysize_bytes != memorysize_bytes:
+			raise UnexpectedResponseException(response, 'Memory size echoed back by the server (%s) does not match the one requested by the client (%s)' % (binascii.hexlify(response_memorysize_bytes), binascii.hexlify(memorysize_bytes)) )
+
+		return response
 
 # ====  ReadDTCInformation
 
