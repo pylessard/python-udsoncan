@@ -26,7 +26,7 @@ class TestRequestTransferExit(ClientServerTest):
 
 	def _test_request_transfer_exit_no_data_ok(self):
 		response_data = self.udsclient.request_transfer_exit()
-		self.assertEqual(response_data, None)	
+		self.assertEqual(response_data, b'')	
 
 #========================================
 	def test_request_transfer_exit_denied(self):

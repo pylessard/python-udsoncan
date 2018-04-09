@@ -110,7 +110,7 @@ class Response:
 			if not isinstance(data, bytes):
 				raise ValueError("Given data must be a valid bytes object")
 
-		self.data = data
+		self.data = data if data is not None else b''
 
 		if code is not None:
 			if not isinstance(code, int):

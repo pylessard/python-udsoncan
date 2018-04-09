@@ -92,15 +92,14 @@ class TestResponse(UdsTest):
 		response = Response.from_payload(payload)
 		self.assertFalse(response.valid)
 		self.assertIsNone(response.service)
-		self.assertIsNone(response.data)
-
+		self.assertEqual(b'', response.data)
 
 	def test_from_bad_payload(self):
 		payload = b'\xFF\xFF'
 		response = Response.from_payload(payload)
 		self.assertFalse(response.valid)
 		self.assertIsNone(response.service)
-		self.assertIsNone(response.data)
+		self.assertEqual(b'', response.data)
 
 	def test_no_response_data(self):
 		with self.assertRaises(ValueError):
