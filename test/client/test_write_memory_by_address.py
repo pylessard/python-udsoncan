@@ -17,6 +17,16 @@ class TestWriteMemoryByAddress(ClientServerTest):
 		memloc = MemoryLocation(address=0x1234, memorysize=4, address_format=16, memorysize_format=8)
 		self.udsclient.write_memory_by_address(memloc, b'\x66\x77\x88\x99')
 
+	def test_config_format(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x3D\x24\x00\x00\x12\x34\x00\x04\x66\x77\x88\x99")
+		self.conn.fromuserqueue.put(b"\x7D\x24\x00\x00\x12\x34\x00\x04")
+
+	def _test_config_format(self):
+		self.udsclient.config['server_address_format'] = 32
+		self.udsclient.config['server_memorysize_format'] = 16
+		self.udsclient.write_memory_by_address(MemoryLocation(address=0x1234, memorysize=4), b'\x66\x77\x88\x99')
+
 	def test_4byte_block_harmless_extra_bytes(self):
 		self.wait_request_and_respond(b'\x7D\x12\x12\x34\x04\x01\x02\x03\x04\x05')
 

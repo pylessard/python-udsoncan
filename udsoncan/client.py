@@ -19,7 +19,7 @@ class Client:
 	def __init__(self, conn, config=default_client_config, request_timeout = 1, heartbeat  = None):
 		self.conn = conn
 		self.request_timeout = request_timeout
-		self.config = config
+		self.config = dict(config) # Makes a copy of given configuration
 		self.heartbeat = heartbeat
 		self.logger = logging.getLogger("UdsClient")
 		self.last_dtc_status_availability_mask = None
@@ -592,6 +592,13 @@ class Client:
 
 	def read_memory_by_address(self, memory_location):
 		service = services.ReadMemoryByAddress(memory_location)
+
+		if 'server_address_format' in self.config:
+			service.memory_location.set_format_if_none(address_format=self.config['server_address_format'])
+
+		if 'server_memorysize_format' in self.config:
+			service.memory_location.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
+
 		req = Request(service)
 
 		req.data = b''
@@ -615,6 +622,13 @@ class Client:
 
 	def write_memory_by_address(self, memory_location, data):
 		service = services.WriteMemoryByAddress(memory_location, data)
+
+		if 'server_address_format' in self.config:
+			service.memory_location.set_format_if_none(address_format=self.config['server_address_format'])
+
+		if 'server_memorysize_format' in self.config:
+			service.memory_location.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
+
 		req = Request(service)
 
 		if len(service.data) != service.memory_location.memorysize:
@@ -630,7 +644,7 @@ class Client:
 
 		expected_response_size = len(ali_byte) + len(address_bytes) + len(memorysize_bytes)
 		if len(response.data) < expected_response_size:
-			raise InvalidResponseException('Repsonse should be at least %d bytes' % (expected_response_size))
+			raise InvalidResponseException(response, 'Repsonse should be at least %d bytes' % (expected_response_size))
 
 		offset = 0
 
