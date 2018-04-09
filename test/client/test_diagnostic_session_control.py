@@ -8,7 +8,6 @@ class TestDiagnosticSessionControl(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
-#========================================
 	def test_dsc_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x01")
@@ -18,7 +17,6 @@ class TestDiagnosticSessionControl(ClientServerTest):
 		sessionParamRecords = self.udsclient.change_session(services.DiagnosticSessionControl.defaultSession)
 		self.assertEqual(sessionParamRecords, b"\x99\x88")
 
-#========================================
 	def test_dsc_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x08")
@@ -34,7 +32,6 @@ class TestDiagnosticSessionControl(ClientServerTest):
 		self.assertEqual(response.code, 0x12)
 
 
-#========================================
 	def test_dsc_bad_subfunction(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x01")
@@ -44,7 +41,6 @@ class TestDiagnosticSessionControl(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException):
 			success = self.udsclient.change_session(services.DiagnosticSessionControl.defaultSession)
 
-#========================================
 	def test_dsc_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x02")
@@ -55,7 +51,6 @@ class TestDiagnosticSessionControl(ClientServerTest):
 			success = self.udsclient.change_session(0x02)
 
 
-#========================================
 	def test_ecu_reset_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x55")
@@ -66,7 +61,6 @@ class TestDiagnosticSessionControl(ClientServerTest):
 			success = self.udsclient.change_session(0x55)
 
 
-#========================================
 	def test_bad_param(self):
 		pass
 

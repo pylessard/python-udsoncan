@@ -7,17 +7,14 @@ from test.ClientServerTest import ClientServerTest
 class TestTesterPresent(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
-#========================================
 	def test_tester_present_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x3E\x00")
 		self.conn.fromuserqueue.put(b"\x7E\x00")	# Positive response
 
 	def _test_tester_present_success(self):
-		success = self.udsclient.tester_present()
-		self.assertTrue(success)
+		self.udsclient.tester_present()
 
-#========================================
 	def test_tester_present_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x3E\x00")
@@ -32,7 +29,6 @@ class TestTesterPresent(ClientServerTest):
 		self.assertTrue(issubclass(response.service, services.TesterPresent))
 		self.assertEqual(response.code, 0x13)
 
-#========================================
 	def test_tester_present_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x3E\x00")
@@ -42,7 +38,6 @@ class TestTesterPresent(ClientServerTest):
 		with self.assertRaises(InvalidResponseException) as handle:
 			response = self.udsclient.tester_present()
 
-#========================================
 	def test_tester_present_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x3E\x00")
@@ -52,7 +47,6 @@ class TestTesterPresent(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			response = self.udsclient.tester_present()
 
-#========================================
 	def test_bad_param(self):
 		pass
 

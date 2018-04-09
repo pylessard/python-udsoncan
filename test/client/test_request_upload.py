@@ -8,7 +8,6 @@ class TestRequestUpload(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
-#========================================
 	def test_request_upload_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x35\x00\x12\x12\x34\xFF")
@@ -19,7 +18,6 @@ class TestRequestUpload(ClientServerTest):
 		nblock = self.udsclient.request_upload(memory_location=memloc)
 		self.assertEqual(nblock,0xabcd)
 
-#========================================
 	def test_request_upload_config_format(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x35\x00\x24\x00\x00\x12\x34\x00\xFF")	# dfi = 24 and 0 padding
@@ -31,7 +29,6 @@ class TestRequestUpload(ClientServerTest):
 		nblock = self.udsclient.request_upload(memory_location=memloc)
 		self.assertEqual(nblock,0xabcd)
 
-#========================================
 	def test_request_upload_success_lfid(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x35\x00\x12\x12\x34\xFF")
@@ -42,7 +39,6 @@ class TestRequestUpload(ClientServerTest):
 		nblock = self.udsclient.request_upload(memory_location=memloc)
 		self.assertEqual(nblock,0xabcd)
 
-#========================================
 	def test_request_upload_success_dfi(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x35\x52\x12\x12\x34\xFF")
@@ -54,7 +50,6 @@ class TestRequestUpload(ClientServerTest):
 		nblock = self.udsclient.request_upload(memory_location=memloc, dfi=dfi)
 		self.assertEqual(nblock,0xabcd)
 
-#========================================
 	def test_incomplete_nblock_response(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x75\x40\xab\xcd")	# Missing 2 bytes to complete number of block
@@ -64,7 +59,6 @@ class TestRequestUpload(ClientServerTest):
 		with self.assertRaises(InvalidResponseException):
 			self.udsclient.request_upload(memory_location=memloc)
 
-#========================================
 	def test_request_upload_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x20\x12\x34") #Inexistent Service
@@ -74,7 +68,6 @@ class TestRequestUpload(ClientServerTest):
 		with self.assertRaises(InvalidResponseException) as handle:
 			self.udsclient.request_upload(memory_location=memloc)
 
-#========================================
 	def test_request_upload_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x20\x12\x34") # Valid but wrong service (Tester Present)
@@ -84,7 +77,6 @@ class TestRequestUpload(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			self.udsclient.request_upload(memory_location=memloc)
 
-#========================================
 	def test_bad_params(self):
 		pass
 

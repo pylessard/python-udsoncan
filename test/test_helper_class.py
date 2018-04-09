@@ -1,37 +1,37 @@
-from udsoncan import DataFormatIdentifier, AddressAndLengthIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc
+from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc
 from test.UdsTest import UdsTest
 import struct
 
-class TestAddressAndLengthIdentifier(UdsTest):
+class TestAddressAndLengthFormatIdentifier(UdsTest):
 	def test_ali_1(self):
-		ali = AddressAndLengthIdentifier(memorysize_format=8, address_format=8)
+		ali = AddressAndLengthFormatIdentifier(memorysize_format=8, address_format=8)
 		self.assertEqual(ali.get_byte(),b'\x11')
 
 	def test_ali_2(self):
-		ali = AddressAndLengthIdentifier(memorysize_format=16, address_format=8)
+		ali = AddressAndLengthFormatIdentifier(memorysize_format=16, address_format=8)
 		self.assertEqual(ali.get_byte(),b'\x21')
 
 	def test_ali_oob_values(self):	# Out Of Bounds Value
 		with self.assertRaises(ValueError):
-			AddressAndLengthIdentifier(memorysize_format=1, address_format=1)
+			AddressAndLengthFormatIdentifier(memorysize_format=1, address_format=1)
 		
 		with self.assertRaises(ValueError):
-			AddressAndLengthIdentifier(memorysize_format=0, address_format=8)
+			AddressAndLengthFormatIdentifier(memorysize_format=0, address_format=8)
 
 		with self.assertRaises(ValueError):
-			AddressAndLengthIdentifier(memorysize_format=8, address_format=0)
+			AddressAndLengthFormatIdentifier(memorysize_format=8, address_format=0)
 
 		with self.assertRaises(ValueError):
-			AddressAndLengthIdentifier(memorysize_format=40, address_format=0)
+			AddressAndLengthFormatIdentifier(memorysize_format=40, address_format=0)
 
 		with self.assertRaises(ValueError):
-			AddressAndLengthIdentifier(memorysize_format=8, address_format=48)
+			AddressAndLengthFormatIdentifier(memorysize_format=8, address_format=48)
 
 		with self.assertRaises(ValueError):
-			AddressAndLengthIdentifier(memorysize_format='8', address_format=8)
+			AddressAndLengthFormatIdentifier(memorysize_format='8', address_format=8)
 
 		with self.assertRaises(ValueError):
-			AddressAndLengthIdentifier(memorysize_format=8, address_format='8')
+			AddressAndLengthFormatIdentifier(memorysize_format=8, address_format='8')
 
 class TestDataFormatIdentifier(UdsTest):
 	def test_dfi(self):

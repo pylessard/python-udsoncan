@@ -8,7 +8,6 @@ class TestAccessTimingParameter(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
-#========================================
 	def test_read_extended_params_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x83\x01")
@@ -19,7 +18,6 @@ class TestAccessTimingParameter(ClientServerTest):
 		params = self.udsclient.read_extended_timing_parameters()
 		self.assertEqual(params, b"\x99\x88\x77\x66")
 
-#========================================
 	def test_read_active_params_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x83\x03")
@@ -30,7 +28,6 @@ class TestAccessTimingParameter(ClientServerTest):
 		params = self.udsclient.read_active_timing_parameters()
 		self.assertEqual(params, b"\x99\x88\x77\x66")		
 
-#========================================
 	def test_set_params_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x83\x04\x11\x22\x33\x44")
@@ -40,7 +37,6 @@ class TestAccessTimingParameter(ClientServerTest):
 		self.udsclient.set_timing_parameters(params=b"\x11\x22\x33\x44")
 
 
-#========================================
 	def test_set_params_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x83\x02")
@@ -51,7 +47,6 @@ class TestAccessTimingParameter(ClientServerTest):
 
 
 
-#========================================
 	def test_set_params_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7F\x83\x31") #Request Out Of Range
@@ -60,7 +55,6 @@ class TestAccessTimingParameter(ClientServerTest):
 		with self.assertRaises(NegativeResponseException) as handle:
 			self.udsclient.access_timing_parameter(access_type=0x22)
 
-#========================================
 	def test_set_params_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x22") #Inexistent Service
@@ -69,7 +63,6 @@ class TestAccessTimingParameter(ClientServerTest):
 		with self.assertRaises(InvalidResponseException) as handle:
 			self.udsclient.access_timing_parameter(access_type=0x22)
 
-#========================================
 	def test_routine_control_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x22") # Valid but wrong service (Tester Present)
@@ -78,7 +71,6 @@ class TestAccessTimingParameter(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			self.udsclient.access_timing_parameter(access_type=0x22)
 
-#========================================
 	def test_access_timing_params_bad_access_type(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\xC3\x23") # Valid but access type
@@ -87,7 +79,6 @@ class TestAccessTimingParameter(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			self.udsclient.access_timing_parameter(access_type=0x22)
 
-#========================================
 	def test_bad_param(self):
 		pass
 

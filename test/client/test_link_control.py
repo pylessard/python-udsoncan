@@ -8,7 +8,6 @@ class TestLinkContorl(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
-#========================================
 	def test_linkcontrol_verify_fixed(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x87\x01\x11")
@@ -18,7 +17,6 @@ class TestLinkContorl(ClientServerTest):
 		baudrate = Baudrate(250000, baudtype=Baudrate.Type.Fixed)
 		response = self.udsclient.link_control(control_type=1, baudrate=baudrate)
 
-#========================================
 	def test_linkcontrol_verify_fixed_from_specific(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x87\x01\x11")
@@ -28,7 +26,6 @@ class TestLinkContorl(ClientServerTest):
 		baudrate = Baudrate(250000, baudtype=Baudrate.Type.Specific)
 		response = self.udsclient.link_control(control_type=1, baudrate=baudrate)
 
-#========================================
 	def test_linkcontrol_verify_specific(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x87\x02\x12\x34\x56")
@@ -39,7 +36,6 @@ class TestLinkContorl(ClientServerTest):
 		baudrate = Baudrate(0x123456, baudtype=Baudrate.Type.Specific)
 		response = self.udsclient.link_control(control_type=2, baudrate=baudrate)
 
-#========================================
 	def test_linkcontrol_verify_specific_from_fixed(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x87\x02\x07\xA1\x20")
@@ -49,7 +45,6 @@ class TestLinkContorl(ClientServerTest):
 		baudrate = Baudrate(500000, baudtype=Baudrate.Type.Fixed)
 		response = self.udsclient.link_control(control_type=2, baudrate=baudrate)
 
-#========================================
 	def test_linkcontrol_custom_control_type(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x87\x55")
@@ -59,7 +54,6 @@ class TestLinkContorl(ClientServerTest):
 	def _test_linkcontrol_custom_control_type(self):
 		response = self.udsclient.link_control(control_type=0x55)	
 
-#========================================
 	def test_linkcontrol_negative_response(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7F\x87\x31") 	# Request Out Of Range
@@ -68,7 +62,6 @@ class TestLinkContorl(ClientServerTest):
 		with self.assertRaises(NegativeResponseException):
 			response = self.udsclient.link_control(control_type=0x55)
 
-#========================================
 	def test_linkcontrol_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x22") 	# Request Out Of Range
@@ -77,7 +70,6 @@ class TestLinkContorl(ClientServerTest):
 		with self.assertRaises(InvalidResponseException):
 			response = self.udsclient.link_control(control_type=0x55)
 
-#========================================
 	def test_linkcontrol_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x22") # Valid but wrong service (Tester Present)
@@ -86,7 +78,6 @@ class TestLinkContorl(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException):
 			response = self.udsclient.link_control(control_type=0x55)
 
-#========================================
 	def test_linkcontrol_bad_control_type(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\xC7\x08") # Valid but bad control type
@@ -95,7 +86,6 @@ class TestLinkContorl(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException):
 			response = self.udsclient.link_control(control_type=0x55)
 
-#========================================
 	def test_bad_param(self):
 		pass
 

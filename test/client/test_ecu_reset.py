@@ -8,7 +8,6 @@ class TestECUReset(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
-#========================================
 	def test_ecu_reset_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x11\x55")
@@ -16,9 +15,7 @@ class TestECUReset(ClientServerTest):
 
 	def _test_ecu_reset_success(self):
 		success = self.udsclient.ecu_reset(0x55)
-		self.assertTrue(success)
 
-#========================================
 	def test_ecu_reset_success_pdt(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x11\x04\x23")
@@ -26,9 +23,7 @@ class TestECUReset(ClientServerTest):
 
 	def _test_ecu_reset_success_pdt(self):
 		success = self.udsclient.ecu_reset(services.ECUReset.enableRapidPowerShutDown, 0x23)
-		self.assertTrue(success)	
 
-#========================================
 	def test_ecu_reset_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x11\x55")
@@ -43,7 +38,6 @@ class TestECUReset(ClientServerTest):
 		self.assertTrue(issubclass(response.service, services.ECUReset))
 		self.assertEqual(response.code, 0x33)
 
-#========================================
 	def test_ecu_reset_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x11\x55")
@@ -53,7 +47,6 @@ class TestECUReset(ClientServerTest):
 		with self.assertRaises(InvalidResponseException) as handle:
 			response = self.udsclient.ecu_reset(0x55)
 
-#========================================
 	def test_ecu_reset_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x11\x55")
@@ -63,7 +56,6 @@ class TestECUReset(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			response = self.udsclient.ecu_reset(0x55)
 
-#========================================
 	def test_bad_param(self):
 		pass
 

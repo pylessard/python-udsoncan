@@ -8,7 +8,6 @@ class TestCommunicationControl(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
-#========================================
 	def test_comcontrol_enable_node(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x28\x00\x01")
@@ -20,7 +19,6 @@ class TestCommunicationControl(ClientServerTest):
 		com_type = CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True)
 		response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)
 
-#========================================
 	def test_comcontrol_disable_subnet(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x28\x03\x33")
@@ -32,7 +30,6 @@ class TestCommunicationControl(ClientServerTest):
 		com_type = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
 		response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 
-#========================================
 	def test_comcontrol_negative_response(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7F\x28\x31") 	# Request Out Of Range
@@ -43,7 +40,6 @@ class TestCommunicationControl(ClientServerTest):
 			com_type = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
 			response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 
-#========================================
 	def test_set_params_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x22") #Inexistent Service
@@ -54,7 +50,6 @@ class TestCommunicationControl(ClientServerTest):
 			com_type = CommunicationType(subnet=5, normal_msg=True, network_management_msg=True)
 			response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 
-#========================================
 	def test_comcontrol_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x22") # Valid but wrong service (Tester Present)
@@ -65,7 +60,6 @@ class TestCommunicationControl(ClientServerTest):
 			com_type = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
 			response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 
-#========================================
 	def test_comcontrol_bad_control_type(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x68\x08") # Valid but bad control type
@@ -75,7 +69,6 @@ class TestCommunicationControl(ClientServerTest):
 			com_type = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
 			response = self.udsclient.communication_control(control_type=9, communication_type=com_type)	
 
-#========================================
 	def test_bad_param(self):
 		pass
 

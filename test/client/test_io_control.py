@@ -56,7 +56,6 @@ class TestIOControl(ClientServerTest):
 			}
 		}
 
-#========================================
 #As defined by ISO-14229:2006, section 12.2.5.2 (Example #1)
 	def test_io_control_single_reset(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -67,7 +66,6 @@ class TestIOControl(ClientServerTest):
 		response_value = self.udsclient.io_control(control_param=1, did=0x132)	# Reset to default
 		self.assertEqual(response_value, 0x4A)	# 0x4B-1 as defined by codec decode method
 
-#========================================
 	def test_io_control_no_control_param(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x32\x78")
@@ -77,7 +75,6 @@ class TestIOControl(ClientServerTest):
 		response_value = self.udsclient.io_control(did=0x132, values=[0x77]) # No control_param, skip directly to data	
 		self.assertEqual(response_value, 0x4A)	# 0x4B-1 as defined by codec decode method
 
-#========================================
 	def test_io_control_with_repsonse_record(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x04\x56\x03\x11\x01\x22\x02")
@@ -87,7 +84,6 @@ class TestIOControl(ClientServerTest):
 		response_value = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	# Short Term Adjustment
 		self.assertEqual(response_value, (0x333, 0x444))	
 
-#========================================
 	def test_io_control_with_repsonse_record_zero_padding_tolerated(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00")
@@ -107,7 +103,6 @@ class TestIOControl(ClientServerTest):
 		response_value = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
 		self.assertEqual(response_value, (0x333, 0x444))	
 
-#========================================
 
 	def test_io_control_with_repsonse_record_zero_padding_not_tolerated(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -128,7 +123,6 @@ class TestIOControl(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
 
-#========================================
 	def test_io_control_composite_did_dict(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x55\x03\x07\x12\x34\x45\x99\x00\xA0")
@@ -146,7 +140,6 @@ class TestIOControl(ClientServerTest):
 		}
 		self.assertEqual(response_value, expected_values)	
 
-#========================================
 	def test_io_control_composite_did_list(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x55\x03\x07\x12\x34\x45\x99\x00\xA0")
@@ -164,7 +157,6 @@ class TestIOControl(ClientServerTest):
 		}
 		self.assertEqual(response_value, expected_values)
 
-#========================================
 	def test_io_control_non_existent_mask_error(self):
 		pass
 
@@ -173,7 +165,6 @@ class TestIOControl(ClientServerTest):
 		with self.assertRaises(ValueError):
 			self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=['xxxx'])	# mask xxxx does not exist in config
 	
-#========================================
 	def test_io_control_mask_all_set1(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x55\x03\x07\x12\x34\x45\x99\xFF\xFF")
@@ -183,7 +174,6 @@ class TestIOControl(ClientServerTest):
 		values = [0x07, 0x1234, 0x4, 0x5, 0x99]
 		response_value = self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=True)	# Short Term Adjustment
 
-#========================================
 	def test_io_control_mask_all_set0(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x55\x03\x07\x12\x34\x45\x99\x00\x00")
@@ -194,7 +184,6 @@ class TestIOControl(ClientServerTest):
 		response_value = self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=False)	# Short Term Adjustment
 
 
-#========================================
 	def test_io_control_no_mask(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x55\x03\x07\x12\x34\x45\x99")
@@ -205,7 +194,6 @@ class TestIOControl(ClientServerTest):
 		response_value = self.udsclient.io_control(control_param=3, did=0x155, values=values)	# Short Term Adjustment
 
 
-#========================================
 	def test_io_control_bad_mask_size(self):
 		pass
 
@@ -223,7 +211,6 @@ class TestIOControl(ClientServerTest):
 			del self.udsclient.config['input_output'][0x155]['mask_size']
 			self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=True) # Set mask, no size defined
 
-#========================================
 	def test_io_control_bad_mask(self):
 		pass
 
@@ -238,7 +225,6 @@ class TestIOControl(ClientServerTest):
 			self.udsclient.config['input_output'][0x155]['mask']['pedalA'] = 0x10000  # Bigger than max_size (2)
 			self.udsclient.io_control(control_param=3, did=0x155, values=values) 
 
-#========================================
 	def test_io_control_bad_values(self):
 		pass
 
@@ -249,7 +235,6 @@ class TestIOControl(ClientServerTest):
 		with self.assertRaises(ValueError):
 			self.udsclient.io_control(control_param=3, did=0x155, values='asd') 
 
-#========================================
 	def test_io_control_bad_control_param(self):
 		pass
 
@@ -260,7 +245,6 @@ class TestIOControl(ClientServerTest):
 		with self.assertRaises(ValueError):
 			self.udsclient.io_control(control_param=0x100, did=0x155, values='asd') 
 
-#========================================
 	def test_io_control_bad_response_too_much_data(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x01\x32\x01\x4B\xAA")	# Last byte is extra
@@ -269,7 +253,6 @@ class TestIOControl(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.io_control(control_param=1, did=0x132)	
 
-#========================================
 	def test_io_control_bad_response_wrong_control_param(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x01\x32\x04\x4B")	# 0x04 should be 0x03

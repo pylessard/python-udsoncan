@@ -28,7 +28,6 @@ class TestReadDataByIdentifier(ClientServerTest):
 			3 : StubbedDidCodec
 		}
 
-#========================================
 	def test_rdbi_single_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x22\x00\x01")
@@ -38,7 +37,6 @@ class TestReadDataByIdentifier(ClientServerTest):
 		values = self.udsclient.read_data_by_identifier(dids = 1)
 		self.assertEqual(values[1], (0x1234,))
 
-#========================================
 	def test_rdbi_multiple_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x22\x00\x01\x00\x02\x00\x03")
@@ -50,7 +48,6 @@ class TestReadDataByIdentifier(ClientServerTest):
 		self.assertEqual(values[2], (0x7856,))		
 		self.assertEqual(values[3], 0x10)	
 
-#========================================
 	def test_rdbi_multiple_zero_padding1_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00")				# Positive response
@@ -87,7 +84,6 @@ class TestReadDataByIdentifier(ClientServerTest):
 		self.assertEqual(values[3], 0x10)	
 		self.assertFalse(0 in values)		
 
-#========================================
 	def test_rdbi_multiple_zero_padding_not_tolerated(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00")				# Positive response
@@ -112,7 +108,6 @@ class TestReadDataByIdentifier(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException):
 			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
 			
-#========================================
 	def test_rdbi_output_format(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
@@ -128,7 +123,6 @@ class TestReadDataByIdentifier(ClientServerTest):
 		self.assertTrue(isinstance(values, list))	
 		self.assertEqual(len(values), 3)		
 
-#========================================
 	def test_rdbi_incomplete_response(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03")	# Positive response
@@ -137,7 +131,6 @@ class TestReadDataByIdentifier(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException):
 			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
 
-#========================================
 	def test_rdbi_unknown_did(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x09\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
@@ -146,7 +139,6 @@ class TestReadDataByIdentifier(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException):
 			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])			
 	
-#========================================
 	def test_rdbi_unwanted_did(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
@@ -155,7 +147,6 @@ class TestReadDataByIdentifier(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException):
 			values = self.udsclient.read_data_by_identifier(dids = [1,3])			
 
-#========================================
 	def test_rdbi_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x00\x01\x12\x34")	# Service is inexistant
@@ -164,7 +155,6 @@ class TestReadDataByIdentifier(ClientServerTest):
 		with self.assertRaises(InvalidResponseException) as handle:
 			response = self.udsclient.read_data_by_identifier(dids=1)
 
-#========================================
 	def test_rdbi_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x50\x00\x01\x12\x34")	# Valid service, but not the one requested
@@ -173,7 +163,6 @@ class TestReadDataByIdentifier(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			response = self.udsclient.read_data_by_identifier(dids=1)
 
-#========================================
 	def test_no_config(self):
 		pass
 

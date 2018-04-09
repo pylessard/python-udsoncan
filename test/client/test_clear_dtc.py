@@ -8,7 +8,6 @@ class TestClearDtc(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
-#========================================
 	def test_clear_dtc_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x14\x12\x34\x56")
@@ -16,9 +15,7 @@ class TestClearDtc(ClientServerTest):
 
 	def _test_clear_dtc_success(self):
 		success = self.udsclient.clear_dtc(0x123456)
-		self.assertTrue(success)
 
-#========================================
 	def test_clear_dtc_all(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x14\xFF\xFF\xFF")
@@ -26,9 +23,7 @@ class TestClearDtc(ClientServerTest):
 
 	def _test_clear_dtc_all(self):
 		success = self.udsclient.clear_dtc()
-		self.assertTrue(success)
 
-#========================================
 	def test_clear_dtc_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7F\x14\x31") #Request Out Of Range
@@ -37,7 +32,6 @@ class TestClearDtc(ClientServerTest):
 		with self.assertRaises(NegativeResponseException) as handle:
 			success = self.udsclient.clear_dtc(0x123456)
 
-#========================================
 	def test_clear_dtc_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00") #Inexistent Service
@@ -46,7 +40,6 @@ class TestClearDtc(ClientServerTest):
 		with self.assertRaises(InvalidResponseException) as handle:
 			response = self.udsclient.clear_dtc(0x123456)
 
-#========================================
 	def test_clear_dtc_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
@@ -55,7 +48,6 @@ class TestClearDtc(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			response = self.udsclient.clear_dtc(0x123456)
 
-#========================================
 	def test_bad_param(self):
 		pass
 

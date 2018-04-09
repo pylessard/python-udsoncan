@@ -8,7 +8,6 @@ class TestTransferData(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
-#========================================
 	def test_transfer_data_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x36\x22\x12\x34\x56")
@@ -18,7 +17,6 @@ class TestTransferData(ClientServerTest):
 		response_data = self.udsclient.transfer_data(block_sequence_counter=0x22, data=b'\x12\x34\x56')
 		self.assertEqual(response_data, b'\x89\xab\xcd\xef')
 
-#========================================
 	def test_transfer_data_no_data_ok(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x36\x22")
@@ -28,7 +26,6 @@ class TestTransferData(ClientServerTest):
 		response_data = self.udsclient.transfer_data(block_sequence_counter=0x22)
 		self.assertEqual(response_data, None)	
 
-#========================================
 	def test_transfer_data_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7F\x36\x73") # wrong block sequence number
@@ -42,7 +39,6 @@ class TestTransferData(ClientServerTest):
 		self.assertTrue(issubclass(response.service, services.TransferData))
 		self.assertEqual(response.code, 0x73)
 
-#========================================
 	def test_transfer_data_bad_sequence_number(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x76\x23\x89\xab\xcd\xef")	# Positive response
@@ -52,7 +48,6 @@ class TestTransferData(ClientServerTest):
 			self.udsclient.transfer_data(block_sequence_counter=0x22, data=b'\x12\x34\x56')
 
 
-#========================================
 	def test_transfer_data_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x00\x55") #Inexistent Service
@@ -61,7 +56,6 @@ class TestTransferData(ClientServerTest):
 		with self.assertRaises(InvalidResponseException) as handle:
 			response = self.udsclient.transfer_data(block_sequence_counter=0x55)
 
-#========================================
 	def test_transfer_data_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
@@ -70,7 +64,6 @@ class TestTransferData(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			response = self.udsclient.transfer_data(block_sequence_counter=0x55)
 
-#========================================
 	def test_bad_param(self):
 		pass
 

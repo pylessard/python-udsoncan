@@ -47,11 +47,8 @@ class DidCodec:
 		if isinstance(didconfig, str):
 			return cls(packstr = didconfig)
 
-
-class SecurityLevel(object):
-	def __init__(self, levelid):
-		self.levelid = levelid & 0xFE
-
+# Defines a Diagnostic Trouble Code which consist of a 3 bytes ID, status, severity + diagnostic data.
+# Some standards such as J1939 breaks down the 3 bytes ID into and 2 bytes ID and 1 bytes subtype. 
 class Dtc:
 	class Format:
 		ISO15031_6 = 0
@@ -71,6 +68,8 @@ class Dtc:
 						
 			return None
 
+	# DTC Status byte
+	# This byte is a 8 bits flag indicating how much we are sure that a DTC is active.
 	class Status:
 		def __init__(self, test_failed=False, test_failed_this_operation_cycle=False, pending=False, confirmed=False, test_not_completed_since_last_clear=False, test_failed_since_last_clear=False, test_not_completed_this_operation_cycle=False, warning_indicator_requested=False):
 			self.test_failed 								= test_failed
@@ -82,7 +81,7 @@ class Dtc:
 			self.test_not_completed_this_operation_cycle 	= test_not_completed_this_operation_cycle
 			self.warning_indicator_requested 				= warning_indicator_requested
 
-		def get_byte_as_int(self):
+		def get_byte_as_int(self):	# Returns the status byte as an integer 
 			byte = 0
 			byte |= 0x1 	if self.test_failed else 0
 			byte |= 0x2 	if self.test_failed_this_operation_cycle else 0
@@ -95,10 +94,10 @@ class Dtc:
 
 			return byte
 
-		def get_byte(self):
+		def get_byte(self):	# Returns the status byte in "bytes" format for payload creation
 			return struct.pack('B', self.get_byte_as_int())
 
-		def set_byte(self, byte):
+		def set_byte(self, byte):	# Set all the status flag from the status byte
 			if not isinstance(byte, int) and not isinstance(byte, bytes):
 				raise ValueError('Given byte must be an integer or bytes object.')
 
@@ -114,13 +113,14 @@ class Dtc:
 			self.test_not_completed_this_operation_cycle	= True if byte & 0x40 > 0 else False
 			self.warning_indicator_requested 				= True if byte & 0x80 > 0 else False
 
+	# DTC Severity byte, it's a 3 bits indicator telling how serious a trouble is.
 	class Severity:
 		def __init__(self, maintenance_only=False, check_at_next_exit=False, check_immediately=False):
 			self.maintenance_only 		= maintenance_only
 			self.check_at_next_exit 	= check_at_next_exit
 			self.check_immediately 		= check_immediately
 
-		def get_byte_as_int(self):
+		def get_byte_as_int(self):	
 			byte = 0
 			byte |= 0x20 	if self.maintenance_only else 0
 			byte |= 0x40 	if self.check_at_next_exit else 0
@@ -145,35 +145,39 @@ class Dtc:
 		@property
 		def available(self):
 			return True if self.get_byte_as_int() > 0 else False
-			
+	
+
 	def __init__(self, dtcid):
 		self.id = dtcid
 		self.status = Dtc.Status()
-		self.snapshots = []  		# Not defined by ISO14229. Must be defined in config
-		self.extended_data = [] 	# Not defined by ISO14229. Must be defined in config
+		self.snapshots = []  		# . DID codec must be configured
+		self.extended_data = [] 	
 		self.severity = Dtc.Severity()
 		self.functional_unit = None 	# Implementation specific (ISO 14229 D.4)
-		self.fault_counter = None
+		self.fault_counter = None 		# Common practices is to detect a specific failure many times before setting the DTC active. This counter should tell the actual count.
 
 	
 	def __repr__(self):
 		return '<DTC ID=0x%06x, Status=0x%02x, Severity=0x%02x at 0x%08x>' % (self.id, self.status.get_byte_as_int(), self.severity.get_byte_as_int(), id(self))
 
+	# A snapshot data. Not defined by ISO14229 and implementation specific. 
+	# To read this data, the client must have a DID codec set in its config.
 	class Snapshot:
 		record_number = None
 		did = None
 		data = None
 		raw_data = b''
 
-		def decode(self):
-			return self.codec.decode(self.data)
-
+	# Extended data. Not defined by ISO14229 and implementation specific
+	# Only raw data can be given to user.
 	class ExtendedData:
 		record_number = None
 		raw_data = b''
 		
-
-class AddressAndLengthIdentifier:
+# This class define the size of an address and the size of the length. 
+# For example : 16 bits address and 8 bits length means only block of 256 bytes can be read in a range of 0 to 65535
+# Mainly used by ReadMemoryAddress and WriteMemoryAddress services
+class AddressAndLengthFormatIdentifier:
 	#As defined by ISO-14229:2006, Annex G
 	address_map = {
 		8 	: 1,
@@ -203,9 +207,11 @@ class AddressAndLengthIdentifier:
 		self.memorysize_format = memorysize_format
 		self.address_format = address_format
 
+	# Byte given alongside a memory address and a length so that they are decoded properly.
 	def get_byte(self):
 		return  struct.pack('B', ((self.memsize_map[self.memorysize_format] << 4) | (self.address_map[self.address_format])) & 0xFF)
 
+# This class defines a memory location including : address, size, AddressAndLengthFormatIdentifier
 class MemoryLocation:
 	def __init__(self, address, memorysize, address_format=None, memorysize_format=None):
 		self.address = address
@@ -219,8 +225,9 @@ class MemoryLocation:
 		if memorysize_format is None:
 			memorysize_format = self.autosize_memorysize(memorysize)
 
-		self.ali = AddressAndLengthIdentifier(memorysize_format=memorysize_format, address_format=address_format)
+		self.alfid = AddressAndLengthFormatIdentifier(memorysize_format=memorysize_format, address_format=address_format)
 		
+	# This is used by the client/server to set a format froma config object while letting the user override it
 	def set_format_if_none(self, address_format=None, memorysize_format=None):
 		previous_address_format = self.address_format
 		previous_memorysize_format = self.memorysize_format
@@ -236,36 +243,42 @@ class MemoryLocation:
 			address_format = self.address_format if self.address_format is not None else self.autosize_address(self.address) 
 			memorysize_format = self.memorysize_format if self.memorysize_format is not None else self.autosize_memorysize(self.memorysize) 
 
-			self.ali = AddressAndLengthIdentifier(memorysize_format=memorysize_format, address_format=address_format)
+			self.alfid = AddressAndLengthFormatIdentifier(memorysize_format=memorysize_format, address_format=address_format)
 		except:
 			self.address_format = previous_address_format
 			self.memorysize_format = previous_memorysize_format
 			raise
 
+	# Finds the smallest size that fit the address
 	def autosize_address(self, val):
 		fmt = math.ceil(val.bit_length()/8)*8
 		if fmt > 40:
 			raise ValueError("address size must be smaller or equal than 40 bits")
 		return fmt
 
+	# Finds the smallest size that fit the memory size
 	def autosize_memorysize(self, val):
 		fmt = math.ceil(val.bit_length()/8)*8
 		if fmt > 32:
 			raise ValueError("memory size must be smaller or equal than 32 bits")
 		return fmt
 
+	# Get the address byte in the requested format
 	def get_address_bytes(self):
-		n = AddressAndLengthIdentifier.address_map[self.ali.address_format]
+		n = AddressAndLengthFormatIdentifier.address_map[self.alfid.address_format]
 
 		data = struct.pack('>q', self.address)
 		return data[-n:]
 
+	# Get the memory size byte in the requested format
 	def get_memorysize_bytes(self):
-		n = AddressAndLengthIdentifier.memsize_map[self.ali.memorysize_format]
+		n = AddressAndLengthFormatIdentifier.memsize_map[self.alfid.memorysize_format]
 
 		data = struct.pack('>q', self.memorysize)
 		return data[-n:]
 
+# epresent a single byte values including compression and encryption method of a chunk of data.
+# Mainly used by TransferData Service
 class DataFormatIdentifier:
 	def __init__(self, compression=0, encryption=0):
 		both = (compression, encryption)
@@ -282,6 +295,7 @@ class DataFormatIdentifier:
 	def get_byte(self):
 		return struct.pack('B', ((self.compression & 0xF) << 4) | (self.encryption & 0xF))
 
+# Units defined in standard. Nowhere does the ISO-14229 makes usage of them, but they are defined
 class Units:
 	#As defined in ISO-14229:2006 Annex C
 	class Prefixs:
@@ -405,15 +419,18 @@ class Units:
 	datetime4 			= Unit(id=0x59, name='DateAndTime4', 				symbol='-', 		description = 'Second/Minute/Hour/Month/Day/Year/Local minute offset/Localhour offset')
 
 
+# Routine class that containes few definition for usage with nice syntax.
+# myRoutine = Routine.EraseMemory    or    print(Routine.name_from_id(myRoutine))
 class Routine:
 	DeployLoopRoutineID	= 0xE200
 	EraseMemory	= 0xFF00
 	CheckProgrammingDependencies = 0xFF01
 	EraseMirrorMemoryDTCs = 0xFF02
 
+
 	@classmethod
 	def name_from_id(cls, routine_id):
-		#As defined by ISO-14229:2006, Annex F
+		# Helper to print the type of request (logging purpose) as defined by ISO-14229:2006, Annex F
 		if not isinstance(routine_id, int) or routine_id < 0 or routine_id > 0xFFFF:
 			raise ValueError('Routine ID must be a valid integer between 0 and 0xFFFF')
 
@@ -442,6 +459,8 @@ class Routine:
 		if routine_id >= 0xFF03 and routine_id <= 0xFFFF:
 			return 'ISOSAEReserved'
 
+# DataIdentifier class that containes few definition for usage with nice syntax.
+# myDid = DataIdentifier.VIN    or    print(DataIdentifier.name_from_id(myDid))
 class DataIdentifier:
 	BootSoftwareIdentification					= 0xF180
 	ApplicationSoftwareIdentification			= 0xF181
@@ -592,8 +611,9 @@ class DataIdentifier:
 		if did >= 0xFF00 and did <= 0xFFFF:
 			return 'ISOSAEReserved'
 
+# Communication type is a single byte value including message type and subnet.
+# Used by CommunicationControl service and defined by ISO-14229:2006 Annex B, table B.1
 class CommunicationType:
-# As defined by ISO-14229:2006 Annex B, table B.1
 	class Subnet:
 		node = 0
 		network = 0xF
@@ -642,6 +662,7 @@ class CommunicationType:
 		network_management_msg = True if val & 2 > 0 else False
 		return cls(subnet,normal_msg,network_management_msg)
 
+# Buadrate is a variable length value used to define the transmission baudrate in LinkControl service.
 class Baudrate:
 	baudrate_map = {
 	9600 : 0x01,
@@ -661,6 +682,7 @@ class Baudrate:
 		Identifier = 2  # Baudrate implied by baudrate ID
 		Auto = 3		# Let the class decide the type
 
+	# User can specify the type of baudrate or let this class guess what he wants (this add some simplicity for non-experts).
 	def __init__(self, baudrate, baudtype=Type.Auto):
 		if not isinstance(baudrate, int):
 			raise ValueError('baudrate must be an integer')
@@ -694,13 +716,14 @@ class Baudrate:
 
 		self.baudrate = baudrate
 
+	# internal helper to change the type of this baudrate
 	def make_new_type(self, baudtype):
 		if baudtype not in [self.Type.Fixed, self.Type.Specific]:
 			raise ValueError('Baudrate type can only be change to Fixed or Specific')
 
 		return Baudrate(self.effective_baudrate(), baudtype=baudtype)
 
-
+	# Returns the baudrate in Symbol Per Seconds if available, otherwise value given by the user.
 	def effective_baudrate(self):
 		if self.baudtype == self.Type.Identifier:
 			for k in self.baudrate_map:
@@ -711,6 +734,7 @@ class Baudrate:
 		else:
 			return self.baudrate
 
+	# Encodes the baudrate value the way they are exchanged.
 	def get_bytes(self):
 		if self.baudtype == self.Type.Fixed:
 			return struct.pack('B', self.baudrate_map[self.baudrate])
@@ -749,7 +773,7 @@ class IOMasks:
 	def get_dict(self):
 		return self.maskdict
 
-
+#Used for IO Control service. Allow comprehensive one-liner.
 class IOValues:
 	def __init__(self, *args, **kwargs):
 		self.args = args
