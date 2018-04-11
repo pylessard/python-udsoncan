@@ -1,4 +1,3 @@
-import isotp
 import socket
 import queue
 import threading
@@ -9,6 +8,7 @@ from udsoncan import TimeoutException
 
 class IsoTPConnection(object):
 	def __init__(self, interface, rxid, txid, tpsock=None):
+		import isotp
 
 		self.interface=interface
 		self.rxid=rxid
