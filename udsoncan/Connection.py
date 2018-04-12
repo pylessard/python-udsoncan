@@ -1,13 +1,60 @@
 import socket
 import queue
 import threading
+import logging
+import binascii
+from abc import ABC, abstractmethod
 
 from udsoncan.Request import Request
 from udsoncan.Response import Response
-from udsoncan import TimeoutException
+from udsoncan.exceptions import TimeoutException
 
-class SocketConnection(object):
-	def __init__(self, sock, bufsize=4095):
+class BaseConnection(ABC):
+
+	def __init__(self, name=None):
+		if name is None:
+			name = 'Connection'
+		else:
+			name = 'Connection[%s]' % (name)
+
+		self.logger = logging.getLogger(name)
+
+	def send(self, obj):
+		if isinstance(obj, Request) or isinstance(obj, Response):
+			payload = obj.get_payload()  
+		else :
+			payload = obj
+
+		if self.logger.getEffectiveLevel() >= logging.DEBUG:
+			self.logger.debug('Sending %d bytes : [%s]' % (len(payload), binascii.hexlify(payload) ))
+		else:
+			self.logger.info('Sending %d bytes' % ( len(payload) ))
+
+		self.specific_send(payload)
+
+	def wait_frame(self, timeout=2, exception=False):
+		frame = self.specific_wait_frame(timeout=timeout, exception=exception)
+		if frame is not None:
+			if self.logger.getEffectiveLevel() >= logging.DEBUG:
+				self.logger.debug('Received %d bytes : [%s]' % (len(frame), binascii.hexlify(frame) ))
+			else:
+				self.logger.info('Received %d bytes' % ( len(frame) ))
+		return frame
+	
+	@abstractmethod
+	def specific_send(self, payload):
+		pass
+
+	@abstractmethod
+	def specific_wait_frame(self, timeout=2, exception=False):
+		pass
+
+
+class SocketConnection(BaseConnection):
+	def __init__(self, sock, bufsize=4095, name=None):
+
+		BaseConnection.__init__(self, name)
+
 		self.rxqueue = queue.Queue()
 		self.exit_requested = False
 		self.opened = False
@@ -38,9 +85,9 @@ class SocketConnection(object):
 				data = self.sock.recv(self.bufsize)
 				if data is not None:
 					self.rxqueue.put(data)
-			except socket.timeout as e:
+			except socket.timeout:
 				pass
-			except Exception as e:
+			except Exception:
 				self.exit_requested = True
 
 
@@ -48,15 +95,10 @@ class SocketConnection(object):
 		self.exit_requested = True
 		self.opened = False
 
-	def send(self, obj):
-		if isinstance(obj, Request) or isinstance(obj, Response):
-			payload = obj.get_payload()  
-		else :
-			payload = obj
-
+	def specific_send(self, payload):
 		self.sock.send(payload)
 
-	def wait_frame(self, timeout=2, exception=False):
+	def specific_wait_frame(self, timeout=2, exception=False):
 		if not self.opened:
 			if exception:
 				raise RuntimeError("Connection is not opened")
@@ -80,9 +122,10 @@ class SocketConnection(object):
 		while not self.rxqueue.empty():
 			self.rxqueue.get()
 
-class IsoTPConnection(object):
-	def __init__(self, interface, rxid, txid, tpsock=None):
+class IsoTPConnection(BaseConnection):
+	def __init__(self, interface, rxid, txid, name=None, tpsock=None):
 		import isotp
+		BaseConnection.__init__(self, name)
 
 		self.interface=interface
 		self.rxid=rxid
@@ -117,9 +160,9 @@ class IsoTPConnection(object):
 				data = self.tpsock.recv()
 				if data is not None:
 					self.rxqueue.put(data)
-			except socket.timeout as e:
+			except socket.timeout:
 				pass
-			except Exception as e:
+			except Exception:
 				self.exit_requested = True
 
 
@@ -128,15 +171,10 @@ class IsoTPConnection(object):
 		self.tpsock.close()
 		self.opened = False
 
-	def send(self, obj):
-		if isinstance(obj, Request) or isinstance(obj, Response):
-			payload = obj.get_payload()  
-		else :
-			payload = obj
-
+	def specific_send(self, payload):
 		self.tpsock.send(payload)
 
-	def wait_frame(self, timeout=2, exception=False):
+	def specific_wait_frame(self, timeout=2, exception=False):
 		if not self.opened:
 			if exception:
 				raise RuntimeError("Connection is not opened")

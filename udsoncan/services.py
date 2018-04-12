@@ -1,6 +1,7 @@
 from udsoncan.Response import Response
 import inspect
 import sys
+from abc import ABC
 
 def cls_from_request_id(given_id):
 	return BaseService.from_request_id(given_id)
@@ -8,7 +9,7 @@ def cls_from_request_id(given_id):
 def cls_from_response_id(given_id):
 	return BaseService.from_response_id(given_id)
 
-class BaseService:
+class BaseService(ABC):
 
 	always_valid_negative_response = [
 		Response.Code.GeneralReject,
@@ -30,12 +31,6 @@ class BaseService:
 	@classmethod	# Returns the service ID used for a server response
 	def response_id(cls):
 		return cls._sid + 0x40
-
-	# Set the service ID from a server Response payload value
-	def set_id_from_response_payload(self, payload):
-		if not payload or len(payload) == 0:
-			raise ValueError("Response is empty")
-		_sid = payload[0] - 0x40
 
 	@classmethod	# Returns an instance of the service identified by the service ID (Request)
 	def from_request_id(cls, given_id):

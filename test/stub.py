@@ -1,5 +1,5 @@
+from udsoncan.exceptions import TimeoutException
 from udsoncan import Connection, Request, Response
-from udsoncan.exceptions import *
 import queue
 import logging
 import socket
@@ -7,7 +7,9 @@ import socket
 class StubbedIsoTPSocket(object):
 	conns = {}
 
-	def __init__(self, timeout=1):
+	def __init__(self, name=None, timeout=1):
+		Connection.BaseConnection.__init__(self, name)
+
 		self.bound = False
 		self.interface=None
 		self.rxid=None
@@ -48,8 +50,10 @@ class StubbedIsoTPSocket(object):
 			raise socket.timeout 
 		return payload
 
-class StubbedConnection(object):
-	def __init__(self):
+class StubbedConnection(Connection.BaseConnection):
+	def __init__(self, name=None):
+		Connection.BaseConnection.__init__(self, name)
+
 		self.fromuserqueue = queue.Queue()	# Client reads from this queue. Other end is simulated
 		self.touserqueue = queue.Queue()	# Client writes to this queue. Other end is simulated
 		self.opened = False
@@ -76,21 +80,14 @@ class StubbedConnection(object):
 
 		self.opened = False
 
-	def send(self, obj):
-		if isinstance(obj, Request) or isinstance(obj, Response):
-			payload = obj.get_payload()  
-		else :
-			payload = obj
-
+	def specific_send(self, payload):
 		if len(payload) > 4095:
 			self.logger.warning("Truncating payload to be sent to a length of 4095")
 			payload = payload[0:4095]
 
-		self.logger.info("Sending payload of %d bytes" % len(payload))
-		self.logger.debug("".join(["%02x" % b for b in payload]))
 		self.touserqueue.put(payload)
 
-	def wait_frame(self, timeout=2, exception=False):
+	def specific_wait_frame(self, timeout=2, exception=False):
 		if not self.opened:
 			if exception:
 				raise RuntimeException("Connection is not opened")
@@ -101,8 +98,6 @@ class StubbedConnection(object):
 		frame = None
 		try:
 			frame = self.fromuserqueue.get(block=True, timeout=timeout)
-			self.logger.info("Received payload of %d bytes" % len(frame))
-			self.logger.debug("".join(["%02x" % b for b in frame]))
 		except queue.Empty:
 			timedout = True
 			

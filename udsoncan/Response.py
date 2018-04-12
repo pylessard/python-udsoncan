@@ -1,4 +1,3 @@
-from udsoncan.exceptions import *
 import inspect
 import struct
 

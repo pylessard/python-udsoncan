@@ -1,4 +1,3 @@
-from udsoncan.exceptions import *
 from udsoncan import services
 import inspect
 import struct
@@ -22,6 +21,9 @@ class Request:
 		elif service is not None:
 			raise ValueError("Given service must be a service class or instance")
 
+		if not isinstance(suppress_positive_response, bool):
+			raise ValueError("suppress_positive_response must be a boolean value")
+
 		self.suppress_positive_response = suppress_positive_response
 		
 		if data is not None and not isinstance(data, bytes):
@@ -38,7 +40,6 @@ class Request:
 
 		requestid = self.service.request_id()	# Return the service ID used to make a client request
 			
-
 		payload = struct.pack("B", requestid)
 		if self.service.use_subfunction():
 			subfunction = self.subfunction

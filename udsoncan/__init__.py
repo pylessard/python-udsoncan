@@ -6,7 +6,7 @@ from udsoncan.exceptions import *
 from udsoncan.Request import Request
 from udsoncan.Response import Response
 
-#Define how to encode/decode a Data Identifier value to/from abinary payload
+#Define how to encode/decode a Data Identifier value to/from a binary payload
 class DidCodec:
 
 	def __init__(self, packstr=None):
@@ -227,7 +227,7 @@ class MemoryLocation:
 
 		self.alfid = AddressAndLengthFormatIdentifier(memorysize_format=memorysize_format, address_format=address_format)
 		
-	# This is used by the client/server to set a format froma config object while letting the user override it
+	# This is used by the client/server to set a format from a config object while letting the user override it
 	def set_format_if_none(self, address_format=None, memorysize_format=None):
 		previous_address_format = self.address_format
 		previous_memorysize_format = self.memorysize_format
