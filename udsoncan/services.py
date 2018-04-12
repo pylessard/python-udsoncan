@@ -10,6 +10,19 @@ def cls_from_response_id(given_id):
 
 class BaseService:
 
+	always_valid_negative_response = [
+		Response.Code.GeneralReject,
+		Response.Code.ServiceNotSupported,
+		Response.Code.ResponseTooLong,
+		Response.Code.BusyRepeatRequest,
+		Response.Code.NoResponseFromSubnetComponent,
+		Response.Code.FailurePreventsExecutionOfRequestedAction,
+		Response.Code.SecurityAccessDenied, # ISO-14229:2006 Table A.1:  "Besides the mandatory use of this negative response code as specified in the applicable services within ISO 14229, this negative response code can also be used for any case where security is required and is not yet granted to perform the required service."
+		Response.Code.RequestCorrectlyReceived_ResponsePending,
+		Response.Code.ServiceNotSupportedInActiveSession
+
+	]
+
 	@classmethod	# Returns the service ID used for a client request
 	def request_id(cls):
 		return cls._sid
@@ -62,7 +75,22 @@ class BaseService:
 
 	@classmethod	# Tells if the given response code is expected for this service according to UDS standard.
 	def is_supported_negative_response(cls, code):
-		return code in cls.supported_negative_response
+		supported = False
+		if code in cls.supported_negative_response:
+			supported = True
+
+		if code in cls.always_valid_negative_response:
+			supported = True
+		
+		# As specified by Annex A, negative response code ranging above 0x7F can be used anytime if the service can return ConditionNotCorrect
+		if code >= 0x80 and code < 0xFF and Response.Code.ConditionsNotCorrect in cls.supported_negative_response:
+			supported = True
+
+		# ISO-14229:2006 Table A.1 : "This response code shall be supported by each diagnostic service with a subfunction parameter"
+		if code == Response.Code.SubFunctionNotSupportedInActiveSession and cls.use_subfunction():
+			supported = True
+
+		return supported
 
 def is_valid_service(service_cls):
 	return issubclass(service_cls, BaseService)
@@ -79,6 +107,20 @@ class DiagnosticSessionControl(BaseService):
 	programmingSession = 2
 	extendedDiagnosticSession = 3
 	safetySystemDiagnosticSession = 4
+
+	@classmethod
+	def get_session_name(cls, session_id):
+		if session_id == cls.defaultSession:
+			return 'defaultSession'
+		elif session_id == cls.programmingSession:
+			return 'programmingSession'
+		elif session_id == cls.extendedDiagnosticSession:
+			return 'extendedDiagnosticSession'
+		elif session_id == cls.safetySystemDiagnosticSession:
+			return 'safetySystemDiagnosticSession'
+		else:
+			return 'custom session'
+
 
 	def __init__(self, session):
 		if not isinstance(session, int):
