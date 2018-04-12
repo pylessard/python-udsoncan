@@ -49,13 +49,6 @@ class Client:
 
 		self.logger = logging.getLogger(logger_name)
 
-		if 'log_level' in self.config:
-			self.logger.set_level(self.config['log_level'])
-
-		if 'log_file' in self.config:
-
-			self.logger.addHandler()
-
 	def refresh_config(self):
 		self.configure_logger()
 
