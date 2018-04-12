@@ -12,7 +12,7 @@ class TestIsoTPConnection(UdsTest):
 		self.tpsock2 = StubbedIsoTPSocket(timeout=0.1)
 
 	def test_open(self):
-		conn = IsoTPConnection(interface='vcan0', rxid=0x001, txid=0x002, tpsock=self.tpsock1)
+		conn = IsoTPConnection(interface='vcan0', rxid=0x001, txid=0x002, tpsock=self.tpsock1, name='unittest')
 		self.assertFalse(conn.is_open())
 		conn.open()
 		self.assertTrue(conn.is_open())
@@ -20,8 +20,8 @@ class TestIsoTPConnection(UdsTest):
 		self.assertFalse(conn.is_open())
 
 	def test_transmit(self):
-		conn1 = IsoTPConnection(interface='vcan0', rxid=0x100, txid=0x101, tpsock=self.tpsock1)
-		conn2 = IsoTPConnection(interface='vcan0', rxid=0x101, txid=0x100, tpsock=self.tpsock2)
+		conn1 = IsoTPConnection(interface='vcan0', rxid=0x100, txid=0x101, tpsock=self.tpsock1, name='unittest')
+		conn2 = IsoTPConnection(interface='vcan0', rxid=0x101, txid=0x100, tpsock=self.tpsock2, name='unittest')
 		
 		with conn1.open():
 			with conn2.open():
@@ -74,7 +74,7 @@ class TestSocketConnection(UdsTest):
 			self.server_sock.close()
 		
 	def test_open(self):
-		conn = SocketConnection(self.sock1)
+		conn = SocketConnection(self.sock1, name='unittest')
 		self.assertFalse(conn.is_open())
 		conn.open()
 		self.assertTrue(conn.is_open())
@@ -82,8 +82,8 @@ class TestSocketConnection(UdsTest):
 		self.assertFalse(conn.is_open())
 
 	def test_transmit(self):
-		conn1 = SocketConnection(self.sock1)
-		conn2 = SocketConnection(self.sock2)
+		conn1 = SocketConnection(self.sock1, name='unittest')
+		conn2 = SocketConnection(self.sock2, name='unittest')
 		
 		with conn1.open():
 			with conn2.open():

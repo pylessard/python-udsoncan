@@ -7,10 +7,13 @@ class ClientServerTest(ThreadableTest):
 		ThreadableTest.__init__(self, *args, **kwargs)
 
 	def setUp(self):
-		self.conn = StubbedConnection()
+		self.conn = StubbedConnection(name='unittest')
 
 	def clientSetUp(self):
-		self.udsclient = Client(self.conn, request_timeout=0.3)
+		self.udsclient = Client(self.conn, request_timeout=0.2)
+		self.udsclient.config['logger_name'] = 'unittest'
+		self.udsclient.refresh_config()
+		
 		self.udsclient.open()
 		if hasattr(self, "postClientSetUp"):
 			self.postClientSetUp()

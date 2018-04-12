@@ -5,7 +5,7 @@ from udsoncan.exceptions import *
 class TestStubbedConnection(UdsTest):
 
 	def setUp(self):
-		self.conn = StubbedConnection()
+		self.conn = StubbedConnection(name='unittest')
 		self.conn.open()
 
 	def tearDown(self):

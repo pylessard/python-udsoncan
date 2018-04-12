@@ -57,7 +57,7 @@ class StubbedConnection(Connection.BaseConnection):
 		self.fromuserqueue = queue.Queue()	# Client reads from this queue. Other end is simulated
 		self.touserqueue = queue.Queue()	# Client writes to this queue. Other end is simulated
 		self.opened = False
-		self.logger = logging.getLogger("StubbedConnection")
+		#self.logger = logging.getLogger("StubbedConnection")
 
 	def open(self):
 		self.logger.info("Connection opened")

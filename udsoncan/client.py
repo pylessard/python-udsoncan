@@ -25,7 +25,8 @@ class Client:
 		self.request_timeout = request_timeout
 		self.config = dict(config) # Makes a copy of given configuration
 		self.heartbeat = heartbeat
-		self.logger = logging.getLogger("UdsClient")
+
+		self.refresh_config()
 
 	def __enter__(self):
 		self.open()
@@ -40,6 +41,23 @@ class Client:
 
 	def close(self):
 		self.conn.close()
+
+	def configure_logger(self):
+		logger_name = 'UdsClient'
+		if 'logger_name' in self.config:
+			logger_name = "UdsClient[%s]" % self.config['logger_name']
+
+		self.logger = logging.getLogger(logger_name)
+
+		if 'log_level' in self.config:
+			self.logger.set_level(self.config['log_level'])
+
+		if 'log_file' in self.config:
+
+			self.logger.addHandler()
+
+	def refresh_config(self):
+		self.configure_logger()
 
 ## 	DiagnosticSessionControl
 	def change_session(self, newsession):
