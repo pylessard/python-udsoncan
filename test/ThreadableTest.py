@@ -53,10 +53,12 @@ class ThreadableTest(UdsTest):
 			self.clientSetUp()
 		except BaseException as e:
 			self.queue.put(e)
+			self.client_ready.set()
 			self._clientTearDown()
 			return
 		finally:
 			self.client_ready.set()
+
 		if self.server_crashed:
 			self._clientTearDown()
 			return
