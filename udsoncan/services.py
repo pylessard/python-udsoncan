@@ -144,6 +144,21 @@ class ECUReset(BaseService):
 	enableRapidPowerShutDown = 4
 	disableRapidPowerShutDown = 5
 
+	@classmethod
+	def get_reset_name(cls, reset_id):
+		if reset_id == cls.hardReset:
+			return 'hardReset'
+		elif reset_id == cls.keyOffOnReset:
+			return 'keyOffOnReset'
+		elif reset_id == cls.softReset:
+			return 'softReset'
+		elif reset_id == cls.enableRapidPowerShutDown:
+			return 'enableRapidPowerShutDown'
+		elif reset_id == cls.disableRapidPowerShutDown:
+			return 'disableRapidPowerShutDown'
+		else:
+			return 'custom reset'
+
 	def __init__(self, resettype=None, powerdowntime=None):
 		if not isinstance(resettype, int):
 			raise ValueError('Reset type must be a integer')
@@ -213,6 +228,19 @@ class CommunicationControl(BaseService):
 							Response.Code.ConditionsNotCorrect,
 							Response.Code.RequestOutOfRange
 							]
+	@classmethod
+	def get_control_type_name(cls, control_type):
+		if control_type == cls.enableRxAndTx:
+			return 'enableRxAndTx'
+		elif control_type == cls.enableRxAndDisableTx:
+			return 'enableRxAndDisableTx'
+		elif control_type == cls.disableRxAndEnableTx:
+			return 'disableRxAndEnableTx'
+		elif control_type == cls.disableRxAndTx:
+			return 'disableRxAndTx'
+		else:
+			return 'custom control type'
+
 	def __init__(self, control_type, communication_type):
 		from udsoncan import CommunicationType
 
@@ -248,6 +276,19 @@ class AccessTimingParameter(BaseService):
 	setTimingParametersToDefaultValues = 2
 	readCurrentlyActiveTimingParameters = 3
 	setTimingParametersToGivenValues = 4
+
+	@classmethod
+	def get_access_type_name(cls, access_type):
+		if access_type == cls.readExtendedTimingParameterSet:
+			return 'readExtendedTimingParameterSet'
+		elif access_type == cls.setTimingParametersToDefaultValues:
+			return 'setTimingParametersToDefaultValues'
+		elif access_type == cls.readCurrentlyActiveTimingParameters:
+			return 'readCurrentlyActiveTimingParameters'
+		elif access_type == cls.setTimingParametersToGivenValues:
+			return 'setTimingParametersToGivenValues'
+		else:
+			return 'custom access type'
 
 	supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
 							Response.Code.IncorrectMessageLegthOrInvalidFormat,
@@ -321,7 +362,7 @@ class ControlDTCSetting(BaseService):
 	off = 2
 
 	@classmethod
-	def name_from_setting_type(cls, setting_type):
+	def get_setting_type_name(cls, setting_type):
 		if setting_type == 1:
 			return 'on'
 		elif setting_type == 2:
@@ -376,6 +417,17 @@ class LinkControl(BaseService):
 	verifyBaudrateTransitionWithFixedBaudrate = 1
 	verifyBaudrateTransitionWithSpecificBaudrate = 2
 	transitionBaudrate = 3
+
+	@classmethod
+	def control_type_by_name(cls, control_type):
+		if control_type == cls.verifyBaudrateTransitionWithFixedBaudrate:
+			return 'verifyBaudrateTransitionWithFixedBaudrate'		
+		elif control_type == cls.verifyBaudrateTransitionWithSpecificBaudrate:
+			return 'verifyBaudrateTransitionWithSpecificBaudrate'
+		elif control_type == cls.transitionBaudrate:
+			return 'transitionBaudrate'
+		else:
+			return 'custom control type'
 
 
 	def __init__(self, control_type, baudrate=None):
@@ -556,27 +608,40 @@ class ReadDTCInformation(BaseService):
 							Response.Code.RequestOutOfRange
 							]
 
-	reportNumberOfDTCByStatusMask = 1
-	reportDTCByStatusMask = 2
-	reportDTCSnapshotIdentification = 3
-	reportDTCSnapshotRecordByDTCNumber = 4
-	reportDTCSnapshotRecordByRecordNumber = 5
-	reportDTCExtendedDataRecordByDTCNumber = 6
-	reportNumberOfDTCBySeverityMaskRecord = 7
-	reportDTCBySeverityMaskRecord = 8
-	reportSeverityInformationOfDTC = 9
-	reportSupportedDTCs = 0xA
-	reportFirstTestFailedDTC = 0xB
-	reportFirstConfirmedDTC = 0xC
-	reportMostRecentTestFailedDTC = 0xD
-	reportMostRecentConfirmedDTC = 0xE
-	reportMirrorMemoryDTCByStatusMask = 0xF
-	reportMirrorMemoryDTCExtendedDataRecordByDTCNumber = 0x10
-	reportNumberOfMirrorMemoryDTCByStatusMask = 0x11
-	reportNumberOfEmissionsRelatedOBDDTCByStatusMask = 0x12
-	reportEmissionsRelatedOBDDTCByStatusMask = 0x13
-	reportDTCFaultDetectionCounter = 0x14
-	reportDTCWithPermanentStatus = 0x15
+	class Subfunction:
+		reportNumberOfDTCByStatusMask = 1
+		reportDTCByStatusMask = 2
+		reportDTCSnapshotIdentification = 3
+		reportDTCSnapshotRecordByDTCNumber = 4
+		reportDTCSnapshotRecordByRecordNumber = 5
+		reportDTCExtendedDataRecordByDTCNumber = 6
+		reportNumberOfDTCBySeverityMaskRecord = 7
+		reportDTCBySeverityMaskRecord = 8
+		reportSeverityInformationOfDTC = 9
+		reportSupportedDTCs = 0xA
+		reportFirstTestFailedDTC = 0xB
+		reportFirstConfirmedDTC = 0xC
+		reportMostRecentTestFailedDTC = 0xD
+		reportMostRecentConfirmedDTC = 0xE
+		reportMirrorMemoryDTCByStatusMask = 0xF
+		reportMirrorMemoryDTCExtendedDataRecordByDTCNumber = 0x10
+		reportNumberOfMirrorMemoryDTCByStatusMask = 0x11
+		reportNumberOfEmissionsRelatedOBDDTCByStatusMask = 0x12
+		reportEmissionsRelatedOBDDTCByStatusMask = 0x13
+		reportDTCFaultDetectionCounter = 0x14
+		reportDTCWithPermanentStatus = 0x15
+
+		@classmethod
+		def get_subfn_name(cls, subfn_id):
+			attributes = inspect.getmembers(cls, lambda a:not(inspect.isroutine(a)))
+			subfn_list = [a for a in attributes if not(a[0].startswith('__') and a[0].endswith('__'))]
+
+			for subfn in subfn_list:
+				if subfn[1] == subfn_id:	# [1] is value
+					return subfn[0] 		# [0] is proeprty name
+
+			return 'unknown subfunction'
+
 
 
 	def __init__(self, subfunction):
@@ -606,6 +671,18 @@ class InputOutputControlByIdentifier(BaseService):
 							Response.Code.RequestOutOfRange,
 							Response.Code.SecurityAccessDenied
 							]
+	@classmethod
+	def get_control_param_name(cls, control_param):
+		if control_param == cls.returnControlToECU:
+			return 'returnControlToECU'
+		elif control_param == cls.resetToDefault:
+			return 'resetToDefault'
+		elif control_param == cls.freezeCurrentState:
+			return 'freezeCurrentState'
+		elif control_param == cls.shortTermAdjustment:
+			return 'shortTermAdjustment'
+		else:
+			return 'unknown control param'
 
 	def __init__(self, did, control_param=None, values=None, masks=None):
 		from udsoncan import IOValues, IOMasks
@@ -666,7 +743,7 @@ class RoutineControl(BaseService):
 							Response.Code.GeneralProgrammingFailure
 							]
 
-	def __init__(self, routine_id, control_type):
+	def __init__(self, routine_id, control_type, data=None):
 		if not isinstance(routine_id, int):
 			raise ValueError("Routine ID must be a valid integer")
 		if routine_id < 0 or routine_id > 0xFFFF:
@@ -677,8 +754,13 @@ class RoutineControl(BaseService):
 		if control_type < 0 or control_type > 0x7F:
 			raise ValueError("Routine control type must be an integer between 0 and 0x7F")
 
+		if data is not None:
+			if not isinstance(data, bytes):
+				raise ValueError('data must be a valid bytes object')
+
 		self.routine_id = routine_id
 		self.control_type = control_type
+		self.data = data
 
 
 	def subfunction_id(self):

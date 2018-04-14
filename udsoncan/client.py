@@ -1,4 +1,4 @@
-from udsoncan import Response, Request, services, DidCodec, Routine, IOMasks, Dtc
+from udsoncan import Response, Request, services, DidCodec, Routine, IOMasks, Dtc, DataIdentifier
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
 import struct
@@ -206,7 +206,10 @@ class Client:
 	# Perform a ReadDataByIdentifier request.
 	def read_data_by_identifier(self, dids, output_fmt='dict'):
 		service = services.ReadDataByIdentifier(dids)
-		self.logger.info("Reading data identifier : %s", service.dids)
+		if isinstance(service.dids, list):
+			self.logger.info("Reading %d data identifier : %s" % (len(service.dids), service.dids))
+		else:
+			self.logger.info("Reading data identifier : %s (%s)" % (service.dids, DataIdentifier.name_from_id(service.dids)))
 		req = Request(service)
 		didlist = [service.dids] if not isinstance(service.dids, list) else service.dids
 
@@ -275,13 +278,13 @@ class Client:
 	# Performs a WriteDataByIdentifier request.
 	def write_data_by_identifier(self, did, value):
 		service = services.WriteDataByIdentifier(did)
-		self.logger.info("Writing data identifier %s", did)
+		self.logger.info("Writing data identifier %s (%s)", service.did, DataIdentifier.name_from_id(service.did))
 		req = Request(service)
 		
-		didconfig = self.check_did_config(did)		# Make sure DID is configured in client configuration
+		didconfig = self.check_did_config(service.did)		# Make sure DID is configured in client configuration
 		req.data = struct.pack('>H', service.did)	# encode DID number
 
-		codec = DidCodec.from_config(didconfig[did])
+		codec = DidCodec.from_config(didconfig[service.did])
 		req.data += codec.encode(value)
 		response = self.send_request(req)
 
@@ -290,7 +293,7 @@ class Client:
 
 		did_fb = struct.unpack(">H", response.data[0:2])[0]
 
-		if did_fb != did:
+		if did_fb != service.did:
 			self.raise_and_log(UnexpectedResponseException(response, "Server returned a response for data identifier 0x%02x while client requested for did 0x%02x" % (did_fb, did)))
 		
 		return None
@@ -298,7 +301,7 @@ class Client:
 	# Performs a ECUReset service request
 	def ecu_reset(self, resettype, powerdowntime=None):
 		service = services.ECUReset(resettype, powerdowntime)
-		self.logger.info("Requesting ECU reset of type 0x%02x" % (resettype))
+		self.logger.info("Requesting ECU reset of type 0x%02x (%s)" % (service.resettype, services.ECUReset.get_reset_name(service.resettype)))
 		req = Request(service)
 		if powerdowntime is not None:	
 			if resettype == services.ECUReset.enableRapidPowerShutDown:
@@ -321,6 +324,10 @@ class Client:
 	# Performs a ClearDTC service request. 
 	def clear_dtc(self, group=0xFFFFFF, suppress_positive_response=False):
 		service = services.ClearDiagnosticInformation(group)
+		if service.group == 0xFFFFFF:
+			self.logger.info('Clearing all DTCs (group mask : 0xFFFFFF)')
+		else:
+			self.logger.info('Clearing DTCs matching group mask : 0x%06x' % service.group)
 		request = Request(service, suppress_positive_response=suppress_positive_response)
 		group = service.group  # Service object can filter that value
 
@@ -335,29 +342,36 @@ class Client:
 
 	# Performs a RoutineControl Service request
 	def start_routine(self, routine_id, data=None):
-		self.logger.info("Sending request to start %s routine" % (Routine.name_from_id(routine_id)))
 		return self.routine_control(routine_id, services.RoutineControl.startRoutine, data)
 
 	# Performs a RoutineControl Service request
 	def stop_routine(self, routine_id, data=None):
-		self.logger.info("Sending request to stop %s routine" % (Routine.name_from_id(routine_id)))
 		return self.routine_control(routine_id, services.RoutineControl.stopRoutine, data)
 
 	# Performs a RoutineControl Service request
 	def get_routine_result(self, routine_id, data=None):
-		self.logger.info("Sending request to get results of %s routine" % (Routine.name_from_id(routine_id)))
 		return self.routine_control(routine_id, services.RoutineControl.requestRoutineResults, data)
 
 	# Performs a RoutineControl Service request
 	def routine_control(self, routine_id, control_type, data=None):
-		service = services.RoutineControl(routine_id, control_type)
+		service = services.RoutineControl(routine_id, control_type, data=data)
+		payload_length = 0 if service.data is None else len(service.data)
+		if control_type == services.RoutineControl.startRoutine:
+			self.logger.info("Sending request to start routine ID : 0x%04x (%s) with a payload of %d bytes" % (service.routine_id, Routine.name_from_id(service.routine_id), payload_length))
+		elif control_type == services.RoutineControl.stopRoutine:
+			self.logger.info("Sending request to stop routine ID : 0x%04x (%s) with a payload of %d bytes" % (service.routine_id, Routine.name_from_id(service.routine_id), payload_length))
+		elif control_type == services.RoutineControl.requestRoutineResults:
+			self.logger.info("Sending request to get the result of routine ID : 0x%04x (%s) with a payload of %d bytes" % (service.routine_id, Routine.name_from_id(service.routine_id), payload_length))
+		else:
+			self.logger.info("Requesting RoutineControl service with unknown control type (0x%02x) and routine ID : 0x%04x (%s) with a payload of %d bytes" % (service.control_type, service.routine_id, Routine.name_from_id(service.routine_id), payload_length))
+
 		req = Request(service)
 
 		req.data = struct.pack('>H', service.routine_id)
 
 		# Data can be optionally be given to server. Implementation specific
 		if data is not None:
-			req.data += data 	
+			req.data += service.data 	
 
 		response = self.send_request(req)
 
@@ -396,6 +410,10 @@ class Client:
 	# Performs an AccessTimingParameter service request
 	def access_timing_parameter(self, access_type, request_record=None):
 		service = services.AccessTimingParameter(access_type, request_record)
+
+		payload_length = 0 if service.request_record is None else len(service.request_record)
+		self.logger.info('Sending AccessTimingParameter service request with access type 0x%02x (%s) and a request record payload of %d bytes' % (service.access_type, services.AccessTimingParameter.get_access_type_name(service.access_type), payload_length))
+
 		request = Request(service)
 
 		if service.request_record is not None:
@@ -409,10 +427,10 @@ class Client:
 		received = int(response.data[0])
 		expected = service.subfunction_id()
 		if received != expected:
-			self.raise_and_log(UnexpectedResponseException(response, "Access Type of response (0x%02x) does not match request access type (0x%02x)" % (received, expected)))
+			self.raise_and_log(UnexpectedResponseException(response, "Access type of response (0x%02x) does not match request access type (0x%02x)" % (received, expected)))
 
 		if response.data is not None and service.access_type not in [services.AccessTimingParameter.readExtendedTimingParameterSet, services.AccessTimingParameter.readCurrentlyActiveTimingParameters]:
-			self.logger.warning("Server returned data altough none were asked")
+			self.logger.warning("Server returned data for AccessTimingParameter altough none were asked")
 
 		if len(response.data) > 1:
 			return response.data[1:]
@@ -422,6 +440,7 @@ class Client:
 	# Performs a CommunicationControl service request
 	def communication_control(self, control_type, communication_type):
 		service = services.CommunicationControl(control_type, communication_type)
+		self.logger.info('Sending CommunicationControl service request with control type 0x%02x (%s) and a communication type byte of 0x%02x (%s)' % (service.control_type, services.CommunicationControl.get_control_type_name(service.control_type), communication_type.get_byte_as_int(), str(communication_type)))
 		req = Request(service)
 		req.data = service.communication_type.get_byte()  # subnet and message type
 
@@ -449,9 +468,11 @@ class Client:
 	# Common code for both RequestDownload and RequestUpload services
 	def request_upload_download(self, service_cls, memory_location, dfi=None):
 		if service_cls not in [services.RequestDownload, services.RequestUpload]:
-			self.raise_and_log(ValueError('services must eitehr be RequestDownload or RequestUpload'))
+			self.raise_and_log(ValueError('services must either be RequestDownload or RequestUpload'))
 
 		service = service_cls(memory_location=memory_location, dfi=dfi)
+		self.logger.info('Sending %s service request for memory location [%s] and DataFormatIdentifier 0x%02x (%s)' % (service_cls.__name__, str(service.memory_location), service.dfi.get_byte_as_int(), str(service.dfi)))
+
 		req = Request(service)
 
 		# If user does not specify a byte format, we apply the one in client configuration.
@@ -488,10 +509,14 @@ class Client:
 
 	def transfer_data(self, block_sequence_counter, data=None):
 		service = services.TransferData(block_sequence_counter, data)
+		
+		data_len = 0 if service.data is None else len(service.data)
+		self.logger.info('Sending TransferData service request with SequenceNumber=%d and %d bytes of data.' % (service.block_sequence_counter, data_len))
+		if data_len > 0:
+			self.logger.debug('Data to transfer : %s' % binascii.hexlify(service.data))
+		
 		request = Request(service)
-
 		request.data = service.data
-
 		response = self.send_request(request)
 
 		if len(response.data) < 1:
@@ -509,6 +534,8 @@ class Client:
 
 	def request_transfer_exit(self, data=None, suppress_positive_response=False):
 		service = services.RequestTransferExit(data)
+		self.logger.info('Sending RequestTransferExit service request')
+
 		request = Request(service, suppress_positive_response=suppress_positive_response)
 		request.data = service.data
 
@@ -518,6 +545,9 @@ class Client:
 
 	def link_control(self, control_type, baudrate=None):
 		service = services.LinkControl(control_type, baudrate)
+		baudrate_str = 'No baudrate specified' if service.baudrate is None else 'Baudrate : ' + str(service.baudrate)
+
+		self.logger.info('Sending LinkControl service request with control type of 0x%02x (%s). %s' % (service.control_type, services.LinkControl.control_type_by_name(service.control_type), baudrate_str))
 		request = Request(service)
 		if service.baudrate is not None:
 			request.data = service.baudrate.get_bytes()
@@ -534,24 +564,27 @@ class Client:
 
 		return response
 
+	#Perform InputOutputControlByIdentifier service request
 	def io_control(self,  did, control_param=None, values=None, masks=None):
 		service = services.InputOutputControlByIdentifier( did, control_param=control_param, values=values, masks=masks)
+		control_param_str = 'no control parameter' if service.control_param is None else 'control parameter 0x%02x (%s)' % (service.control_param, services.InputOutputControlByIdentifier.get_control_param_name(service.control_param))
+		self.logger.info('Sending InputOutputControlByIdentifier service request for DID=0x%04x, %s.' % (service.did, control_param_str))
+
 		req = Request(service)
 		req.data = b''
-
-		ioconfig = self.check_io_config(service.did)
-
+		ioconfig = self.check_io_config(service.did)	# IO dids are defined in client config.
 		req.data += struct.pack('>H', service.did)
 
+		# This parameters is optional according to standard
 		if service.control_param is not None:
 			req.data += struct.pack('B', control_param)
 		
-		codec = DidCodec.from_config(ioconfig[did])
+		codec = DidCodec.from_config(ioconfig[did])	# Get IO codec from config
 		
 		if service.values is not None:
 			req.data += codec.encode(*service.values.args, **service.values.kwargs)
 
-		if service.masks is not None: # Skip the masks byte.
+		if service.masks is not None: # Skip the masks byte if none is given.
 			if isinstance(service.masks, bool):
 				byte = b'\xFF' if service.masks == True else b'\x00'
 				if 'mask_size' in  ioconfig[did]:
@@ -624,8 +657,11 @@ class Client:
 			
 			return decoded_data
 
+
 	def control_dtc_setting(self, setting_type, data=None):
 		service = services.ControlDTCSetting(setting_type, data)
+		data_len = 0 if service.data is None else len(service.data)
+		self.logger.info('Sending ControlDTCSetting service request with setting type 0x%02x (%s) and %d bytes of data' % (service.setting_type, services.ControlDTCSetting.get_setting_type_name(service.setting_type), data_len))
 		req = Request(service)
 
 		if service.data is not None:
@@ -652,6 +688,8 @@ class Client:
 
 		if 'server_memorysize_format' in self.config:
 			service.memory_location.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
+
+		self.logger.info('Reading memory address (ReadMemoryByAddress) - %s' % str(service.memory_location))
 
 		req = Request(service)
 
@@ -682,6 +720,8 @@ class Client:
 
 		if 'server_memorysize_format' in self.config:
 			service.memory_location.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
+
+		self.logger.info('Writing %d bytes to memory address (WriteMemoryByAddress) - %s' % (len(service.data), str(service.memory_location)))
 
 		req = Request(service)
 
@@ -721,67 +761,67 @@ class Client:
 
 # ====  ReadDTCInformation
 	def get_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information(services.ReadDTCInformation.reportDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCByStatusMask, status_mask=status_mask)
 
 	def get_emission_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information(services.ReadDTCInformation.reportEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
 
 	def get_mirrormemory_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information(services.ReadDTCInformation.reportMirrorMemoryDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCByStatusMask, status_mask=status_mask)
 
 	def get_dtc_by_status_severity_mask(self, status_mask, severity_mask):
-		return self.read_dtc_information(services.ReadDTCInformation.reportDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 
 	def get_number_of_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information(services.ReadDTCInformation.reportNumberOfDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfDTCByStatusMask, status_mask=status_mask)
 	
 	def get_mirrormemory_number_of_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information(services.ReadDTCInformation.reportNumberOfMirrorMemoryDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfMirrorMemoryDTCByStatusMask, status_mask=status_mask)
 	
 	def get_number_of_emission_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information(services.ReadDTCInformation.reportNumberOfEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
 
 	def get_number_of_dtc_by_status_severity_mask(self, status_mask, severity_mask):
-		return self.read_dtc_information(services.ReadDTCInformation.reportNumberOfDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 	
 	def get_dtc_severity(self, dtc):
-		return self.read_dtc_information(services.ReadDTCInformation.reportSeverityInformationOfDTC, dtc=dtc)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC, dtc=dtc)
 
 	def get_supported_dtc(self):
-		return self.read_dtc_information(services.ReadDTCInformation.reportSupportedDTCs)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportSupportedDTCs)
 
 	def get_first_test_failed_dtc(self):
-		return self.read_dtc_information(services.ReadDTCInformation.reportFirstTestFailedDTC)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportFirstTestFailedDTC)
 
 	def get_first_confirmed_dtc(self):
-		return self.read_dtc_information(services.ReadDTCInformation.reportFirstConfirmedDTC)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportFirstConfirmedDTC)
 
 	def get_most_recent_test_failed_dtc(self):
-		return self.read_dtc_information(services.ReadDTCInformation.reportMostRecentTestFailedDTC)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMostRecentTestFailedDTC)
 
 	def get_most_recent_confirmed_dtc(self):
-		return self.read_dtc_information(services.ReadDTCInformation.reportMostRecentConfirmedDTC)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMostRecentConfirmedDTC)
 
 	def get_dtc_with_permanent_status(self):
-		return self.read_dtc_information(services.ReadDTCInformation.reportDTCWithPermanentStatus)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCWithPermanentStatus)
 
 	def get_dtc_fault_counter(self):
-		return self.read_dtc_information(services.ReadDTCInformation.reportDTCFaultDetectionCounter)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCFaultDetectionCounter)
 
 	def get_dtc_snapshot_identification(self):
-		return self.read_dtc_information(services.ReadDTCInformation.reportDTCSnapshotIdentification)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotIdentification)
 
 	def get_dtc_snapshot_by_dtc_number(self, dtc, record_number=0xFF):
-		return self.read_dtc_information(services.ReadDTCInformation.reportDTCSnapshotRecordByDTCNumber, dtc=dtc, snapshot_record_number=record_number)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber, dtc=dtc, snapshot_record_number=record_number)
 
 	def get_dtc_snapshot_by_record_number(self, record_number):
-		return self.read_dtc_information(services.ReadDTCInformation.reportDTCSnapshotRecordByRecordNumber, snapshot_record_number=record_number)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber, snapshot_record_number=record_number)
 
 	def get_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
-		return self.read_dtc_information(services.ReadDTCInformation.reportDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number,data_size=data_size)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number,data_size=data_size)
 
 	def get_mirrormemory_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
-		return self.read_dtc_information(services.ReadDTCInformation.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number, data_size=data_size)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number, data_size=data_size)
 
 	# Performs a ReadDiagnsticInformation service request.
 	# Many request are encoded the same way and many response are encoded the same way. Request grouping and response grouping are independent.
@@ -799,104 +839,106 @@ class Client:
 
 		# Request grouping for subfunction that have the same request format
 		request_subfn_no_param = [
-			services.ReadDTCInformation.reportSupportedDTCs,
-			services.ReadDTCInformation.reportFirstTestFailedDTC,
-			services.ReadDTCInformation.reportFirstConfirmedDTC,
-			services.ReadDTCInformation.reportMostRecentTestFailedDTC,
-			services.ReadDTCInformation.reportMostRecentConfirmedDTC,
-			services.ReadDTCInformation.reportDTCFaultDetectionCounter,
-			services.ReadDTCInformation.reportDTCWithPermanentStatus,
+			services.ReadDTCInformation.Subfunction.reportSupportedDTCs,
+			services.ReadDTCInformation.Subfunction.reportFirstTestFailedDTC,
+			services.ReadDTCInformation.Subfunction.reportFirstConfirmedDTC,
+			services.ReadDTCInformation.Subfunction.reportMostRecentTestFailedDTC,
+			services.ReadDTCInformation.Subfunction.reportMostRecentConfirmedDTC,
+			services.ReadDTCInformation.Subfunction.reportDTCFaultDetectionCounter,
+			services.ReadDTCInformation.Subfunction.reportDTCWithPermanentStatus,
 
 			# Documentation is confusing about reportDTCSnapshotIdentification subfunction.
 			# It is presented with reportDTCSnapshotRecordByDTCNumber (2 params) but a footnote says that these 2 parameters
 			# are not to be provided for reportDTCSnapshotIdentification. Therefore, it is the same as other no-params subfn
-			services.ReadDTCInformation.reportDTCSnapshotIdentification	
+			services.ReadDTCInformation.Subfunction.reportDTCSnapshotIdentification	
 
 			]
 
 		request_subfn_status_mask = [
-			services.ReadDTCInformation.reportNumberOfDTCByStatusMask,
-			services.ReadDTCInformation.reportDTCByStatusMask,
-			services.ReadDTCInformation.reportMirrorMemoryDTCByStatusMask,
-			services.ReadDTCInformation.reportNumberOfMirrorMemoryDTCByStatusMask,
-			services.ReadDTCInformation.reportNumberOfEmissionsRelatedOBDDTCByStatusMask,
-			services.ReadDTCInformation.reportEmissionsRelatedOBDDTCByStatusMask
+			services.ReadDTCInformation.Subfunction.reportNumberOfDTCByStatusMask,
+			services.ReadDTCInformation.Subfunction.reportDTCByStatusMask,
+			services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCByStatusMask,
+			services.ReadDTCInformation.Subfunction.reportNumberOfMirrorMemoryDTCByStatusMask,
+			services.ReadDTCInformation.Subfunction.reportNumberOfEmissionsRelatedOBDDTCByStatusMask,
+			services.ReadDTCInformation.Subfunction.reportEmissionsRelatedOBDDTCByStatusMask
 		]
 
 		request_subfn_mask_record_plus_snapshot_record_number = [
-			services.ReadDTCInformation.reportDTCSnapshotRecordByDTCNumber
+			services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber
 		]
 
 		request_subfn_snapshot_record_number = [
-			services.ReadDTCInformation.reportDTCSnapshotRecordByRecordNumber
+			services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber
 		]
 
 		request_subfn_mask_record_plus_extdata_record_number = [
-			services.ReadDTCInformation.reportDTCExtendedDataRecordByDTCNumber,
-			services.ReadDTCInformation.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber
+			services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber,
+			services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber
 		]
 
 		request_subfn_severity_plus_status_mask = [
-			services.ReadDTCInformation.reportNumberOfDTCBySeverityMaskRecord,
-			services.ReadDTCInformation.reportDTCBySeverityMaskRecord
+			services.ReadDTCInformation.Subfunction.reportNumberOfDTCBySeverityMaskRecord,
+			services.ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord
 		]
 
 		request_subfn_mask_record = [
-			services.ReadDTCInformation.reportSeverityInformationOfDTC		
+			services.ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC		
 			]
 
 		# Response grouping for responses that are encoded the same way
 		response_subfn_dtc_availability_mask_plus_dtc_record = [
-			services.ReadDTCInformation.reportDTCByStatusMask,
-			services.ReadDTCInformation.reportSupportedDTCs,
-			services.ReadDTCInformation.reportFirstTestFailedDTC,
-			services.ReadDTCInformation.reportFirstConfirmedDTC,
-			services.ReadDTCInformation.reportMostRecentTestFailedDTC,
-			services.ReadDTCInformation.reportMostRecentConfirmedDTC,
-			services.ReadDTCInformation.reportMirrorMemoryDTCByStatusMask,
-			services.ReadDTCInformation.reportEmissionsRelatedOBDDTCByStatusMask,
-			services.ReadDTCInformation.reportDTCWithPermanentStatus
+			services.ReadDTCInformation.Subfunction.reportDTCByStatusMask,
+			services.ReadDTCInformation.Subfunction.reportSupportedDTCs,
+			services.ReadDTCInformation.Subfunction.reportFirstTestFailedDTC,
+			services.ReadDTCInformation.Subfunction.reportFirstConfirmedDTC,
+			services.ReadDTCInformation.Subfunction.reportMostRecentTestFailedDTC,
+			services.ReadDTCInformation.Subfunction.reportMostRecentConfirmedDTC,
+			services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCByStatusMask,
+			services.ReadDTCInformation.Subfunction.reportEmissionsRelatedOBDDTCByStatusMask,
+			services.ReadDTCInformation.Subfunction.reportDTCWithPermanentStatus
 		]
 
 		response_subfn_number_of_dtc = [
-			services.ReadDTCInformation.reportNumberOfDTCByStatusMask,
-			services.ReadDTCInformation.reportNumberOfDTCBySeverityMaskRecord,
-			services.ReadDTCInformation.reportNumberOfMirrorMemoryDTCByStatusMask,
-			services.ReadDTCInformation.reportNumberOfEmissionsRelatedOBDDTCByStatusMask,
+			services.ReadDTCInformation.Subfunction.reportNumberOfDTCByStatusMask,
+			services.ReadDTCInformation.Subfunction.reportNumberOfDTCBySeverityMaskRecord,
+			services.ReadDTCInformation.Subfunction.reportNumberOfMirrorMemoryDTCByStatusMask,
+			services.ReadDTCInformation.Subfunction.reportNumberOfEmissionsRelatedOBDDTCByStatusMask,
 		]
 
 		response_subfn_dtc_availability_mask_plus_dtc_record_with_severity = [
-			services.ReadDTCInformation.reportDTCBySeverityMaskRecord,
-			services.ReadDTCInformation.reportSeverityInformationOfDTC
+			services.ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord,
+			services.ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC
 		]
 		
 		response_subfn_dtc_plus_fault_counter = [
-			services.ReadDTCInformation.reportDTCFaultDetectionCounter
+			services.ReadDTCInformation.Subfunction.reportDTCFaultDetectionCounter
 		]
 
 		response_subfn_dtc_plus_sapshot_record = [
-			services.ReadDTCInformation.reportDTCSnapshotIdentification
+			services.ReadDTCInformation.Subfunction.reportDTCSnapshotIdentification
 		]
 
 		response_sbfn_dtc_status_snapshots_records = [
-			services.ReadDTCInformation.reportDTCSnapshotRecordByDTCNumber
+			services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber
 		]
 
 		response_sbfn_dtc_status_snapshots_records_record_first = [
-			services.ReadDTCInformation.reportDTCSnapshotRecordByRecordNumber
+			services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber
 		]
 
 		response_subfn_mask_record_plus_extdata = [
-			services.ReadDTCInformation.reportDTCExtendedDataRecordByDTCNumber,
-			services.ReadDTCInformation.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber
+			services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber,
+			services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber
 		]
 
 		# Craft Request and validate input params according the request group.
 
 		service = services.ReadDTCInformation(subfunction)
+		log_service_declaration_str = 'Sending a ReadDtcInformation service request with subfunction "%s" (0x%02X).' % (services.ReadDTCInformation.Subfunction.get_subfn_name(service.subfunction), service.subfunction)
 		req = Request(service)
 
 		if service.subfunction in request_subfn_no_param:		# Service ID + Subfunction
+			self.logger.info(log_service_declaration_str)
 			pass
 
 		elif service.subfunction in request_subfn_status_mask:
@@ -906,6 +948,7 @@ class Client:
 			if not isinstance(status_mask, int) or status_mask < 0 or status_mask > 0xFF:
 				self.raise_and_log(ValueError('status_mask must be a Dtc.Status instance or an integer between 0 and 0xFF'))
 
+			self.logger.info('%s - StatusMask=0x%02x' % (log_service_declaration_str, status_mask))
 			req.data = struct.pack('B', (status_mask & 0xFF))
 
 		elif service.subfunction in request_subfn_mask_record_plus_snapshot_record_number:
@@ -921,6 +964,8 @@ class Client:
 			if not isinstance(snapshot_record_number, int) or (isinstance(snapshot_record_number, int) and (snapshot_record_number < 0 or snapshot_record_number > 0xFF)):
 				self.raise_and_log(ValueError('snapshot_record_number must be an integer between 0 and 0xFF'))
 
+			self.logger.info('%s - DTC=0x%06x, snapshot record number=0x%02x' % (log_service_declaration_str, dtc, snapshot_record_number))
+
 			req.data = b''
 			req.data += struct.pack('B', (dtc >> 16) & 0xFF)
 			req.data += struct.pack('B', (dtc >> 8) & 0xFF)
@@ -933,6 +978,8 @@ class Client:
 
 			if not isinstance(snapshot_record_number, int) or (isinstance(snapshot_record_number, int) and (snapshot_record_number < 0 or snapshot_record_number > 0xFF)):
 				self.raise_and_log(ValueError('snapshot_record_number must be an integer between 0 and 0xFF'))
+
+			self.logger.info('%s - Snapshot record number=0x%02x' % (log_service_declaration_str, snapshot_record_number))
 
 			req.data = struct.pack('B', snapshot_record_number)
 
@@ -957,6 +1004,8 @@ class Client:
 			if not isinstance(data_size, int) or (isinstance(data_size, int) and data_size <= 0):
 				self.raise_and_log(ValueError('data_size or config[extended_data_size][dtc] must be a non-zero positive integer'))
 
+			self.logger.info('%s - DTC=0x%06x, ExtendedData record number=0x%02x' % (log_service_declaration_str, dtc, extended_data_record_number))
+
 			req.data = b''
 			req.data += struct.pack('B', (dtc >> 16) & 0xFF)
 			req.data += struct.pack('B', (dtc >> 8) & 0xFF)
@@ -977,14 +1026,19 @@ class Client:
 			if not isinstance(severity_mask, int) or severity_mask < 0 or severity_mask > 0xFF:
 				self.raise_and_log(ValueError('severity_mask must be a Dtc.Severity instance or an integer between 0 and 0xFF'))
 
+			self.logger.info('%s - StatusMask=0x%02x,SeverityMask=%02x' % (log_service_declaration_str, status_mask, severity_mask))
+
 			req.data = struct.pack('B', (severity_mask & 0xFF))
 			req.data += struct.pack('B', (status_mask & 0xFF))
+
 		elif service.subfunction in request_subfn_mask_record:
 			if dtc is None:
 				self.raise_and_log(ValueError('A dtc value must be provided for subfunction 0x%02x' % service.subfunction))
 
 			if not isinstance(dtc, int) or dtc < 0 or dtc > 0xFFFFFF:
 				self.raise_and_log(ValueError('dtc parameter must be an instance of Dtcor an integer between 0 and 0xFFFFFF'))
+
+			self.logger.info('%s - DTC=0x%06x' % (log_service_declaration_str, dtc))
 
 			req.data = b''
 			req.data += struct.pack('B', (dtc >> 16) & 0xFF)
@@ -1030,7 +1084,7 @@ class Client:
 						break
 					else:
 						# We purposely ignore extra byte for subfunction reportSeverityInformationOfDTC as it is supposed to returns 0 or 1 DTC.
-						if service.subfunction != services.ReadDTCInformation.reportSeverityInformationOfDTC or actual_byte == 2: 
+						if service.subfunction != services.ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC or actual_byte == 2: 
 							self.raise_and_log(InvalidResponseException(response, 'Incomplete DTC record. Missing %d bytes to response to complete the record' % (dtc_size-partial_dtc_length)))
 
 				else:
@@ -1389,7 +1443,7 @@ class Client:
 
 			response = Response.from_payload(payload)
 			self.last_response = response
-			self.logger.info("Received response from server")
+			self.logger.debug("Received response from server")
 
 			if not response.valid:
 				self.raise_and_log(InvalidResponseException(response, 'Received response is invalid.'))
@@ -1403,8 +1457,13 @@ class Client:
 					self.logger.warning("Given response (%s) is not a supported negative response code according to UDS standard." % response.code_name)	
 				self.raise_and_log(NegativeResponseException(response))
 
+			self.logger.info('Received positive response from server.')
 			return response
 
 	def raise_and_log(self, exception):
-		self.logger.error('[%s] : %s' % (exception.__class__, str(exception)))
+		logline = '[%s] : %s' % (exception.__class__.__name__, str(exception))
+		if exception.__class__ in [NegativeResponseException]:
+			self.logger.warning(logline)
+		else:
+			self.logger.error(logline)
 		raise exception

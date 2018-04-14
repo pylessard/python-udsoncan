@@ -287,6 +287,12 @@ class MemoryLocation:
 		data = struct.pack('>q', self.memorysize)
 		return data[-n:]
 
+	def __str__(self):
+		return 'Address=0x%x (%d bits), Size=0x%x (%d bits)' % (self.address, self.alfid.address_format, self.memorysize, self.alfid.memorysize_format)
+
+	def __repr__(self):
+		return '<%s: %s at 0x%08x>' % (self.__class__.__name__, str(self), id(self))
+
 # epresent a single byte values including compression and encryption method of a chunk of data.
 # Mainly used by TransferData Service
 class DataFormatIdentifier:
@@ -302,8 +308,17 @@ class DataFormatIdentifier:
 		self.compression = compression
 		self.encryption=encryption
 
+	def get_byte_as_int(self):
+		return ((self.compression & 0xF) << 4) | (self.encryption & 0xF)
+
 	def get_byte(self):
-		return struct.pack('B', ((self.compression & 0xF) << 4) | (self.encryption & 0xF))
+		return struct.pack('B', self.get_byte_as_int())
+
+	def __str__(self):
+		return 'Compression:0x%x, Encryption:0x%x' % (self.compression, self.encryption)
+
+	def __repr__(self):
+		return '<%s: %s at 0x%08x>' % (self.__class__.__name__, str(self), id(self))
 
 # Units defined in standard. Nowhere does the ISO-14229 makes usage of them, but they are defined
 class Units:
@@ -652,15 +667,21 @@ class CommunicationType:
 			raise ValueError('At least one message type must be controlled')
 
 		self.subnet = subnet
-		self.message_type = 0
-		if normal_msg:
-			self.message_type |= 1
-		if network_management_msg:
-			self.message_type |= 2
+		self.normal_msg = normal_msg
+		self.network_management_msg = network_management_msg
+
+	def get_byte_as_int(self):
+		message_type = 0
+		if self.normal_msg:
+			message_type |= 1
+		if self.network_management_msg:
+			message_type |= 2
+
+		byte = (message_type & 0x3) | ((self.subnet.value() & 0xF) << 4)
+		return byte
 
 	def get_byte(self):
-		byte = (self.message_type & 0x3) | ((self.subnet.value() & 0xF) << 4)
-		return struct.pack('B', byte)
+		return struct.pack('B', self.get_byte_as_int())
 
 	@classmethod
 	def from_byte(cls, byte):
@@ -671,6 +692,19 @@ class CommunicationType:
 		normal_msg = True if val & 1 > 0 else False
 		network_management_msg = True if val & 2 > 0 else False
 		return cls(subnet,normal_msg,network_management_msg)
+
+	def __str__(self):
+		flags = []
+		if self.normal_msg:
+			flags.append('NormalMsg')
+
+		if self.network_management_msg:
+			flags.append('NetworkManagementMsg')
+
+		return 'subnet=0x%x. Flags : [%s]' % (self.subnet.value(), ','.join(flags))
+
+	def __repr__(self):
+		return '<%s: %s at 0x%08x>' % (self.__class__.__name__, str(self), id(self))
 
 # Buadrate is a variable length value used to define the transmission baudrate in LinkControl service.
 class Baudrate:
@@ -759,6 +793,20 @@ class Baudrate:
 			return struct.pack('B', self.baudrate)
 
 		raise RuntimeError('Unknown baudrate baudtype : %s' % self.baudtype)
+
+	def __str__(self):
+		baudtype_str = ''
+		if self.baudtype == self.Type.Fixed:
+			baudtype_str = 'Fixed'
+		elif self.baudtype == self.Type.Specific:
+			baudtype_str = 'Specific'
+		elif self.baudtype == self.Type.Identifier:
+			baudtype_str = 'Defined by identifier'
+
+		return '%sBauds, %s format.' % (str(self.effective_baudrate()), baudtype_str)
+
+	def __repr__(self):
+		return '<%s: %s at 0x%08x>' % (self.__class__.__name__, str(self), id(self))
 
 #Used for IO Control service. Allow comprehensive one-liner.
 class IOMasks:

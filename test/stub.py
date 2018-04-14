@@ -8,8 +8,6 @@ class StubbedIsoTPSocket(object):
 	conns = {}
 
 	def __init__(self, name=None, timeout=1):
-		Connection.BaseConnection.__init__(self, name)
-
 		self.bound = False
 		self.interface=None
 		self.rxid=None
@@ -57,11 +55,10 @@ class StubbedConnection(Connection.BaseConnection):
 		self.fromuserqueue = queue.Queue()	# Client reads from this queue. Other end is simulated
 		self.touserqueue = queue.Queue()	# Client writes to this queue. Other end is simulated
 		self.opened = False
-		#self.logger = logging.getLogger("StubbedConnection")
 
 	def open(self):
-		self.logger.info("Connection opened")
 		self.opened = True
+		self.logger.info('Connection opened')
 		return self
 
 	def __enter__(self):
@@ -74,15 +71,14 @@ class StubbedConnection(Connection.BaseConnection):
 		return self.opened 
 
 	def close(self):
-		self.logger.info("Connection closed")
 		self.empty_rxqueue()
 		self.empty_txqueue()
-
 		self.opened = False
+		self.logger.info('Connection closed')	
 
 	def specific_send(self, payload):
 		if len(payload) > 4095:
-			self.logger.warning("Truncating payload to be sent to a length of 4095")
+			self.logger.warning("Truncating payload to be set to a length of 4095")
 			payload = payload[0:4095]
 
 		self.touserqueue.put(payload)
@@ -102,7 +98,7 @@ class StubbedConnection(Connection.BaseConnection):
 			timedout = True
 			
 		if exception and timedout:
-			raise TimeoutException("Did not received frame from user in time (timeout=%s sec)" % timeout)
+			raise TimeoutException("Did not receive frame from user in time (timeout=%s sec)" % timeout)
 
 		if frame is not None and len(frame) > 4095:
 			self.logger.warning("Truncating received payload to a length of 4095")

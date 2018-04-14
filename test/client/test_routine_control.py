@@ -101,3 +101,7 @@ class TestRoutineControl(ClientServerTest):
 
 		with self.assertRaises(ValueError):
 			response = self.udsclient.routine_control(routine_id=1, control_type=0x80)
+
+		with self.assertRaises(ValueError):
+			response = self.udsclient.routine_control(routine_id=1, control_type=1, data=123)
+

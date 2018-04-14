@@ -13,11 +13,11 @@ class BaseConnection(ABC):
 
 	def __init__(self, name=None):
 		if name is None:
-			name = 'Connection'
+			self.name = 'Connection'
 		else:
-			name = 'Connection[%s]' % (name)
+			self.name = 'Connection[%s]' % (name)
 
-		self.logger = logging.getLogger(name)
+		self.logger = logging.getLogger(self.name)
 
 	def send(self, obj):
 		if isinstance(obj, Request) or isinstance(obj, Response):
@@ -25,20 +25,13 @@ class BaseConnection(ABC):
 		else :
 			payload = obj
 
-		if self.logger.getEffectiveLevel() >= logging.DEBUG:
-			self.logger.debug('Sending %d bytes : [%s]' % (len(payload), binascii.hexlify(payload) ))
-		else:
-			self.logger.info('Sending %d bytes' % ( len(payload) ))
-
+		self.logger.debug('Sending %d bytes : [%s]' % (len(payload), binascii.hexlify(payload) ))
 		self.specific_send(payload)
 
 	def wait_frame(self, timeout=2, exception=False):
 		frame = self.specific_wait_frame(timeout=timeout, exception=exception)
 		if frame is not None:
-			if self.logger.getEffectiveLevel() >= logging.DEBUG:
-				self.logger.debug('Received %d bytes : [%s]' % (len(frame), binascii.hexlify(frame) ))
-			else:
-				self.logger.info('Received %d bytes' % ( len(frame) ))
+			self.logger.debug('Received %d bytes : [%s]' % (len(frame), binascii.hexlify(frame) ))
 		return frame
 	
 	@abstractmethod
@@ -47,6 +40,17 @@ class BaseConnection(ABC):
 
 	@abstractmethod
 	def specific_wait_frame(self, timeout=2, exception=False):
+		pass
+
+	@abstractmethod
+	def open(self):
+		pass
+
+	@abstractmethod
+	def close(self):
+		pass
+	@abstractmethod
+	def __exit__(self, type, value, traceback):
 		pass
 
 
@@ -68,6 +72,7 @@ class SocketConnection(BaseConnection):
 		self.exit_requested = False
 		self.rxthread.start()
 		self.opened = True
+		self.logger.info('Connection opened')
 		return self
 
 	def __enter__(self):
@@ -94,6 +99,7 @@ class SocketConnection(BaseConnection):
 	def close(self):
 		self.exit_requested = True
 		self.opened = False
+		self.logger.info('Connection closed')
 
 	def specific_send(self, payload):
 		self.sock.send(payload)
@@ -143,6 +149,7 @@ class IsoTPConnection(BaseConnection):
 		self.exit_requested = False
 		self.rxthread.start()
 		self.opened = True
+		self.logger.info('Connection opened')
 		return self
 
 	def __enter__(self):
@@ -170,6 +177,7 @@ class IsoTPConnection(BaseConnection):
 		self.exit_requested = True
 		self.tpsock.close()
 		self.opened = False
+		self.logger.info('Connection closed')
 
 	def specific_send(self, payload):
 		self.tpsock.send(payload)
