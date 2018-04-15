@@ -99,6 +99,9 @@ class Response:
 		self.code_name = ""
 		self.valid = False
 		self.invalid_reason = "Object not initialized"
+		self.parsed_data = None
+		self.original_payload = None
+		self.unexpected = False
 		
 		self.service = service
 
@@ -152,6 +155,8 @@ class Response:
 	def from_payload(cls, payload):
 		from udsoncan import services
 		response = cls()
+		response.original_payload = payload # may be useful for debugging
+
 		if len(payload) < 1:
 			response.valid = False
 			response.invalid_reason = "Payload is empty"

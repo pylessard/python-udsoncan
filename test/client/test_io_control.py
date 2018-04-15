@@ -63,8 +63,8 @@ class TestIOControl(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x6F\x01\x32\x01\x4B")	# Positive response
 
 	def _test_io_control_single_reset(self):
-		response_value = self.udsclient.io_control(control_param=1, did=0x132)	# Reset to default
-		self.assertEqual(response_value, 0x4A)	# 0x4B-1 as defined by codec decode method
+		response = self.udsclient.io_control(control_param=1, did=0x132)	# Reset to default
+		self.assertEqual(response.parsed_data, 0x4A)	# 0x4B-1 as defined by codec decode method
 
 	def test_io_control_no_control_param(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -72,8 +72,8 @@ class TestIOControl(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x6F\x01\x32\x4B")
 
 	def _test_io_control_no_control_param(self):
-		response_value = self.udsclient.io_control(did=0x132, values=[0x77]) # No control_param, skip directly to data	
-		self.assertEqual(response_value, 0x4A)	# 0x4B-1 as defined by codec decode method
+		response = self.udsclient.io_control(did=0x132, values=[0x77]) # No control_param, skip directly to data	
+		self.assertEqual(response.parsed_data, 0x4A)	# 0x4B-1 as defined by codec decode method
 
 	def test_io_control_with_repsonse_record(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -81,8 +81,8 @@ class TestIOControl(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04")	# Positive response with 0x333 and 0x444 as response data
 
 	def _test_io_control_with_repsonse_record(self):
-		response_value = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	# Short Term Adjustment
-		self.assertEqual(response_value, (0x333, 0x444))	
+		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	# Short Term Adjustment
+		self.assertEqual(response.parsed_data, (0x333, 0x444))	
 
 	def test_io_control_with_repsonse_record_zero_padding_tolerated(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -94,14 +94,14 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_with_repsonse_record_zero_padding_tolerated(self):
 		self.udsclient.config['tolerate_zero_padding'] = True
-		response_value = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-		self.assertEqual(response_value, (0x333, 0x444))	
+		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
+		self.assertEqual(response.parsed_data, (0x333, 0x444))	
 
-		response_value = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-		self.assertEqual(response_value, (0x333, 0x444))	
+		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
+		self.assertEqual(response.parsed_data, (0x333, 0x444))	
 
-		response_value = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-		self.assertEqual(response_value, (0x333, 0x444))	
+		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
+		self.assertEqual(response.parsed_data, (0x333, 0x444))	
 
 
 	def test_io_control_with_repsonse_record_zero_padding_not_tolerated(self):
@@ -130,7 +130,7 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_composite_did_dict(self):
 		values = {'IAC_pintle': 0x07, 'rpm': 0x1234, 'pedalA': 0x4, 'pedalB' : 0x5,  'EGR_duty': 0x99}
-		response_value = self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=['IAC_pintle', 'pedalA'])	# Short Term Adjustment
+		response = self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=['IAC_pintle', 'pedalA'])	# Short Term Adjustment
 		expected_values = {
 			'IAC_pintle': 0x07,
 			'rpm' 		: 0x2EE,
@@ -138,7 +138,7 @@ class TestIOControl(ClientServerTest):
 			'pedalB' 	: 0x2,
 			'EGR_duty' 	: 0x59
 		}
-		self.assertEqual(response_value, expected_values)	
+		self.assertEqual(response.parsed_data, expected_values)	
 
 	def test_io_control_composite_did_list(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -147,7 +147,7 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_composite_did_list(self):
 		values = [0x07, 0x1234, 0x4, 0x5, 0x99]
-		response_value = self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=['IAC_pintle', 'pedalA'])	# Short Term Adjustment
+		response = self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=['IAC_pintle', 'pedalA'])	# Short Term Adjustment
 		expected_values = {
 			'IAC_pintle': 0x07,
 			'rpm' 		: 0x2EE,
@@ -155,7 +155,7 @@ class TestIOControl(ClientServerTest):
 			'pedalB' 	: 0x2,
 			'EGR_duty' 	: 0x59
 		}
-		self.assertEqual(response_value, expected_values)
+		self.assertEqual(response.parsed_data, expected_values)
 
 	def test_io_control_non_existent_mask_error(self):
 		pass
@@ -172,7 +172,7 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_mask_all_set1(self):
 		values = [0x07, 0x1234, 0x4, 0x5, 0x99]
-		response_value = self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=True)	# Short Term Adjustment
+		self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=True)	# Short Term Adjustment
 
 	def test_io_control_mask_all_set0(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -181,7 +181,7 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_mask_all_set0(self):
 		values = [0x07, 0x1234, 0x4, 0x5, 0x99]
-		response_value = self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=False)	# Short Term Adjustment
+		self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=False)	# Short Term Adjustment
 
 
 	def test_io_control_no_mask(self):
@@ -191,7 +191,7 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_no_mask(self):
 		values = [0x07, 0x1234, 0x4, 0x5, 0x99]
-		response_value = self.udsclient.io_control(control_param=3, did=0x155, values=values)	# Short Term Adjustment
+		self.udsclient.io_control(control_param=3, did=0x155, values=values)	# Short Term Adjustment
 
 
 	def test_io_control_bad_mask_size(self):

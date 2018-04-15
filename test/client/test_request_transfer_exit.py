@@ -14,8 +14,8 @@ class TestRequestTransferExit(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x77\x89\xab\xcd\xef")	# Positive response
 
 	def _test_request_transfer_exit_success(self):
-		response_data = self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
-		self.assertEqual(response_data, b'\x89\xab\xcd\xef')
+		response = self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
+		self.assertEqual(response.parsed_data, b'\x89\xab\xcd\xef')
 
 	def test_request_transfer_exit_no_data_ok(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -23,8 +23,8 @@ class TestRequestTransferExit(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x77")	# Positive response
 
 	def _test_request_transfer_exit_no_data_ok(self):
-		response_data = self.udsclient.request_transfer_exit()
-		self.assertEqual(response_data, b'')	
+		response = self.udsclient.request_transfer_exit()
+		self.assertEqual(response.parsed_data, b'')	
 
 	def test_request_transfer_exit_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -32,7 +32,7 @@ class TestRequestTransferExit(ClientServerTest):
 
 	def _test_request_transfer_exit_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:
-			success = self.udsclient.request_transfer_exit()
+			self.udsclient.request_transfer_exit()
 		response = handle.exception.response
 
 		self.assertTrue(response.valid)
@@ -45,7 +45,7 @@ class TestRequestTransferExit(ClientServerTest):
 
 	def _test_request_transfer_exit_invalidservice(self):
 		with self.assertRaises(InvalidResponseException) as handle:
-			response = self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
+			self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
 
 	def test_request_transfer_exit_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -53,14 +53,14 @@ class TestRequestTransferExit(ClientServerTest):
 
 	def _test_request_transfer_exit_wrongservice(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
-			response = self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
+			self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
 
 	def test_bad_param(self):
 		pass
 
 	def _test_bad_param(self):
 		with self.assertRaises(ValueError):
-			response = self.udsclient.request_transfer_exit(data=123)
+			self.udsclient.request_transfer_exit(data=123)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.request_transfer_exit(data="asd")
+			self.udsclient.request_transfer_exit(data="asd")

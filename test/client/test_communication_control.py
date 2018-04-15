@@ -38,7 +38,7 @@ class TestCommunicationControl(ClientServerTest):
 		with self.assertRaises(NegativeResponseException) as handle:
 			control_type = services.CommunicationControl.ControlType.disableRxAndTx
 			com_type = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
-			response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
+			self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 
 	def test_set_params_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -48,7 +48,7 @@ class TestCommunicationControl(ClientServerTest):
 		with self.assertRaises(InvalidResponseException) as handle:
 			control_type = services.CommunicationControl.ControlType.disableRxAndTx
 			com_type = CommunicationType(subnet=5, normal_msg=True, network_management_msg=True)
-			response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
+			self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 
 	def test_comcontrol_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -58,7 +58,7 @@ class TestCommunicationControl(ClientServerTest):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			control_type = services.CommunicationControl.ControlType.disableRxAndTx
 			com_type = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
-			response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
+			self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 
 	def test_comcontrol_bad_control_type(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -67,7 +67,7 @@ class TestCommunicationControl(ClientServerTest):
 	def _test_comcontrol_bad_control_type(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			com_type = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
-			response = self.udsclient.communication_control(control_type=9, communication_type=com_type)	
+			self.udsclient.communication_control(control_type=9, communication_type=com_type)	
 
 	def test_bad_param(self):
 		pass

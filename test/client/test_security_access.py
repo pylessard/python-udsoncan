@@ -13,8 +13,8 @@ class TestRequestSeed(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x67\x05\x99\x88\x77\x66")	# Positive response
 
 	def _test_request_seed_success(self):
-		seed = self.udsclient.request_seed(0x05)
-		self.assertEqual(seed, b"\x99\x88\x77\x66")
+		response = self.udsclient.request_seed(0x05)
+		self.assertEqual(response.parsed_data, b"\x99\x88\x77\x66")
 
 	def test_request_seed_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -23,7 +23,7 @@ class TestRequestSeed(ClientServerTest):
 
 	def _test_request_seed_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:
-			seed = self.udsclient.request_seed(0x05)
+			self.udsclient.request_seed(0x05)
 		response = handle.exception.response
 
 		self.assertTrue(response.valid)
@@ -37,7 +37,7 @@ class TestRequestSeed(ClientServerTest):
 
 	def _test_request_seed_bad_subfn(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
-			seed = self.udsclient.request_seed(0x05)
+			self.udsclient.request_seed(0x05)
 
 	def test_request_seed_incomplete_response(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -46,7 +46,7 @@ class TestRequestSeed(ClientServerTest):
 
 	def _test_request_seed_incomplete_response(self):
 		with self.assertRaises(InvalidResponseException) as handle:
-			seed = self.udsclient.request_seed(0x05)
+			self.udsclient.request_seed(0x05)
 
 	def test_request_seed_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -55,7 +55,7 @@ class TestRequestSeed(ClientServerTest):
 
 	def _test_request_seed_invalidservice(self):
 		with self.assertRaises(InvalidResponseException) as handle:
-			response = self.udsclient.request_seed(0x05)
+			self.udsclient.request_seed(0x05)
 
 	def test_request_seed_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -64,17 +64,17 @@ class TestRequestSeed(ClientServerTest):
 
 	def _test_request_seed_wrongservice(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
-			response = self.udsclient.request_seed(0x05)
+			self.udsclient.request_seed(0x05)
 
 	def test_request_seed_bad_param(self):
 		pass
 
 	def _test_request_seed_bad_param(self):
 		with self.assertRaises(ValueError):
-			response = self.udsclient.request_seed(0x80)
+			self.udsclient.request_seed(0x80)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.request_seed(-1)
+			self.udsclient.request_seed(-1)
 
 
 class TestSendKey(ClientServerTest):
@@ -87,8 +87,8 @@ class TestSendKey(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x67\x06")	# Positive response
 
 	def _test_send_key_success(self):
-		success = self.udsclient.send_key(0x06,b"\x11\x22\x33\x44")
-		self.assertTrue(success)
+		response = self.udsclient.send_key(0x06,b"\x11\x22\x33\x44")
+		self.assertTrue(response.positive)
 
 	def test_send_key_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -97,7 +97,7 @@ class TestSendKey(ClientServerTest):
 
 	def _test_send_key_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:
-			success = self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
+			self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
 		response = handle.exception.response
 
 		self.assertTrue(response.valid)
@@ -111,7 +111,7 @@ class TestSendKey(ClientServerTest):
 
 	def _test_send_key_bad_subfn(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
-			success = self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
+			self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
 
 	def test_send_key_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -120,7 +120,7 @@ class TestSendKey(ClientServerTest):
 
 	def _test_send_key_invalidservice(self):
 		with self.assertRaises(InvalidResponseException) as handle:
-			response = self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
+			self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
 
 	def test_send_key_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -136,10 +136,10 @@ class TestSendKey(ClientServerTest):
 
 	def _test_send_key_bad_param(self):
 		with self.assertRaises(ValueError):
-			response = self.udsclient.send_key(0x80, b"\x11\x22\x33\x44")
+			self.udsclient.send_key(0x80, b"\x11\x22\x33\x44")
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.send_key(-1, b"\x11\x22\x33\x44")
+			self.udsclient.send_key(-1, b"\x11\x22\x33\x44")
 
 
 class TestUnlockSecurityService(ClientServerTest):
@@ -164,11 +164,11 @@ class TestUnlockSecurityService(ClientServerTest):
 	def _test_unlock_success(self):
 		self.udsclient.config['security_algo'] = self.dummy_algo
 		self.udsclient.config['security_algo_params'] = 0xFF
-		success = self.udsclient.unlock_security_access(0x07)	
-		self.assertTrue(success)
+		response = self.udsclient.unlock_security_access(0x07)	
+		self.assertTrue(response.positive)
 
-		success = self.udsclient.unlock_security_access(0x08)
-		self.assertTrue(success)
+		response = self.udsclient.unlock_security_access(0x08)
+		self.assertTrue(response.positive)
 
 	def test_no_algo_set(self):
 		pass

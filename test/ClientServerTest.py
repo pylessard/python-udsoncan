@@ -11,8 +11,7 @@ class ClientServerTest(ThreadableTest):
 
 	def clientSetUp(self):
 		self.udsclient = Client(self.conn, request_timeout=0.2)
-		self.udsclient.config['logger_name'] = 'unittest'
-		self.udsclient.refresh_config()
+		self.udsclient.set_config('logger_name', 'unittest')
 		
 		self.udsclient.open()
 		if hasattr(self, "postClientSetUp"):

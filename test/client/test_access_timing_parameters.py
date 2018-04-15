@@ -13,20 +13,26 @@ class TestAccessTimingParameter(ClientServerTest):
 		self.assertEqual(request, b"\x83\x01")
 		self.conn.fromuserqueue.put(b"\xC3\x01\x99\x88\x77\x66")	# Positive response
 
-
 	def _test_read_extended_params_success(self):
-		params = self.udsclient.read_extended_timing_parameters()
-		self.assertEqual(params, b"\x99\x88\x77\x66")
+		response = self.udsclient.read_extended_timing_parameters()
+		self.assertTrue(response.valid)
+		self.assertFalse(response.unexpected)
+		self.assertTrue(response.positive)
+		param = response.parsed_data
+		self.assertEqual(param, b"\x99\x88\x77\x66")
 
 	def test_read_active_params_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x83\x03")
 		self.conn.fromuserqueue.put(b"\xC3\x03\x99\x88\x77\x66")	# Positive response
 
-
 	def _test_read_active_params_success(self):
-		params = self.udsclient.read_active_timing_parameters()
-		self.assertEqual(params, b"\x99\x88\x77\x66")		
+		response = self.udsclient.read_active_timing_parameters()
+		self.assertTrue(response.valid)
+		self.assertFalse(response.unexpected)
+		self.assertTrue(response.positive)
+		param = response.parsed_data		
+		self.assertEqual(param, b"\x99\x88\x77\x66")		
 
 	def test_set_params_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -36,7 +42,6 @@ class TestAccessTimingParameter(ClientServerTest):
 	def _test_set_params_success(self):
 		self.udsclient.set_timing_parameters(params=b"\x11\x22\x33\x44")
 
-
 	def test_set_params_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x83\x02")
@@ -44,8 +49,6 @@ class TestAccessTimingParameter(ClientServerTest):
 
 	def _test_set_params_success(self):
 		self.udsclient.reset_default_timing_parameters()
-
-
 
 	def test_set_params_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)

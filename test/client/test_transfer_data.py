@@ -14,8 +14,8 @@ class TestTransferData(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x76\x22\x89\xab\xcd\xef")	# Positive response
 
 	def _test_transfer_data_success(self):
-		response_data = self.udsclient.transfer_data(block_sequence_counter=0x22, data=b'\x12\x34\x56')
-		self.assertEqual(response_data, b'\x89\xab\xcd\xef')
+		response = self.udsclient.transfer_data(block_sequence_counter=0x22, data=b'\x12\x34\x56')
+		self.assertEqual(response.parsed_data, b'\x89\xab\xcd\xef')
 
 	def test_transfer_data_no_data_ok(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -23,8 +23,8 @@ class TestTransferData(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x76\x22")	# Positive response
 
 	def _test_transfer_data_no_data_ok(self):
-		response_data = self.udsclient.transfer_data(block_sequence_counter=0x22)
-		self.assertEqual(response_data, None)	
+		response = self.udsclient.transfer_data(block_sequence_counter=0x22)
+		self.assertEqual(response.parsed_data, b'')	
 
 	def test_transfer_data_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)

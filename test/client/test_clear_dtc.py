@@ -14,7 +14,7 @@ class TestClearDtc(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x54")	# Positive response
 
 	def _test_clear_dtc_success(self):
-		success = self.udsclient.clear_dtc(0x123456)
+		response = self.udsclient.clear_dtc(0x123456)
 
 	def test_clear_dtc_all(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -22,7 +22,7 @@ class TestClearDtc(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x54")	# Positive response
 
 	def _test_clear_dtc_all(self):
-		success = self.udsclient.clear_dtc()
+		response = self.udsclient.clear_dtc()
 
 	def test_clear_dtc_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -30,7 +30,7 @@ class TestClearDtc(ClientServerTest):
 
 	def _test_clear_dtc_denied(self):
 		with self.assertRaises(NegativeResponseException) as handle:
-			success = self.udsclient.clear_dtc(0x123456)
+			self.udsclient.clear_dtc(0x123456)
 
 	def test_clear_dtc_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -38,7 +38,7 @@ class TestClearDtc(ClientServerTest):
 
 	def _test_clear_dtc_invalidservice(self):
 		with self.assertRaises(InvalidResponseException) as handle:
-			response = self.udsclient.clear_dtc(0x123456)
+			self.udsclient.clear_dtc(0x123456)
 
 	def test_clear_dtc_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -46,14 +46,14 @@ class TestClearDtc(ClientServerTest):
 
 	def _test_clear_dtc_wrongservice(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
-			response = self.udsclient.clear_dtc(0x123456)
+			self.udsclient.clear_dtc(0x123456)
 
 	def test_bad_param(self):
 		pass
 
 	def _test_bad_param(self):
 		with self.assertRaises(ValueError):
-			response = self.udsclient.clear_dtc(0x1000000)
+			self.udsclient.clear_dtc(0x1000000)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.clear_dtc(-1)
+			self.udsclient.clear_dtc(-1)

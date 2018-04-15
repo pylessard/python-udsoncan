@@ -34,7 +34,8 @@ class TestReadDataByIdentifier(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34")	# Positive response
 
 	def _test_rdbi_single_success(self):
-		values = self.udsclient.read_data_by_identifier(dids = 1)
+		response = self.udsclient.read_data_by_identifier(dids = 1)
+		values = response.parsed_data
 		self.assertEqual(values[1], (0x1234,))
 
 	def test_rdbi_multiple_success(self):
@@ -43,7 +44,8 @@ class TestReadDataByIdentifier(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
 
 	def _test_rdbi_multiple_success(self):
-		values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		values = response.parsed_data
 		self.assertEqual(values[1], (0x1234,))		
 		self.assertEqual(values[2], (0x7856,))		
 		self.assertEqual(values[3], 0x10)	
@@ -60,25 +62,29 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def _test_rdbi_multiple_zero_padding1_success(self):
 		self.udsclient.config['tolerate_zero_padding'] = True
-		values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		values = response.parsed_data
 		self.assertEqual(values[1], (0x1234,))		
 		self.assertEqual(values[2], (0x7856,))		
 		self.assertEqual(values[3], 0x10)
 		self.assertFalse(0 in values)		
 
-		values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		values = response.parsed_data
 		self.assertEqual(values[1], (0x1234,))		
 		self.assertEqual(values[2], (0x7856,))		
 		self.assertEqual(values[3], 0x10)		
 		self.assertFalse(0 in values)		
 
-		values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		values = response.parsed_data
 		self.assertEqual(values[1], (0x1234,))		
 		self.assertEqual(values[2], (0x7856,))		
 		self.assertEqual(values[3], 0x10)		
 		self.assertFalse(0 in values)		
 
-		values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		values = response.parsed_data
 		self.assertEqual(values[1], (0x1234,))		
 		self.assertEqual(values[2], (0x7856,))		
 		self.assertEqual(values[3], 0x10)	
@@ -97,16 +103,16 @@ class TestReadDataByIdentifier(ClientServerTest):
 	def _test_rdbi_multiple_zero_padding_not_tolerated(self):
 		self.udsclient.config['tolerate_zero_padding'] = False
 		with self.assertRaises(UnexpectedResponseException):
-			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+			self.udsclient.read_data_by_identifier(dids = [1,2,3])
 
 		with self.assertRaises(UnexpectedResponseException):
-			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])	
+			self.udsclient.read_data_by_identifier(dids = [1,2,3])	
 
 		with self.assertRaises(UnexpectedResponseException):
-			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+			self.udsclient.read_data_by_identifier(dids = [1,2,3])
 
 		with self.assertRaises(UnexpectedResponseException):
-			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+			self.udsclient.read_data_by_identifier(dids = [1,2,3])
 			
 	def test_rdbi_output_format(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -115,11 +121,13 @@ class TestReadDataByIdentifier(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
 
 	def _test_rdbi_output_format(self):
-		values = self.udsclient.read_data_by_identifier(dids = [1,2,3], output_fmt="dict")
+		response = self.udsclient.read_data_by_identifier(dids = [1,2,3], output_fmt="dict")
+		values = response.parsed_data
 		self.assertTrue(isinstance(values, dict))	
 		self.assertEqual(len(values), 3)		
 
-		values = self.udsclient.read_data_by_identifier(dids = [1,2,3], output_fmt="list")
+		response = self.udsclient.read_data_by_identifier(dids = [1,2,3], output_fmt="list")
+		values = response.parsed_data
 		self.assertTrue(isinstance(values, list))	
 		self.assertEqual(len(values), 3)		
 
@@ -129,7 +137,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def _test_rdbi_incomplete_response(self):
 		with self.assertRaises(UnexpectedResponseException):
-			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+			self.udsclient.read_data_by_identifier(dids = [1,2,3])
 
 	def test_rdbi_unknown_did(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -137,7 +145,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def _test_rdbi_unknown_did(self):
 		with self.assertRaises(UnexpectedResponseException):
-			values = self.udsclient.read_data_by_identifier(dids = [1,2,3])			
+			self.udsclient.read_data_by_identifier(dids = [1,2,3])			
 	
 	def test_rdbi_unwanted_did(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -145,7 +153,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def _test_rdbi_unwanted_did(self):
 		with self.assertRaises(UnexpectedResponseException):
-			values = self.udsclient.read_data_by_identifier(dids = [1,3])			
+			self.udsclient.read_data_by_identifier(dids = [1,3])			
 
 	def test_rdbi_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -153,7 +161,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def _test_rdbi_invalidservice(self):
 		with self.assertRaises(InvalidResponseException) as handle:
-			response = self.udsclient.read_data_by_identifier(dids=1)
+			self.udsclient.read_data_by_identifier(dids=1)
 
 	def test_rdbi_wrongservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -161,11 +169,11 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def _test_rdbi_wrongservice(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
-			response = self.udsclient.read_data_by_identifier(dids=1)
+			self.udsclient.read_data_by_identifier(dids=1)
 
 	def test_no_config(self):
 		pass
 
 	def _test_no_config(self):
 		with self.assertRaises(LookupError):
-			response = self.udsclient.read_data_by_identifier(dids=[1,2,3,4]) 
+			self.udsclient.read_data_by_identifier(dids=[1,2,3,4]) 
