@@ -4,12 +4,12 @@ import struct
 
 class TestAddressAndLengthFormatIdentifier(UdsTest):
 	def test_ali_1(self):
-		ali = AddressAndLengthFormatIdentifier(memorysize_format=8, address_format=8)
-		self.assertEqual(ali.get_byte(),b'\x11')
+		alfid = AddressAndLengthFormatIdentifier(memorysize_format=8, address_format=8)
+		self.assertEqual(alfid.get_byte(),b'\x11')
 
 	def test_ali_2(self):
-		ali = AddressAndLengthFormatIdentifier(memorysize_format=16, address_format=8)
-		self.assertEqual(ali.get_byte(),b'\x21')
+		alfid = AddressAndLengthFormatIdentifier(memorysize_format=16, address_format=8)
+		self.assertEqual(alfid.get_byte(),b'\x21')
 
 	def test_ali_oob_values(self):	# Out Of Bounds Value
 		with self.assertRaises(ValueError):
@@ -33,14 +33,24 @@ class TestAddressAndLengthFormatIdentifier(UdsTest):
 		with self.assertRaises(ValueError):
 			AddressAndLengthFormatIdentifier(memorysize_format=8, address_format='8')
 
+	def test_str_repr(self):
+		alfid = AddressAndLengthFormatIdentifier(memorysize_format=8, address_format=8)
+		str(alfid)
+		alfid.__repr__()
+
 class TestDataFormatIdentifier(UdsTest):
 	def test_dfi(self):
-		ali = DataFormatIdentifier(compression=1, encryption=2)
-		self.assertEqual(ali.get_byte(),b'\x12')
+		dfi = DataFormatIdentifier(compression=1, encryption=2)
+		self.assertEqual(dfi.get_byte(),b'\x12')
 
 	def test_dfi2(self):
-		ali = DataFormatIdentifier(compression=15, encryption=15)
-		self.assertEqual(ali.get_byte(),b'\xFF')
+		dfi = DataFormatIdentifier(compression=15, encryption=15)
+		self.assertEqual(dfi.get_byte(),b'\xFF')
+
+	def test_str_repr(self):
+		dfi = DataFormatIdentifier(compression=1, encryption=2)
+		str(dfi)
+		dfi.__repr__()
 
 	def test_ali_oob_values(self):
 		with self.assertRaises(ValueError):
@@ -71,6 +81,11 @@ class TestMemoryLocation(UdsTest):
 		self.assertEqual(memloc.get_address_bytes(), b'\x01\x23\x45\x67')
 		self.assertEqual(memloc.get_memorysize_bytes(), b'\x78\x9a\xbb')
 
+	def test_memloc_str_repr(self):
+		memloc = MemoryLocation(address=0x1234, memorysize=0x78, address_format=16, memorysize_format=8)
+		str(memloc)
+		memloc.__repr__()
+
 	def test_memloc_override(self):
 		memloc = MemoryLocation(address=0x1234, memorysize=0x78)
 		self.assertEqual(memloc.get_address_bytes(), b'\x12\x34')
@@ -92,6 +107,11 @@ class TestCommunicationType(UdsTest):
 
 		comtype = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
 		self.assertEqual(comtype.get_byte(), b'\x33')
+
+	def test_str_repr(self):
+		comtype = CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True, network_management_msg=False)
+		str(comtype)
+		comtype.__repr__()
 
 	def test_from_byte(self):
 		comtype = CommunicationType.from_byte(b'\x01')
@@ -151,6 +171,11 @@ class TestBaudrate(UdsTest):
 		br = Baudrate(115200, baudtype=Baudrate.Type.Specific)
 		br2 = br.make_new_type(Baudrate.Type.Fixed)
 		self.assertEqual(br2.get_bytes(), b'\x05')
+
+	def test_str_repr(self):
+		br = Baudrate(115200, baudtype=Baudrate.Type.Fixed)
+		str(br)
+		br.__repr__()
 
 	def test_create_auto(self):
 		# Direct ID
@@ -328,6 +353,13 @@ class TestDtc(UdsTest):
 		for i in range(255):
 			dtc.severity.set_byte(i)
 
+	def test_str_repr(self):
+		dtc=Dtc(0x123456)
+		dtc.status.pending = True
+		str(dtc)
+		dtc.__repr__()
+
+
 	def test_severity_behaviour(self):
 		dtc=Dtc(1)
 
@@ -338,7 +370,6 @@ class TestDtc(UdsTest):
 		self.assertEqual(dtc.severity.get_byte_as_int(), 0x60)
 		dtc.severity.check_immediately = True
 		self.assertEqual(dtc.severity.get_byte_as_int(), 0xE0)
-		
 		
 		dtc.severity.set_byte(0x20)
 		self.assertEqual(dtc.severity.maintenance_only, True)

@@ -101,6 +101,11 @@ class TestResponse(UdsTest):
 		self.assertIsNone(response.service)
 		self.assertEqual(b'', response.data)
 
+	def test_str_repr(self):
+		response = Response(DummyServiceNormal, code=0x22)
+		str(response)
+		response.__repr__()
+
 	def test_no_response_data(self):
 		with self.assertRaises(ValueError):
 			response = Response(DummyServiceNoResponseData(), code = 0x10, data=b'\x12\x13')

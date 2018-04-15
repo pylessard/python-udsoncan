@@ -81,6 +81,11 @@ class TestRequest(UdsTest):
 		self.assertIsNone(req.subfunction)
 		self.assertIsNone(req.data)
 
+	def test_str_repr(self):
+		req = Request(DummyServiceNormal())
+		str(req)
+		req.__repr__()
+
 	def test_from_input_param(self):
 		with self.assertRaises(ValueError):
 			req = Request("a string")	
