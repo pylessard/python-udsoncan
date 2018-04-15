@@ -15,7 +15,7 @@ class TestCommunicationControl(ClientServerTest):
 
 
 	def _test_comcontrol_enable_node(self):
-		control_type = services.CommunicationControl.enableRxAndTx
+		control_type = services.CommunicationControl.ControlType.enableRxAndTx
 		com_type = CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True)
 		response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)
 
@@ -26,7 +26,7 @@ class TestCommunicationControl(ClientServerTest):
 
 
 	def _test_comcontrol_disable_subnet(self):
-		control_type = services.CommunicationControl.disableRxAndTx
+		control_type = services.CommunicationControl.ControlType.disableRxAndTx
 		com_type = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
 		response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 
@@ -36,7 +36,7 @@ class TestCommunicationControl(ClientServerTest):
 
 	def _test_comcontrol_negative_response(self):
 		with self.assertRaises(NegativeResponseException) as handle:
-			control_type = services.CommunicationControl.disableRxAndTx
+			control_type = services.CommunicationControl.ControlType.disableRxAndTx
 			com_type = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
 			response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 
@@ -46,7 +46,7 @@ class TestCommunicationControl(ClientServerTest):
 
 	def _test_set_params_invalidservice(self):
 		with self.assertRaises(InvalidResponseException) as handle:
-			control_type = services.CommunicationControl.disableRxAndTx
+			control_type = services.CommunicationControl.ControlType.disableRxAndTx
 			com_type = CommunicationType(subnet=5, normal_msg=True, network_management_msg=True)
 			response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 
@@ -56,7 +56,7 @@ class TestCommunicationControl(ClientServerTest):
 
 	def _test_comcontrol_wrongservice(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
-			control_type = services.CommunicationControl.disableRxAndTx
+			control_type = services.CommunicationControl.ControlType.disableRxAndTx
 			com_type = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
 			response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 

@@ -56,7 +56,7 @@ class Client:
 	def change_session(self, newsession):
 		service = services.DiagnosticSessionControl(newsession)	
 		
-		named_newsession = '%s (0x%02x)' % (services.DiagnosticSessionControl.get_session_name(service.session), service.session)
+		named_newsession = '%s (0x%02x)' % (services.DiagnosticSessionControl.Session.get_name(service.session), service.session)
 		
 		self.logger.info('Switching session to : %s' % (named_newsession))
 		req = Request(service)
@@ -301,10 +301,10 @@ class Client:
 	# Performs a ECUReset service request
 	def ecu_reset(self, resettype, powerdowntime=None):
 		service = services.ECUReset(resettype, powerdowntime)
-		self.logger.info("Requesting ECU reset of type 0x%02x (%s)" % (service.resettype, services.ECUReset.get_reset_name(service.resettype)))
+		self.logger.info("Requesting ECU reset of type 0x%02x (%s)" % (service.resettype, services.ECUReset.ResetType.get_name(service.resettype)))
 		req = Request(service)
 		if powerdowntime is not None:	
-			if resettype == services.ECUReset.enableRapidPowerShutDown:
+			if resettype == services.ECUReset.ResetType.enableRapidPowerShutDown:
 				req.data =struct.pack('B', service.powerdowntime)
 			else:
 				self.raise_and_log(ValueError("Power down time is only used when reset type is enableRapidShutdown"))
@@ -342,28 +342,22 @@ class Client:
 
 	# Performs a RoutineControl Service request
 	def start_routine(self, routine_id, data=None):
-		return self.routine_control(routine_id, services.RoutineControl.startRoutine, data)
+		return self.routine_control(routine_id, services.RoutineControl.ControlType.startRoutine, data)
 
 	# Performs a RoutineControl Service request
 	def stop_routine(self, routine_id, data=None):
-		return self.routine_control(routine_id, services.RoutineControl.stopRoutine, data)
+		return self.routine_control(routine_id, services.RoutineControl.ControlType.stopRoutine, data)
 
 	# Performs a RoutineControl Service request
 	def get_routine_result(self, routine_id, data=None):
-		return self.routine_control(routine_id, services.RoutineControl.requestRoutineResults, data)
+		return self.routine_control(routine_id, services.RoutineControl.ControlType.requestRoutineResults, data)
 
 	# Performs a RoutineControl Service request
 	def routine_control(self, routine_id, control_type, data=None):
 		service = services.RoutineControl(routine_id, control_type, data=data)
 		payload_length = 0 if service.data is None else len(service.data)
-		if control_type == services.RoutineControl.startRoutine:
-			self.logger.info("Sending request to start routine ID : 0x%04x (%s) with a payload of %d bytes" % (service.routine_id, Routine.name_from_id(service.routine_id), payload_length))
-		elif control_type == services.RoutineControl.stopRoutine:
-			self.logger.info("Sending request to stop routine ID : 0x%04x (%s) with a payload of %d bytes" % (service.routine_id, Routine.name_from_id(service.routine_id), payload_length))
-		elif control_type == services.RoutineControl.requestRoutineResults:
-			self.logger.info("Sending request to get the result of routine ID : 0x%04x (%s) with a payload of %d bytes" % (service.routine_id, Routine.name_from_id(service.routine_id), payload_length))
-		else:
-			self.logger.info("Requesting RoutineControl service with unknown control type (0x%02x) and routine ID : 0x%04x (%s) with a payload of %d bytes" % (service.control_type, service.routine_id, Routine.name_from_id(service.routine_id), payload_length))
+
+		self.logger.info("Sending RoutineControl request with control type %s (0x%02x) for Routine ID : 0x%04x (%s) with a payload of %d bytes" % ( services.RoutineControl.ControlType.get_name(service.control_type), service.control_type, service.routine_id, Routine.name_from_id(service.routine_id), payload_length))
 
 		req = Request(service)
 
@@ -393,26 +387,26 @@ class Client:
 
 	# Performs an AccessTimingParameter service request
 	def read_extended_timing_parameters(self):
-		return self.access_timing_parameter(access_type=services.AccessTimingParameter.readExtendedTimingParameterSet)
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.readExtendedTimingParameterSet)
 
 	# Performs an AccessTimingParameter service request
 	def read_active_timing_parameters(self):
-		return self.access_timing_parameter(access_type=services.AccessTimingParameter.readCurrentlyActiveTimingParameters)
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.readCurrentlyActiveTimingParameters)
 
 	# Performs an AccessTimingParameter service request
 	def set_timing_parameters(self, params):
-		return self.access_timing_parameter(access_type=services.AccessTimingParameter.setTimingParametersToGivenValues, request_record=params)
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToGivenValues, request_record=params)
 	
 	# Performs an AccessTimingParameter service request
 	def reset_default_timing_parameters(self):
-		return self.access_timing_parameter(access_type=services.AccessTimingParameter.setTimingParametersToDefaultValues)
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToDefaultValues)
 	
 	# Performs an AccessTimingParameter service request
 	def access_timing_parameter(self, access_type, request_record=None):
 		service = services.AccessTimingParameter(access_type, request_record)
 
 		payload_length = 0 if service.request_record is None else len(service.request_record)
-		self.logger.info('Sending AccessTimingParameter service request with access type 0x%02x (%s) and a request record payload of %d bytes' % (service.access_type, services.AccessTimingParameter.get_access_type_name(service.access_type), payload_length))
+		self.logger.info('Sending AccessTimingParameter service request with access type 0x%02x (%s) and a request record payload of %d bytes' % (service.access_type, services.AccessTimingParameter.AccessType.get_name(service.access_type), payload_length))
 
 		request = Request(service)
 
@@ -429,7 +423,7 @@ class Client:
 		if received != expected:
 			self.raise_and_log(UnexpectedResponseException(response, "Access type of response (0x%02x) does not match request access type (0x%02x)" % (received, expected)))
 
-		if response.data is not None and service.access_type not in [services.AccessTimingParameter.readExtendedTimingParameterSet, services.AccessTimingParameter.readCurrentlyActiveTimingParameters]:
+		if response.data is not None and service.access_type not in [services.AccessTimingParameter.AccessType.readExtendedTimingParameterSet, services.AccessTimingParameter.AccessType.readCurrentlyActiveTimingParameters]:
 			self.logger.warning("Server returned data for AccessTimingParameter altough none were asked")
 
 		if len(response.data) > 1:
@@ -440,7 +434,7 @@ class Client:
 	# Performs a CommunicationControl service request
 	def communication_control(self, control_type, communication_type):
 		service = services.CommunicationControl(control_type, communication_type)
-		self.logger.info('Sending CommunicationControl service request with control type 0x%02x (%s) and a communication type byte of 0x%02x (%s)' % (service.control_type, services.CommunicationControl.get_control_type_name(service.control_type), communication_type.get_byte_as_int(), str(communication_type)))
+		self.logger.info('Sending CommunicationControl service request with control type 0x%02x (%s) and a communication type byte of 0x%02x (%s)' % (service.control_type, services.CommunicationControl.ControlType.get_name(service.control_type), communication_type.get_byte_as_int(), str(communication_type)))
 		req = Request(service)
 		req.data = service.communication_type.get_byte()  # subnet and message type
 
@@ -547,7 +541,7 @@ class Client:
 		service = services.LinkControl(control_type, baudrate)
 		baudrate_str = 'No baudrate specified' if service.baudrate is None else 'Baudrate : ' + str(service.baudrate)
 
-		self.logger.info('Sending LinkControl service request with control type of 0x%02x (%s). %s' % (service.control_type, services.LinkControl.control_type_by_name(service.control_type), baudrate_str))
+		self.logger.info('Sending LinkControl service request with control type of 0x%02x (%s). %s' % (service.control_type, services.LinkControl.ControlType.get_name(service.control_type), baudrate_str))
 		request = Request(service)
 		if service.baudrate is not None:
 			request.data = service.baudrate.get_bytes()
@@ -567,7 +561,8 @@ class Client:
 	#Perform InputOutputControlByIdentifier service request
 	def io_control(self,  did, control_param=None, values=None, masks=None):
 		service = services.InputOutputControlByIdentifier( did, control_param=control_param, values=values, masks=masks)
-		control_param_str = 'no control parameter' if service.control_param is None else 'control parameter 0x%02x (%s)' % (service.control_param, services.InputOutputControlByIdentifier.get_control_param_name(service.control_param))
+		control_param_str = 'no control parameter' if service.control_param is None else 'control parameter 0x%02x (%s)' % (service.control_param, services.InputOutputControlByIdentifier.ControlParam.get_name(service.control_param))
+		
 		self.logger.info('Sending InputOutputControlByIdentifier service request for DID=0x%04x, %s.' % (service.did, control_param_str))
 
 		req = Request(service)
@@ -661,7 +656,7 @@ class Client:
 	def control_dtc_setting(self, setting_type, data=None):
 		service = services.ControlDTCSetting(setting_type, data)
 		data_len = 0 if service.data is None else len(service.data)
-		self.logger.info('Sending ControlDTCSetting service request with setting type 0x%02x (%s) and %d bytes of data' % (service.setting_type, services.ControlDTCSetting.get_setting_type_name(service.setting_type), data_len))
+		self.logger.info('Sending ControlDTCSetting service request with setting type 0x%02x (%s) and %d bytes of data' % (service.setting_type, services.ControlDTCSetting.SettingType.get_name(service.setting_type), data_len))
 		req = Request(service)
 
 		if service.data is not None:
@@ -934,7 +929,7 @@ class Client:
 		# Craft Request and validate input params according the request group.
 
 		service = services.ReadDTCInformation(subfunction)
-		log_service_declaration_str = 'Sending a ReadDtcInformation service request with subfunction "%s" (0x%02X).' % (services.ReadDTCInformation.Subfunction.get_subfn_name(service.subfunction), service.subfunction)
+		log_service_declaration_str = 'Sending a ReadDtcInformation service request with subfunction "%s" (0x%02X).' % (services.ReadDTCInformation.Subfunction.get_name(service.subfunction), service.subfunction)
 		req = Request(service)
 
 		if service.subfunction in request_subfn_no_param:		# Service ID + Subfunction

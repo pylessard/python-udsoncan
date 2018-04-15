@@ -90,10 +90,10 @@ class TestAccessTimingParameter(ClientServerTest):
 			response = self.udsclient.access_timing_parameter(access_type=0x80)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.setTimingParametersToGivenValues, request_record=None)
+			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToGivenValues, request_record=None)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.readExtendedTimingParameterSet, request_record=b"\xaa\xbb")
+			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.readExtendedTimingParameterSet, request_record=b"\xaa\xbb")
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.setTimingParametersToDefaultValues, request_record=123)
+			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToDefaultValues, request_record=123)

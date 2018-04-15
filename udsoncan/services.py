@@ -9,6 +9,23 @@ def cls_from_request_id(given_id):
 def cls_from_response_id(given_id):
 	return BaseService.from_response_id(given_id)
 
+class BaseSubfunction:
+	
+	@classmethod
+	def get_name(cls, subfn_id):
+		attributes = inspect.getmembers(cls, lambda a:not(inspect.isroutine(a)))
+		subfn_list = [a for a in attributes if not(a[0].startswith('__') and a[0].endswith('__'))]
+
+		for subfn in subfn_list:
+			if isinstance(subfn[1], int):
+				if subfn[1] == subfn_id:	# [1] is value
+					return subfn[0] 		# [0] is property name
+			elif isinstance(subfn[1], tuple):
+				if subfn_id >= subfn[1][0] or subfn_id <= subfn[1][1]:
+					return subfn[0] 
+		name = cls.__name__ if not hasattr(cls, '__pretty_name__') else cls.__pretty_name__
+		return 'custom %s' % name
+
 class BaseService(ABC):
 
 	always_valid_negative_response = [
@@ -97,25 +114,13 @@ class DiagnosticSessionControl(BaseService):
 									Response.Code.IncorrectMessageLegthOrInvalidFormat,
 									Response.Code.ConditionsNotCorrect
 									]
+	class Session(BaseSubfunction):
+		__pretty_name__ = 'session'	# Only to print "custom session" instead of "custom subfunction"
 
-	defaultSession = 1
-	programmingSession = 2
-	extendedDiagnosticSession = 3
-	safetySystemDiagnosticSession = 4
-
-	@classmethod
-	def get_session_name(cls, session_id):
-		if session_id == cls.defaultSession:
-			return 'defaultSession'
-		elif session_id == cls.programmingSession:
-			return 'programmingSession'
-		elif session_id == cls.extendedDiagnosticSession:
-			return 'extendedDiagnosticSession'
-		elif session_id == cls.safetySystemDiagnosticSession:
-			return 'safetySystemDiagnosticSession'
-		else:
-			return 'custom session'
-
+		defaultSession = 1
+		programmingSession = 2
+		extendedDiagnosticSession = 3
+		safetySystemDiagnosticSession = 4
 
 	def __init__(self, session):
 		if not isinstance(session, int):
@@ -138,26 +143,14 @@ class ECUReset(BaseService):
 								Response.Code.SecurityAccessDenied
 								]
 
-	hardReset = 1
-	keyOffOnReset = 2
-	softReset = 3
-	enableRapidPowerShutDown = 4
-	disableRapidPowerShutDown = 5
+	class ResetType(BaseSubfunction):
+		__pretty_name__ = 'reset type' # Only to print "custom reset type" instead of "custom subfunction"
 
-	@classmethod
-	def get_reset_name(cls, reset_id):
-		if reset_id == cls.hardReset:
-			return 'hardReset'
-		elif reset_id == cls.keyOffOnReset:
-			return 'keyOffOnReset'
-		elif reset_id == cls.softReset:
-			return 'softReset'
-		elif reset_id == cls.enableRapidPowerShutDown:
-			return 'enableRapidPowerShutDown'
-		elif reset_id == cls.disableRapidPowerShutDown:
-			return 'disableRapidPowerShutDown'
-		else:
-			return 'custom reset'
+		hardReset = 1
+		keyOffOnReset = 2
+		softReset = 3
+		enableRapidPowerShutDown = 4
+		disableRapidPowerShutDown = 5
 
 	def __init__(self, resettype=None, powerdowntime=None):
 		if not isinstance(resettype, int):
@@ -165,7 +158,7 @@ class ECUReset(BaseService):
 		if resettype < 0 or resettype > 0xFF:
 			raise ValueError('Reset type must be a value between 0 and 0x7F')
 
-		if resettype == self.enableRapidPowerShutDown:
+		if resettype == self.ResetType.enableRapidPowerShutDown:
 			if powerdowntime is None:
 				raise ValueError('Power down time must be provided for reset of type enableRapidPowerShutDown')
 			
@@ -216,30 +209,19 @@ class SecurityAccess(BaseService):
 class CommunicationControl(BaseService):
 	_sid = 0x28
 
-	enableRxAndTx = 0
-	enableRxAndDisableTx = 1
-	disableRxAndEnableTx = 2
-	disableRxAndTx = 3
+	class ControlType(BaseSubfunction):
+		__pretty_name__ = 'control type' 
 
-
+		enableRxAndTx = 0
+		enableRxAndDisableTx = 1
+		disableRxAndEnableTx = 2
+		disableRxAndTx = 3
 
 	supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
 							Response.Code.IncorrectMessageLegthOrInvalidFormat,
 							Response.Code.ConditionsNotCorrect,
 							Response.Code.RequestOutOfRange
 							]
-	@classmethod
-	def get_control_type_name(cls, control_type):
-		if control_type == cls.enableRxAndTx:
-			return 'enableRxAndTx'
-		elif control_type == cls.enableRxAndDisableTx:
-			return 'enableRxAndDisableTx'
-		elif control_type == cls.disableRxAndEnableTx:
-			return 'disableRxAndEnableTx'
-		elif control_type == cls.disableRxAndTx:
-			return 'disableRxAndTx'
-		else:
-			return 'custom control type'
 
 	def __init__(self, control_type, communication_type):
 		from udsoncan import CommunicationType
@@ -272,23 +254,13 @@ class TesterPresent(BaseService):
 class AccessTimingParameter(BaseService):
 	_sid = 0x83
 
-	readExtendedTimingParameterSet = 1
-	setTimingParametersToDefaultValues = 2
-	readCurrentlyActiveTimingParameters = 3
-	setTimingParametersToGivenValues = 4
+	class AccessType(BaseSubfunction):
+		__pretty_name__ = 'access type'
 
-	@classmethod
-	def get_access_type_name(cls, access_type):
-		if access_type == cls.readExtendedTimingParameterSet:
-			return 'readExtendedTimingParameterSet'
-		elif access_type == cls.setTimingParametersToDefaultValues:
-			return 'setTimingParametersToDefaultValues'
-		elif access_type == cls.readCurrentlyActiveTimingParameters:
-			return 'readCurrentlyActiveTimingParameters'
-		elif access_type == cls.setTimingParametersToGivenValues:
-			return 'setTimingParametersToGivenValues'
-		else:
-			return 'custom access type'
+		readExtendedTimingParameterSet = 1
+		setTimingParametersToDefaultValues = 2
+		readCurrentlyActiveTimingParameters = 3
+		setTimingParametersToGivenValues = 4
 
 	supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
 							Response.Code.IncorrectMessageLegthOrInvalidFormat,
@@ -303,10 +275,10 @@ class AccessTimingParameter(BaseService):
 		if access_type < 0 or access_type > 0x7F:
 			raise ValueError('access_type must be an integer between 0 and 0x7F')
 
-		if request_record is not None and access_type != self.setTimingParametersToGivenValues :
+		if request_record is not None and access_type != self.AccessType.setTimingParametersToGivenValues :
 			raise ValueError('request_record can only be set when access_type is setTimingParametersToGivenValues"')
 
-		if request_record is None and access_type == self.setTimingParametersToGivenValues :
+		if request_record is None and access_type == self.AccessType.setTimingParametersToGivenValues :
 			raise ValueError('A request_record must be provided when access_type is "setTimingParametersToGivenValues"')
 
 		if request_record is not None:
@@ -357,22 +329,13 @@ class ControlDTCSetting(BaseService):
 							Response.Code.ConditionsNotCorrect,
 							Response.Code.RequestOutOfRange
 							]
+	class SettingType(BaseSubfunction):
+		__pretty_name__ = 'setting type'
 
-	on = 1
-	off = 2
-
-	@classmethod
-	def get_setting_type_name(cls, setting_type):
-		if setting_type == 1:
-			return 'on'
-		elif setting_type == 2:
-			return 'off'
-		elif setting_type >= 0x40 and setting_type <= 0x5F:
-			return 'vehicleManufacturerSpecific'
-		elif setting_type >= 0x60 and setting_type <= 0x7E:
-			return 'systemSupplierSpecific'
-		elif setting_type >= 0 and setting_type<= 0x7F:
-			return 'ISOSAEReserved'
+		on = 1
+		off = 2
+		vehicleManufacturerSpecific = (0x40, 0x5F)	# To be able to print textual name for logging only.
+		systemSupplierSpecific = (0x60, 0x7E)		# To be able to print textual name for logging only.
 
 	def __init__(self, setting_type, data = None):
 
@@ -413,22 +376,12 @@ class LinkControl(BaseService):
 							Response.Code.RequestSequenceError,
 							Response.Code.RequestOutOfRange
 							]
+	class ControlType(BaseSubfunction):
+		__pretty_name__ = 'control type'
 
-	verifyBaudrateTransitionWithFixedBaudrate = 1
-	verifyBaudrateTransitionWithSpecificBaudrate = 2
-	transitionBaudrate = 3
-
-	@classmethod
-	def control_type_by_name(cls, control_type):
-		if control_type == cls.verifyBaudrateTransitionWithFixedBaudrate:
-			return 'verifyBaudrateTransitionWithFixedBaudrate'		
-		elif control_type == cls.verifyBaudrateTransitionWithSpecificBaudrate:
-			return 'verifyBaudrateTransitionWithSpecificBaudrate'
-		elif control_type == cls.transitionBaudrate:
-			return 'transitionBaudrate'
-		else:
-			return 'custom control type'
-
+		verifyBaudrateTransitionWithFixedBaudrate = 1
+		verifyBaudrateTransitionWithSpecificBaudrate = 2
+		transitionBaudrate = 3
 
 	def __init__(self, control_type, baudrate=None):
 		from udsoncan import Baudrate
@@ -438,23 +391,23 @@ class LinkControl(BaseService):
 		if control_type < 0 or control_type > 0x7F:
 			raise ValueError('control_type must be an integer between 0 and 0x7F')
 
-		if control_type in [self.verifyBaudrateTransitionWithSpecificBaudrate, self.verifyBaudrateTransitionWithFixedBaudrate]:
+		if control_type in [self.ControlType.verifyBaudrateTransitionWithSpecificBaudrate, self.ControlType.verifyBaudrateTransitionWithFixedBaudrate]:
 			if baudrate is None:
-				raise ValueError('A Baudrate must be provided with control type : "verifyBaudrateTransitionWithSpecificBaudrate" (0x%02x) or "verifyBaudrateTransitionWithFixedBaudrate" (0x%02x)' % (self.verifyBaudrateTransitionWithSpecificBaudrate, self.verifyBaudrateTransitionWithFixedBaudrate))
+				raise ValueError('A Baudrate must be provided with control type : "verifyBaudrateTransitionWithSpecificBaudrate" (0x%02x) or "verifyBaudrateTransitionWithFixedBaudrate" (0x%02x)' % (self.ControlType.verifyBaudrateTransitionWithSpecificBaudrate, self.ControlType.verifyBaudrateTransitionWithFixedBaudrate))
 
 			if not isinstance(baudrate, Baudrate):
 				raise ValueError('Given baudrate must be an instance of the Baudrate class')
 		else:
 			if baudrate is not None:
-				raise ValueError('The baudrate parameter is only needed when control type is "verifyBaudrateTransitionWithSpecificBaudrate" (0x%02x) or "verifyBaudrateTransitionWithFixedBaudrate" (0x%02x)' % (self.verifyBaudrateTransitionWithSpecificBaudrate, self.verifyBaudrateTransitionWithFixedBaudrate))
+				raise ValueError('The baudrate parameter is only needed when control type is "verifyBaudrateTransitionWithSpecificBaudrate" (0x%02x) or "verifyBaudrateTransitionWithFixedBaudrate" (0x%02x)' % (self.ControlType.verifyBaudrateTransitionWithSpecificBaudrate, self.ControlType.verifyBaudrateTransitionWithFixedBaudrate))
 
 		self.baudrate = baudrate
 		self.control_type = control_type
 		
-		if control_type == self.verifyBaudrateTransitionWithSpecificBaudrate:
+		if control_type == self.ControlType.verifyBaudrateTransitionWithSpecificBaudrate:
 			self.baudrate = self.baudrate.make_new_type(Baudrate.Type.Specific)
 
-		if control_type == self.verifyBaudrateTransitionWithFixedBaudrate and baudrate.baudtype == Baudrate.Type.Specific:
+		if control_type == self.ControlType.verifyBaudrateTransitionWithFixedBaudrate and baudrate.baudtype == Baudrate.Type.Specific:
 			self.baudrate = self.baudrate.make_new_type(Baudrate.Type.Fixed)
 
 
@@ -608,7 +561,9 @@ class ReadDTCInformation(BaseService):
 							Response.Code.RequestOutOfRange
 							]
 
-	class Subfunction:
+	class Subfunction(BaseSubfunction):
+		__pretty_name__ = 'subfunction'
+
 		reportNumberOfDTCByStatusMask = 1
 		reportDTCByStatusMask = 2
 		reportDTCSnapshotIdentification = 3
@@ -631,16 +586,7 @@ class ReadDTCInformation(BaseService):
 		reportDTCFaultDetectionCounter = 0x14
 		reportDTCWithPermanentStatus = 0x15
 
-		@classmethod
-		def get_subfn_name(cls, subfn_id):
-			attributes = inspect.getmembers(cls, lambda a:not(inspect.isroutine(a)))
-			subfn_list = [a for a in attributes if not(a[0].startswith('__') and a[0].endswith('__'))]
 
-			for subfn in subfn_list:
-				if subfn[1] == subfn_id:	# [1] is value
-					return subfn[0] 		# [0] is proeprty name
-
-			return 'unknown subfunction'
 
 
 
@@ -661,28 +607,19 @@ class InputOutputControlByIdentifier(BaseService):
 	_use_subfunction = False
 
 	#As defined by ISO-14229:2006, Annex E
-	returnControlToECU = 0
-	resetToDefault = 1
-	freezeCurrentState = 2
-	shortTermAdjustment = 3
+	class ControlParam(BaseSubfunction):
+		__pretty_name__ = 'control parameter'
+
+		returnControlToECU = 0
+		resetToDefault = 1
+		freezeCurrentState = 2
+		shortTermAdjustment = 3
 
 	supported_negative_response = [	 Response.Code.IncorrectMessageLegthOrInvalidFormat,
 							Response.Code.ConditionsNotCorrect,
 							Response.Code.RequestOutOfRange,
 							Response.Code.SecurityAccessDenied
 							]
-	@classmethod
-	def get_control_param_name(cls, control_param):
-		if control_param == cls.returnControlToECU:
-			return 'returnControlToECU'
-		elif control_param == cls.resetToDefault:
-			return 'resetToDefault'
-		elif control_param == cls.freezeCurrentState:
-			return 'freezeCurrentState'
-		elif control_param == cls.shortTermAdjustment:
-			return 'shortTermAdjustment'
-		else:
-			return 'unknown control param'
 
 	def __init__(self, did, control_param=None, values=None, masks=None):
 		from udsoncan import IOValues, IOMasks
@@ -730,9 +667,12 @@ class InputOutputControlByIdentifier(BaseService):
 class RoutineControl(BaseService):
 	_sid = 0x31
 
-	startRoutine = 1
-	stopRoutine = 2
-	requestRoutineResults = 3
+	class ControlType(BaseSubfunction):
+		__pretty_name__ = 'control type'
+
+		startRoutine = 1
+		stopRoutine = 2
+		requestRoutineResults = 3
 
 	supported_negative_response = [	 Response.Code.SubFunctionNotSupported,
 							Response.Code.IncorrectMessageLegthOrInvalidFormat,

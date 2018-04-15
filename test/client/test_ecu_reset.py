@@ -22,7 +22,7 @@ class TestECUReset(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x51\x04")	# Positive response 
 
 	def _test_ecu_reset_success_pdt(self):
-		success = self.udsclient.ecu_reset(services.ECUReset.enableRapidPowerShutDown, 0x23)
+		success = self.udsclient.ecu_reset(services.ECUReset.ResetType.enableRapidPowerShutDown, 0x23)
 
 	def test_ecu_reset_denied(self):
 		request = self.conn.touserqueue.get(timeout=0.2)

@@ -14,7 +14,7 @@ class TestDiagnosticSessionControl(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x50\x01\x99\x88")	# Positive response
 
 	def _test_dsc_success(self):
-		sessionParamRecords = self.udsclient.change_session(services.DiagnosticSessionControl.defaultSession)
+		sessionParamRecords = self.udsclient.change_session(services.DiagnosticSessionControl.Session.defaultSession)
 		self.assertEqual(sessionParamRecords, b"\x99\x88")
 
 	def test_dsc_denied(self):
@@ -39,7 +39,7 @@ class TestDiagnosticSessionControl(ClientServerTest):
 
 	def _test_dsc_bad_subfunction(self):
 		with self.assertRaises(UnexpectedResponseException):
-			success = self.udsclient.change_session(services.DiagnosticSessionControl.defaultSession)
+			success = self.udsclient.change_session(services.DiagnosticSessionControl.Session.defaultSession)
 
 	def test_dsc_invalidservice(self):
 		request = self.conn.touserqueue.get(timeout=0.2)

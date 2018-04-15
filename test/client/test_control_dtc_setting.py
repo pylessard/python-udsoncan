@@ -14,7 +14,7 @@ class TestControlDTCSettings(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\xC5\x01")	# Positive response
 
 	def _test_set_on(self):
-		self.udsclient.control_dtc_setting(services.ControlDTCSetting.on)
+		self.udsclient.control_dtc_setting(services.ControlDTCSetting.SettingType.on)
 
 	def test_set_on_with_extra_data(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -22,13 +22,13 @@ class TestControlDTCSettings(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\xC5\x01")	# Positive response
 
 	def _test_set_on_with_extra_data(self):
-		self.udsclient.control_dtc_setting(setting_type=services.ControlDTCSetting.on, data=b'\x11\x22\x33')
+		self.udsclient.control_dtc_setting(setting_type=services.ControlDTCSetting.SettingType.on, data=b'\x11\x22\x33')
 
 	def test_set_on_harmless_extra_bytes_in_response(self):
 		self.wait_request_and_respond(b"\xC5\x01\x77\x88\x99")	# Positive response
 
 	def _test_set_on_harmless_extra_bytes_in_response(self):
-		self.udsclient.control_dtc_setting(setting_type=services.ControlDTCSetting.on)
+		self.udsclient.control_dtc_setting(setting_type=services.ControlDTCSetting.SettingType.on)
 
 	def test_set_params_denied(self):
 		self.wait_request_and_respond(b"\x7F\x85\x45") #Request Out Of Range
@@ -69,7 +69,7 @@ class TestControlDTCSettings(ClientServerTest):
 			response = self.udsclient.control_dtc_setting(setting_type=0x80)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.control_dtc_setting(setting_type=services.ControlDTCSetting.on, data=1)
+			response = self.udsclient.control_dtc_setting(setting_type=services.ControlDTCSetting.SettingType.on, data=1)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.control_dtc_setting(setting_type=services.ControlDTCSetting.on, data='asdasdasd')
+			response = self.udsclient.control_dtc_setting(setting_type=services.ControlDTCSetting.SettingType.on, data='asdasdasd')
