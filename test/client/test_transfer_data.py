@@ -26,56 +26,90 @@ class TestTransferData(ClientServerTest):
 		response = self.udsclient.transfer_data(block_sequence_counter=0x22)
 		self.assertEqual(response.parsed_data, b'')	
 
-	def test_transfer_data_denied(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x7F\x36\x73") # wrong block sequence number
+	def test_transfer_data_denied_exception(self):
+		self.wait_request_and_respond(b"\x7F\x36\x73") # wrong block sequence number
 
-	def _test_transfer_data_denied(self):
+	def _test_transfer_data_denied_exception(self):
 		with self.assertRaises(NegativeResponseException) as handle:
-			success = self.udsclient.transfer_data(block_sequence_counter=0x55)
+			self.udsclient.transfer_data(block_sequence_counter=0x55)
 		response = handle.exception.response
 
 		self.assertTrue(response.valid)
+		self.assertFalse(response.positive)
 		self.assertTrue(issubclass(response.service, services.TransferData))
 		self.assertEqual(response.code, 0x73)
 
-	def test_transfer_data_bad_sequence_number(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x76\x23\x89\xab\xcd\xef")	# Positive response
+	def test_transfer_data_denied_no_exception(self):
+		self.wait_request_and_respond(b"\x7F\x36\x73") # wrong block sequence number
 
-	def _test_transfer_data_bad_sequence_number(self):
+	def _test_transfer_data_denied_no_exception(self):
+		self.udsclient.config['exception_on_negative_response'] = False
+		response = self.udsclient.transfer_data(block_sequence_counter=0x55)
+
+		self.assertTrue(response.valid)
+		self.assertFalse(response.positive)
+		self.assertTrue(issubclass(response.service, services.TransferData))
+		self.assertEqual(response.code, 0x73)
+
+	def test_transfer_data_bad_sequence_number_exception(self):
+		self.wait_request_and_respond(b"\x76\x23\x89\xab\xcd\xef")	# Positive response
+
+	def _test_transfer_data_bad_sequence_number_exception(self):
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.transfer_data(block_sequence_counter=0x22, data=b'\x12\x34\x56')
 
+	def test_transfer_data_bad_sequence_number_no_exception(self):
+		self.wait_request_and_respond(b"\x76\x23\x89\xab\xcd\xef")	# Positive response
 
-	def test_transfer_data_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x00\x55") #Inexistent Service
+	def _test_transfer_data_bad_sequence_number_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.transfer_data(block_sequence_counter=0x22, data=b'\x12\x34\x56')
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
 
-	def _test_transfer_data_invalidservice(self):
+	def test_transfer_data_invalidservice_exception(self):
+		self.wait_request_and_respond(b"\x00\x55") #Inexistent Service
+
+	def _test_transfer_data_invalidservice_exception(self):
 		with self.assertRaises(InvalidResponseException) as handle:
-			response = self.udsclient.transfer_data(block_sequence_counter=0x55)
+			self.udsclient.transfer_data(block_sequence_counter=0x55)
 
-	def test_transfer_data_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
+	def test_transfer_data_invalidservice_no_exception(self):
+		self.wait_request_and_respond(b"\x00\x55") #Inexistent Service
 
-	def _test_transfer_data_wrongservice(self):
+	def _test_transfer_data_invalidservice_no_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False
+		response = self.udsclient.transfer_data(block_sequence_counter=0x55)
+		self.assertFalse(response.valid)
+
+	def test_transfer_data_wrongservice_exception(self):
+		self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+
+	def _test_transfer_data_wrongservice_exception(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
-			response = self.udsclient.transfer_data(block_sequence_counter=0x55)
+			self.udsclient.transfer_data(block_sequence_counter=0x55)
 
+	def test_transfer_data_wrongservice_no_exception(self):
+		self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+
+	def _test_transfer_data_wrongservice_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.transfer_data(block_sequence_counter=0x55)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
+		
 	def test_bad_param(self):
 		pass
 
 	def _test_bad_param(self):
 		with self.assertRaises(ValueError):
-			response = self.udsclient.transfer_data(block_sequence_counter=-1)
+			self.udsclient.transfer_data(block_sequence_counter=-1)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.transfer_data(block_sequence_counter=0x100)
+			self.udsclient.transfer_data(block_sequence_counter=0x100)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.transfer_data(block_sequence_counter=1, data=123)
+			self.udsclient.transfer_data(block_sequence_counter=1, data=123)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.transfer_data(block_sequence_counter=1, data='asd')
+			self.udsclient.transfer_data(block_sequence_counter=1, data='asd')

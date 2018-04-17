@@ -104,7 +104,7 @@ class TestIOControl(ClientServerTest):
 		self.assertEqual(response.parsed_data, (0x333, 0x444))	
 
 
-	def test_io_control_with_repsonse_record_zero_padding_not_tolerated(self):
+	def test_io_control_with_repsonse_record_zero_padding_not_tolerated_exception(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00")
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -112,7 +112,7 @@ class TestIOControl(ClientServerTest):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00\x00")
 
-	def _test_io_control_with_repsonse_record_zero_padding_not_tolerated(self):
+	def _test_io_control_with_repsonse_record_zero_padding_not_tolerated_exception(self):
 		self.udsclient.config['tolerate_zero_padding'] = False
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
@@ -122,6 +122,31 @@ class TestIOControl(ClientServerTest):
 
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
+
+	def test_io_control_with_repsonse_record_zero_padding_not_tolerated_no_exception(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00")
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00")
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00\x00")
+
+	def _test_io_control_with_repsonse_record_zero_padding_not_tolerated_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		self.udsclient.config['tolerate_zero_padding'] = False
+		
+		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
+
+		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
+
+		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
+
 
 	def test_io_control_composite_did_dict(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -182,7 +207,6 @@ class TestIOControl(ClientServerTest):
 	def _test_io_control_mask_all_set0(self):
 		values = [0x07, 0x1234, 0x4, 0x5, 0x99]
 		self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=False)	# Short Term Adjustment
-
 
 	def test_io_control_no_mask(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -245,21 +269,34 @@ class TestIOControl(ClientServerTest):
 		with self.assertRaises(ValueError):
 			self.udsclient.io_control(control_param=0x100, did=0x155, values='asd') 
 
-	def test_io_control_bad_response_too_much_data(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x01\x32\x01\x4B\xAA")	# Last byte is extra
+	def test_io_control_bad_response_too_much_data_exception(self):
+		self.wait_request_and_respond(b"\x6F\x01\x32\x01\x4B\xAA")	# Last byte is extra
 
-	def _test_io_control_bad_response_too_much_data(self):
+	def _test_io_control_bad_response_too_much_data_exception(self):
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.io_control(control_param=1, did=0x132)	
 
-	def test_io_control_bad_response_wrong_control_param(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x01\x32\x04\x4B")	# 0x04 should be 0x03
+	def test_io_control_bad_response_too_much_data_no_exception(self):
+		self.wait_request_and_respond(b"\x6F\x01\x32\x01\x4B\xAA")	# Last byte is extra
 
-	def _test_io_control_bad_response_wrong_control_param(self):
+	def _test_io_control_bad_response_too_much_data_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.io_control(control_param=1, did=0x132)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
+
+	def test_io_control_bad_response_wrong_control_param_exception(self):
+		self.wait_request_and_respond(b"\x6F\x01\x32\x04\x4B")	# 0x04 should be 0x03
+
+	def _test_io_control_bad_response_wrong_control_param_exception(self):
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.io_control(control_param=3, did=0x132)	
 
+	def test_io_control_bad_response_wrong_control_param_no_exception(self):
+		self.wait_request_and_respond(b"\x6F\x01\x32\x04\x4B")	# 0x04 should be 0x03
 
-
+	def _test_io_control_bad_response_wrong_control_param_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.io_control(control_param=3, did=0x132)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)

@@ -54,32 +54,57 @@ class TestRequestDownload(ClientServerTest):
 		nblock = response.parsed_data
 		self.assertEqual(nblock,0xabcd)
 
-	def test_incomplete_nblock_response(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x74\x40\xab\xcd")	# Missing 2 bytes to complete number of block
+	def test_incomplete_nblock_response_exception(self):
+		self.wait_request_and_respond(b"\x74\x40\xab\xcd")	# Missing 2 bytes to complete number of block
 
-	def _test_incomplete_nblock_response(self):
+	def _test_incomplete_nblock_response_exception(self):
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
 		with self.assertRaises(InvalidResponseException):
 			self.udsclient.request_download(memory_location=memloc)
 
-	def test_request_download_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x00\x20\x12\x34") #Inexistent Service
+	def test_incomplete_nblock_response_no_exception(self):
+		self.wait_request_and_respond(b"\x74\x40\xab\xcd")	# Missing 2 bytes to complete number of block
 
-	def _test_request_download_invalidservice(self):
+	def _test_incomplete_nblock_response_no_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False
+		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
+		response = self.udsclient.request_download(memory_location=memloc)
+		self.assertFalse(response.valid)
+
+	def test_request_download_invalidservice_exception(self):
+		self.wait_request_and_respond(b"\x00\x20\x12\x34") #Inexistent Service
+
+	def _test_request_download_invalidservice_exception(self):
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
 		with self.assertRaises(InvalidResponseException) as handle:
 			self.udsclient.request_download(memory_location=memloc)
 
-	def test_request_download_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x7E\x20\x12\x34") # Valid but wrong service (Tester Present)
+	def test_request_download_invalidservice_no_exception(self):
+		self.wait_request_and_respond(b"\x00\x20\x12\x34") #Inexistent Service
 
-	def _test_request_download_wrongservice(self):
+	def _test_request_download_invalidservice_no_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False		
+		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
+		response = self.udsclient.request_download(memory_location=memloc)
+		self.assertFalse(response.valid)
+
+	def test_request_download_wrongservice_exception(self):
+		self.wait_request_and_respond(b"\x7E\x20\x12\x34") # Valid but wrong service (Tester Present)
+
+	def _test_request_download_wrongservice_exception(self):
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			self.udsclient.request_download(memory_location=memloc)
+
+	def test_request_download_wrongservice_no_exception(self):
+		self.wait_request_and_respond(b"\x7E\x20\x12\x34") # Valid but wrong service (Tester Present)
+
+	def _test_request_download_wrongservice_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False	
+		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
+		response = self.udsclient.request_download(memory_location=memloc)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
 
 	def test_bad_params(self):
 		pass

@@ -18,46 +18,76 @@ class TestDiagnosticSessionControl(ClientServerTest):
 		sessionParamRecords = response.parsed_data
 		self.assertEqual(sessionParamRecords, b"\x99\x88")
 
-	def test_dsc_denied(self):
+	def test_dsc_denied_exception(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x08")
 		self.conn.fromuserqueue.put(b"\x7F\x10\x12") # Subfunction not supported
 
-	def _test_dsc_denied(self):
+	def _test_dsc_denied_exception(self):
 		with self.assertRaises(NegativeResponseException) as handle:
-			success = self.udsclient.change_session(0x08)
+			self.udsclient.change_session(0x08)
 		response = handle.exception.response
 
 		self.assertTrue(response.valid)
 		self.assertTrue(issubclass(response.service, services.DiagnosticSessionControl))
 		self.assertEqual(response.code, 0x12)
 
-	def test_dsc_bad_subfunction(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.assertEqual(request, b"\x10\x01")
-		self.conn.fromuserqueue.put(b"\x50\x02")	# Positive response
+	def test_dsc_denied_no_exception(self):
+		self.wait_request_and_respond(b"\x7F\x10\x12") # Subfunction not supported
 
-	def _test_dsc_bad_subfunction(self):
+	def _test_dsc_denied_no_exception(self):
+		self.udsclient.config['exception_on_negative_response'] = False
+		response = self.udsclient.change_session(0x08)
+		self.assertTrue(response.valid)
+		self.assertFalse(response.positive)
+
+	def test_dsc_bad_subfunction_exception(self):
+		self.wait_request_and_respond(b"\x50\x02")	# Positive response
+
+	def _test_dsc_bad_subfunction_exception(self):
 		with self.assertRaises(UnexpectedResponseException):
-			success = self.udsclient.change_session(services.DiagnosticSessionControl.Session.defaultSession)
+			self.udsclient.change_session(services.DiagnosticSessionControl.Session.defaultSession)
 
-	def test_dsc_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.assertEqual(request, b"\x10\x02")
-		self.conn.fromuserqueue.put(b"\x00\x02") #Inexistent Service
+	def test_dsc_bad_subfunction_no_exception(self):
+		self.wait_request_and_respond(b"\x50\x02")	# Positive response
 
-	def _test_dsc_invalidservice(self):
+	def _test_dsc_bad_subfunction_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.change_session(services.DiagnosticSessionControl.Session.defaultSession)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
+
+	def test_dsc_invalidservice_exception(self):
+		self.wait_request_and_respond(b"\x00\x02") #Inexistent Service
+
+	def _test_dsc_invalidservice_exception(self):
 		with self.assertRaises(InvalidResponseException) as handle:
-			success = self.udsclient.change_session(0x02)
+			self.udsclient.change_session(0x02)
 
-	def test_ecu_reset_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.assertEqual(request, b"\x10\x55")
-		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
+	def test_dsc_invalidservice_no_exception(self):
+		self.wait_request_and_respond(b"\x00\x02") #Inexistent Service
 
-	def _test_ecu_reset_wrongservice(self):
+	def _test_dsc_invalidservice_no_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False
+		response = self.udsclient.change_session(0x02)
+		self.assertFalse(response.valid)
+
+	def test_ecu_reset_wrongservice_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False
+		self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+
+	def _test_ecu_reset_wrongservice_exception(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
-			success = self.udsclient.change_session(0x55)
+			self.udsclient.change_session(0x55)
+
+	def test_ecu_reset_wrongservice_no_exception(self):
+		self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+
+	def _test_ecu_reset_wrongservice_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.change_session(0x55)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
 
 	def test_bad_param(self):
 		pass

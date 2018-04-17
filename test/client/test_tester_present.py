@@ -15,41 +15,65 @@ class TestTesterPresent(ClientServerTest):
 	def _test_tester_present_success(self):
 		self.udsclient.tester_present()
 
-	def test_tester_present_denied(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.assertEqual(request, b"\x3E\x00")
-		self.conn.fromuserqueue.put(b"\x7F\x3E\x13") # IMLOIF
+	def test_tester_present_denied_exception(self):
+		self.wait_request_and_respond(b"\x7F\x3E\x13") # IMLOIF
 
-	def _test_tester_present_denied(self):
+	def _test_tester_present_denied_exception(self):
 		with self.assertRaises(NegativeResponseException) as handle:
-			success = self.udsclient.tester_present()
+			self.udsclient.tester_present()
 		response = handle.exception.response
 
 		self.assertTrue(response.valid)
+		self.assertFalse(response.positive)
 		self.assertTrue(issubclass(response.service, services.TesterPresent))
 		self.assertEqual(response.code, 0x13)
 
-	def test_tester_present_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.assertEqual(request, b"\x3E\x00")
-		self.conn.fromuserqueue.put(b"\x00\x00") #Inexistent Service
+	def test_tester_present_denied_no_exception(self):
+		self.wait_request_and_respond(b"\x7F\x3E\x13") # IMLOIF
 
-	def _test_tester_present_invalidservice(self):
+	def _test_tester_present_denied_no_exception(self):
+		self.udsclient.config['exception_on_negative_response'] = False
+		response = self.udsclient.tester_present()
+
+		self.assertTrue(response.valid)
+		self.assertFalse(response.positive)
+		self.assertTrue(issubclass(response.service, services.TesterPresent))
+		self.assertEqual(response.code, 0x13)
+
+	def test_tester_present_invalidservice_exception(self):
+		self.wait_request_and_respond(b"\x00\x00") #Inexistent Service
+
+	def _test_tester_present_invalidservice_exception(self):
 		with self.assertRaises(InvalidResponseException) as handle:
-			response = self.udsclient.tester_present()
+			self.udsclient.tester_present()
 
-	def test_tester_present_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.assertEqual(request, b"\x3E\x00")
-		self.conn.fromuserqueue.put(b"\x50\x00") # Valid but wrong service (Tester Present)
+	def test_tester_present_invalidservice_no_exception(self):
+		self.wait_request_and_respond(b"\x00\x00") #Inexistent Service
 
-	def _test_tester_present_wrongservice(self):
+	def _test_tester_present_invalidservice_no_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False
+		response = self.udsclient.tester_present()
+		self.assertFalse(response.valid)
+
+	def test_tester_present_wrongservice_exception(self):
+		self.wait_request_and_respond(b"\x50\x00") # Valid but wrong service (Tester Present)
+
+	def _test_tester_present_wrongservice_exception(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
-			response = self.udsclient.tester_present()
+			self.udsclient.tester_present()
+
+	def test_tester_present_wrongservice_no_exception(self):
+		self.wait_request_and_respond(b"\x50\x00") # Valid but wrong service (Tester Present)
+
+	def _test_tester_present_wrongservice_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.tester_present()
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
 
 	def test_bad_param(self):
 		pass
 
 	def _test_bad_param(self):
 		with self.assertRaises(ValueError):
-			response = self.udsclient.tester_present(1) 
+			self.udsclient.tester_present(1) 

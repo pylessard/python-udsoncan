@@ -44,45 +44,83 @@ class TestReadDataByIdentifier(ClientServerTest):
 	def _test_wdbi_single_success2(self):
 		self.udsclient.write_data_by_identifier(did = 2, value=0x1234)
 
-	def test_wdbi_incomplete_response(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6E\x00")	#Incomplete response
+	def test_wdbi_incomplete_response_exception(self):
+		self.wait_request_and_respond(b"\x6E\x00")	#Incomplete response
 
-	def _test_wdbi_incomplete_response(self):
+	def _test_wdbi_incomplete_response_exception(self):
 		with self.assertRaises(InvalidResponseException):
 			self.udsclient.write_data_by_identifier(did = 1, value=0x1234)
 
-	def test_wdbi_unknown_did(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6E\x00\x09")	# Positive response
+	def test_wdbi_incomplete_response_no_exception(self):
+		self.wait_request_and_respond(b"\x6E\x00")	#Incomplete response
 
-	def _test_wdbi_unknown_did(self):
+	def _test_wdbi_incomplete_response_no_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False
+		response = self.udsclient.write_data_by_identifier(did = 1, value=0x1234)
+		self.assertFalse(response.valid)
+
+	def test_wdbi_unknown_did_exception(self):
+		self.wait_request_and_respond(b"\x6E\x00\x09")	# Positive response
+
+	def _test_wdbi_unknown_did_exception(self):
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.write_data_by_identifier(did = 1, value=0x1234)			
 	
-	def test_wdbi_unwanted_did(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6E\x00\x02")	# Positive response
+	def test_wdbi_unknown_did_no_exception(self):
+		self.wait_request_and_respond(b"\x6E\x00\x09")	# Positive response
 
-	def _test_wdbi_unwanted_did(self):
+	def _test_wdbi_unknown_did_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.write_data_by_identifier(did = 1, value=0x1234)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)			
+	
+	def test_wdbi_unwanted_did_exception(self):
+		self.wait_request_and_respond(b"\x6E\x00\x02")	# Positive response
+
+	def _test_wdbi_unwanted_did_exception(self):
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.write_data_by_identifier(did = 1, value=0x1234)			
+	
+	def test_wdbi_unwanted_did_no_exception(self):
+		self.wait_request_and_respond(b"\x6E\x00\x02")	# Positive response
 
-	def test_wdbi_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x00\x00\x01")	# Service is inexistant
+	def _test_wdbi_unwanted_did_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.write_data_by_identifier(did = 1, value=0x1234)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
 
-	def _test_wdbi_invalidservice(self):
+	def test_wdbi_invalidservice_exception(self):
+		self.wait_request_and_respond(b"\x00\x00\x01")	# Service is inexistant
+
+	def _test_wdbi_invalidservice_exception(self):
 		with self.assertRaises(InvalidResponseException) as handle:
 			self.udsclient.write_data_by_identifier(did=1, value=0x1234)
 
-	def test_wdbi_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x50\x00\x01")	# Valid service, but not the one requested
+	def test_wdbi_invalidservice_no_exception(self):
+		self.wait_request_and_respond(b"\x00\x00\x01")	# Service is inexistant
 
-	def _test_wdbi_wrongservice(self):
+	def _test_wdbi_invalidservice_no_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False
+		response = self.udsclient.write_data_by_identifier(did=1, value=0x1234)
+		self.assertFalse(response.valid)
+
+	def test_wdbi_wrongservice_exception(self):
+		self.wait_request_and_respond(b"\x50\x00\x01")	# Valid service, but not the one requested
+
+	def _test_wdbi_wrongservice_exception(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			self.udsclient.write_data_by_identifier(did=1, value=0x1234)
+
+	def test_wdbi_wrongservice_no_exception(self):
+		self.wait_request_and_respond(b"\x50\x00\x01")	# Valid service, but not the one requested
+
+	def _test_wdbi_wrongservice_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.write_data_by_identifier(did = 1, value=0x1234)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
 
 	def test_no_config(self):
 		pass

@@ -30,33 +30,68 @@ class TestControlDTCSettings(ClientServerTest):
 	def _test_set_on_harmless_extra_bytes_in_response(self):
 		self.udsclient.control_dtc_setting(setting_type=services.ControlDTCSetting.SettingType.on)
 
-	def test_set_params_denied(self):
+	def test_set_params_denied_exception(self):
 		self.wait_request_and_respond(b"\x7F\x85\x45") #Request Out Of Range
 
-	def _test_set_params_denied(self):
+	def _test_set_params_denied_exception(self):
 		with self.assertRaises(NegativeResponseException) as handle:
 			self.udsclient.control_dtc_setting(setting_type=0x45)
 
-	def test_set_params_invalid_service(self):
+	def test_set_params_denied_no_exception(self):
+		self.wait_request_and_respond(b"\x7F\x85\x45") #Request Out Of Range
+
+	def _test_set_params_denied_no_exception(self):
+		self.udsclient.config['exception_on_negative_response'] = False
+		response = self.udsclient.control_dtc_setting(setting_type=0x45)
+		self.assertTrue(response.valid)
+		self.assertFalse(response.positive)
+
+	def test_set_params_invalid_service_exception(self):
 		self.wait_request_and_respond(b"\x00\x45") #Inexistent Service
 
-	def _test_set_params_invalid_service(self):
+	def _test_set_params_invalid_service_exception(self):
 		with self.assertRaises(InvalidResponseException) as handle:
 			self.udsclient.control_dtc_setting(setting_type=0x45)
 
-	def test_wrong_service(self):
+	def test_set_params_invalid_service_no_exception(self):
+		self.wait_request_and_respond(b"\x00\x45") #Inexistent Service
+
+	def _test_set_params_invalid_service_no_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False
+		response = self.udsclient.control_dtc_setting(setting_type=0x45)
+		self.assertFalse(response.valid)
+
+	def test_wrong_service_exception(self):
 		self.wait_request_and_respond(b"\x7E\x22") # Valid but wrong service (Tester Present)
 
-	def _test_wrong_service(self):
+	def _test_wrong_service_exception(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			self.udsclient.control_dtc_setting(setting_type=0x22)
 
-	def test_bad_setting_type_response(self):
+	def test_wrong_service_no_exception(self):
+		self.wait_request_and_respond(b"\x7E\x22") # Valid but wrong service (Tester Present)
+
+	def _test_wrong_service_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.control_dtc_setting(setting_type=0x22)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
+
+	def test_bad_setting_type_response_exception(self):
 		self.wait_request_and_respond(b"\xC5\x23") # Valid but access type
 
-	def _test_bad_setting_type_response(self):
+	def _test_bad_setting_type_response_exception(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			self.udsclient.control_dtc_setting(setting_type=0x22)
+
+	def test_bad_setting_type_response_no_exception(self):
+		self.wait_request_and_respond(b"\xC5\x23") # Valid but access type
+
+	def _test_bad_setting_type_response_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.control_dtc_setting(setting_type=0x22)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
 
 	def test_bad_param(self):
 		pass

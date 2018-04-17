@@ -26,11 +26,10 @@ class TestRequestTransferExit(ClientServerTest):
 		response = self.udsclient.request_transfer_exit()
 		self.assertEqual(response.parsed_data, b'')	
 
-	def test_request_transfer_exit_denied(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x7F\x37\x24") # reset sequence error
+	def test_request_transfer_exit_denied_exception(self):
+		self.wait_request_and_respond(b"\x7F\x37\x24") # reset sequence error
 
-	def _test_request_transfer_exit_denied(self):
+	def _test_request_transfer_exit_denied_exception(self):
 		with self.assertRaises(NegativeResponseException) as handle:
 			self.udsclient.request_transfer_exit()
 		response = handle.exception.response
@@ -39,21 +38,45 @@ class TestRequestTransferExit(ClientServerTest):
 		self.assertTrue(issubclass(response.service, services.RequestTransferExit))
 		self.assertEqual(response.code, 0x24)
 
-	def test_request_transfer_exit_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x00\x55") #Inexistent Service
+	def test_request_transfer_exit_denied_no_exception(self):
+		self.wait_request_and_respond(b"\x7F\x37\x24") # reset sequence error
 
-	def _test_request_transfer_exit_invalidservice(self):
+	def _test_request_transfer_exit_denied_no_exception(self):
+		self.udsclient.config['exception_on_negative_response'] = False	
+		response = self.udsclient.request_transfer_exit()
+		self.assertTrue(response.valid)
+		self.assertFalse(response.positive)
+
+	def test_request_transfer_exit_invalidservice_exception(self):
+		self.wait_request_and_respond(b"\x00\x55") #Inexistent Service
+
+	def _test_request_transfer_exit_invalidservice_exception(self):
 		with self.assertRaises(InvalidResponseException) as handle:
 			self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
 
-	def test_request_transfer_exit_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x7E\x00") # Valid but wrong service (Tester Present)
+	def test_request_transfer_exit_invalidservice_no_exception(self):
+		self.wait_request_and_respond(b"\x00\x55") #Inexistent Service
 
-	def _test_request_transfer_exit_wrongservice(self):
+	def _test_request_transfer_exit_invalidservice_no_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False	
+		response = self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
+		self.assertFalse(response.valid)
+
+	def test_request_transfer_exit_wrongservice_exception(self):
+		self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+
+	def _test_request_transfer_exit_wrongservice_exception(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
+
+	def test_request_transfer_exit_wrongservice_no_exception(self):
+		self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+
+	def _test_request_transfer_exit_wrongservice_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False	
+		response = self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
 
 	def test_bad_param(self):
 		pass

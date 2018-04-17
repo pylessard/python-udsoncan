@@ -35,6 +35,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def _test_rdbi_single_success(self):
 		response = self.udsclient.read_data_by_identifier(dids = 1)
+		self.assertTrue(response.positive)
 		values = response.parsed_data
 		self.assertEqual(values[1], (0x1234,))
 
@@ -45,131 +46,142 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def _test_rdbi_multiple_success(self):
 		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		self.assertTrue(response.positive)
 		values = response.parsed_data
 		self.assertEqual(values[1], (0x1234,))		
 		self.assertEqual(values[2], (0x7856,))		
 		self.assertEqual(values[3], 0x10)	
 
 	def test_rdbi_multiple_zero_padding1_success(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00")				# Positive response
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00")			# Positive response
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00")		# Positive response
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00\x00")	# Positive response
+		data = b'\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11'
+		for i in range(8):
+			self.wait_request_and_respond(data + b"\x00"*(i+1))	
 
 	def _test_rdbi_multiple_zero_padding1_success(self):
 		self.udsclient.config['tolerate_zero_padding'] = True
-		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
-		values = response.parsed_data
-		self.assertEqual(values[1], (0x1234,))		
-		self.assertEqual(values[2], (0x7856,))		
-		self.assertEqual(values[3], 0x10)
-		self.assertFalse(0 in values)		
+		for i in range(8):
+			response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+			self.assertTrue(response.positive)
+			values = response.parsed_data
+			self.assertEqual(values[1], (0x1234,))		
+			self.assertEqual(values[2], (0x7856,))		
+			self.assertEqual(values[3], 0x10)
+			self.assertFalse(0 in values)		
 
-		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
-		values = response.parsed_data
-		self.assertEqual(values[1], (0x1234,))		
-		self.assertEqual(values[2], (0x7856,))		
-		self.assertEqual(values[3], 0x10)		
-		self.assertFalse(0 in values)		
+	def test_rdbi_multiple_zero_padding_not_tolerated_exception(self):
+		data = b'\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11'
+		for i in range(8):
+			self.wait_request_and_respond(data + b"\x00"*(i+1))		
 
-		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
-		values = response.parsed_data
-		self.assertEqual(values[1], (0x1234,))		
-		self.assertEqual(values[2], (0x7856,))		
-		self.assertEqual(values[3], 0x10)		
-		self.assertFalse(0 in values)		
-
-		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
-		values = response.parsed_data
-		self.assertEqual(values[1], (0x1234,))		
-		self.assertEqual(values[2], (0x7856,))		
-		self.assertEqual(values[3], 0x10)	
-		self.assertFalse(0 in values)		
-
-	def test_rdbi_multiple_zero_padding_not_tolerated(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00")				# Positive response
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00")			# Positive response
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00")		# Positive response
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11\x00\x00\x00\x00")	# Positive response
-
-	def _test_rdbi_multiple_zero_padding_not_tolerated(self):
+	def _test_rdbi_multiple_zero_padding_not_tolerated_exception(self):
 		self.udsclient.config['tolerate_zero_padding'] = False
+		for i in range(8):
+			with self.assertRaises(UnexpectedResponseException):
+				self.udsclient.read_data_by_identifier(dids = [1,2,3])
+
+
+	def test_rdbi_multiple_zero_padding_not_tolerated_no_exception(self):
+		data = b'\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11'
+		for i in range(8):
+			self.wait_request_and_respond(data + b"\x00"*(i+1))		
+
+	def _test_rdbi_multiple_zero_padding_not_tolerated_no_exception(self):
+		self.udsclient.config['tolerate_zero_padding'] = False
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		for i in range(8):
+			response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+			self.assertTrue(response.valid)
+			self.assertTrue(response.unexpected)
+			
+	def test_rdbi_output_format(self):
+		for i in range(2):
+			self.wait_request_and_respond(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
+
+	def _test_rdbi_output_format(self):
+		for i in range(2):
+			response = self.udsclient.read_data_by_identifier(dids = [1,2,3], output_fmt="dict")
+			values = response.parsed_data
+			self.assertTrue(isinstance(values, dict))	
+			self.assertEqual(len(values), 3)			
+
+	def test_rdbi_incomplete_response_exception(self):
+		self.wait_request_and_respond(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03")	
+
+	def _test_rdbi_incomplete_response_exception(self):
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.read_data_by_identifier(dids = [1,2,3])
 
+	def test_rdbi_incomplete_response_no_exception(self):
+		self.wait_request_and_respond(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03")	
+
+	def _test_rdbi_incomplete_response_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
+
+	def test_rdbi_unknown_did_exception(self):
+		self.wait_request_and_respond(b"\x62\x00\x09\x12\x34\x00\x02\x56\x78\x00\x03\x11")	
+
+	def _test_rdbi_unknown_did_exception(self):
 		with self.assertRaises(UnexpectedResponseException):
 			self.udsclient.read_data_by_identifier(dids = [1,2,3])	
 
-		with self.assertRaises(UnexpectedResponseException):
-			self.udsclient.read_data_by_identifier(dids = [1,2,3])
+	def test_rdbi_unknown_did_no_exception(self):
+		self.wait_request_and_respond(b"\x62\x00\x09\x12\x34\x00\x02\x56\x78\x00\x03\x11")	
 
-		with self.assertRaises(UnexpectedResponseException):
-			self.udsclient.read_data_by_identifier(dids = [1,2,3])
-			
-	def test_rdbi_output_format(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
-
-	def _test_rdbi_output_format(self):
-		response = self.udsclient.read_data_by_identifier(dids = [1,2,3], output_fmt="dict")
-		values = response.parsed_data
-		self.assertTrue(isinstance(values, dict))	
-		self.assertEqual(len(values), 3)		
-
-		response = self.udsclient.read_data_by_identifier(dids = [1,2,3], output_fmt="list")
-		values = response.parsed_data
-		self.assertTrue(isinstance(values, list))	
-		self.assertEqual(len(values), 3)		
-
-	def test_rdbi_incomplete_response(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03")	# Positive response
-
-	def _test_rdbi_incomplete_response(self):
-		with self.assertRaises(UnexpectedResponseException):
-			self.udsclient.read_data_by_identifier(dids = [1,2,3])
-
-	def test_rdbi_unknown_did(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x09\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
-
-	def _test_rdbi_unknown_did(self):
-		with self.assertRaises(UnexpectedResponseException):
-			self.udsclient.read_data_by_identifier(dids = [1,2,3])			
+	def _test_rdbi_unknown_did_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
 	
-	def test_rdbi_unwanted_did(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
+	def test_rdbi_unwanted_did_exception(self):
+		self.wait_request_and_respond(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")
 
-	def _test_rdbi_unwanted_did(self):
+	def _test_rdbi_unwanted_did_exception(self):
 		with self.assertRaises(UnexpectedResponseException):
-			self.udsclient.read_data_by_identifier(dids = [1,3])			
+			self.udsclient.read_data_by_identifier(dids = [1,3])	
 
-	def test_rdbi_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x00\x00\x01\x12\x34")	# Service is inexistant
+	def test_rdbi_unwanted_did_no_exception(self):
+		self.wait_request_and_respond(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")
 
-	def _test_rdbi_invalidservice(self):
+	def _test_rdbi_unwanted_did_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.read_data_by_identifier(dids = [1,3])
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
+
+	def test_rdbi_invalidservice_exception(self):
+		self.wait_request_and_respond(b"\x00\x00\x01\x12\x34")	# Service is inexistant
+
+	def _test_rdbi_invalidservice_exception(self):
 		with self.assertRaises(InvalidResponseException) as handle:
 			self.udsclient.read_data_by_identifier(dids=1)
 
-	def test_rdbi_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x50\x00\x01\x12\x34")	# Valid service, but not the one requested
+	def test_rdbi_invalidservice_no_exception(self):
+		self.wait_request_and_respond(b"\x00\x00\x01\x12\x34")	# Service is inexistant
 
-	def _test_rdbi_wrongservice(self):
+	def _test_rdbi_invalidservice_no_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False
+		response = self.udsclient.read_data_by_identifier(dids=1)	
+		self.assertFalse(response.valid)
+
+	def test_rdbi_wrongservice_exception(self):
+		self.wait_request_and_respond(b"\x50\x00\x01\x12\x34")	# Valid service, but not the one requested
+
+	def _test_rdbi_wrongservice_exception(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			self.udsclient.read_data_by_identifier(dids=1)
+
+	def test_rdbi_wrongservice_no_exception(self):
+		self.wait_request_and_respond(b"\x50\x00\x01\x12\x34")	# Valid service, but not the one requested
+
+	def _test_rdbi_wrongservice_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.read_data_by_identifier(dids=1)	
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)		
 
 	def test_no_config(self):
 		pass

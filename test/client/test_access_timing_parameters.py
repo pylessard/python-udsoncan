@@ -15,9 +15,6 @@ class TestAccessTimingParameter(ClientServerTest):
 
 	def _test_read_extended_params_success(self):
 		response = self.udsclient.read_extended_timing_parameters()
-		self.assertTrue(response.valid)
-		self.assertFalse(response.unexpected)
-		self.assertTrue(response.positive)
 		param = response.parsed_data
 		self.assertEqual(param, b"\x99\x88\x77\x66")
 
@@ -28,8 +25,6 @@ class TestAccessTimingParameter(ClientServerTest):
 
 	def _test_read_active_params_success(self):
 		response = self.udsclient.read_active_timing_parameters()
-		self.assertTrue(response.valid)
-		self.assertFalse(response.unexpected)
 		self.assertTrue(response.positive)
 		param = response.parsed_data		
 		self.assertEqual(param, b"\x99\x88\x77\x66")		
@@ -50,37 +45,68 @@ class TestAccessTimingParameter(ClientServerTest):
 	def _test_set_params_success(self):
 		self.udsclient.reset_default_timing_parameters()
 
-	def test_set_params_denied(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x7F\x83\x31") #Request Out Of Range
+	def test_set_params_denied_exception(self):
+		self.wait_request_and_respond(b"\x7F\x83\x31") #Request Out Of Range
 
-	def _test_set_params_denied(self):
+	def _test_set_params_denied_exception(self):
 		with self.assertRaises(NegativeResponseException) as handle:
 			self.udsclient.access_timing_parameter(access_type=0x22)
 
-	def test_set_params_invalidservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x00\x22") #Inexistent Service
+	def test_set_params_denied_no_exception(self):
+		self.wait_request_and_respond(b"\x7F\x83\x31") #Request Out Of Range
 
-	def _test_set_params_invalidservice(self):
+	def _test_set_params_denied_no_exception(self):
+		self.udsclient.config['exception_on_negative_response'] = False
+		response = self.udsclient.access_timing_parameter(access_type=0x22)
+		self.assertTrue(response.valid)
+		self.assertFalse(response.positive)
+
+	def test_set_params_invalidservice_exception(self):
+		self.wait_request_and_respond(b"\x00\x22") #Inexistent Service
+
+	def _test_set_params_invalidservice_exception(self):
 		with self.assertRaises(InvalidResponseException) as handle:
 			self.udsclient.access_timing_parameter(access_type=0x22)
 
-	def test_routine_control_wrongservice(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x7E\x22") # Valid but wrong service (Tester Present)
+	def test_set_params_invalidservice_no_exception(self):
+		self.wait_request_and_respond(b"\x00\x22") #Inexistent Service
 
-	def _test_routine_control_wrongservice(self):
+	def _test_set_params_invalidservice_no_exception(self):
+		self.udsclient.config['exception_on_invalid_response'] = False
+		response = self.udsclient.access_timing_parameter(access_type=0x22)
+		self.assertFalse(response.valid)
+
+	def test_routine_control_wrongservice_exception(self):
+		self.wait_request_and_respond(b"\x7E\x22") # Valid but wrong service (Tester Present)
+
+	def _test_routine_control_wrongservice_exception(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			self.udsclient.access_timing_parameter(access_type=0x22)
 
-	def test_access_timing_params_bad_access_type(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\xC3\x23") # Valid but access type
+	def test_routine_control_wrongservice_no_exception(self):
+		self.wait_request_and_respond(b"\x7E\x22") # Valid but wrong service (Tester Present)
 
-	def _test_access_timing_params_bad_access_type(self):
+	def _test_routine_control_wrongservice_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.access_timing_parameter(access_type=0x22)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
+
+	def test_access_timing_params_bad_access_type_exception(self):
+		self.wait_request_and_respond(b"\xC3\x23") # Valid but access type
+
+	def _test_access_timing_params_bad_access_type_exception(self):
 		with self.assertRaises(UnexpectedResponseException) as handle:
 			self.udsclient.access_timing_parameter(access_type=0x22)
+
+	def test_access_timing_params_bad_access_type_no_exception(self):
+		self.wait_request_and_respond(b"\xC3\x23") # Valid but access type
+
+	def _test_access_timing_params_bad_access_type_no_exception(self):
+		self.udsclient.config['exception_on_unexpected_response'] = False
+		response = self.udsclient.access_timing_parameter(access_type=0x22)
+		self.assertTrue(response.valid)
+		self.assertTrue(response.unexpected)
 
 	def test_bad_param(self):
 		pass

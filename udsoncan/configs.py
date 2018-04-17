@@ -1,4 +1,7 @@
 default_client_config  = {
+	'exception_on_negative_response'	: True,
+	'exception_on_invalid_response'		: True,
+	'exception_on_unexpected_response'	: True,
 	'security_algo'				: None,
 	'security_algo_params'		: None,
 	'tolerate_zero_padding' 	: True,
