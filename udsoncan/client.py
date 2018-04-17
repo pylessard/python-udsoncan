@@ -22,11 +22,11 @@ class DTCServerResponseContainer(object):
 
 class Client:
 
-	def __init__(self, conn, config=default_client_config, request_timeout = 1, heartbeat  = None):
+	def __init__(self, conn, config=default_client_config, request_timeout = 1):
 		self.conn = conn
 		self.request_timeout = request_timeout
 		self.config = dict(config) # Makes a copy of given configuration
-		self.heartbeat = heartbeat
+		self.
 
 		self.refresh_config()
 
