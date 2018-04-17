@@ -416,19 +416,16 @@ class Client:
 		return response
 
 	# Performs a RoutineControl Service request
-	@standard_error_management
 	def start_routine(self, routine_id, data=None):
-		return self.routine_control._func_no_error_management(self, routine_id, services.RoutineControl.ControlType.startRoutine, data)
+		return self.routine_control(routine_id, services.RoutineControl.ControlType.startRoutine, data)
 
 	# Performs a RoutineControl Service request
-	@standard_error_management
 	def stop_routine(self, routine_id, data=None):
-		return self.routine_control._func_no_error_management(self, routine_id, services.RoutineControl.ControlType.stopRoutine, data)
+		return self.routine_control(routine_id, services.RoutineControl.ControlType.stopRoutine, data)
 
 	# Performs a RoutineControl Service request
-	@standard_error_management
 	def get_routine_result(self, routine_id, data=None):
-		return self.routine_control._func_no_error_management(self, routine_id, services.RoutineControl.ControlType.requestRoutineResults, data)
+		return self.routine_control(routine_id, services.RoutineControl.ControlType.requestRoutineResults, data)
 
 	# Performs a RoutineControl Service request
 	@standard_error_management
@@ -467,24 +464,20 @@ class Client:
 		return response
 
 	# Performs an AccessTimingParameter service request
-	@standard_error_management
 	def read_extended_timing_parameters(self):
-		return self.access_timing_parameter._func_no_error_management(self, access_type=services.AccessTimingParameter.AccessType.readExtendedTimingParameterSet)
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.readExtendedTimingParameterSet)
 
 	# Performs an AccessTimingParameter service request
-	@standard_error_management
 	def read_active_timing_parameters(self):
-		return self.access_timing_parameter._func_no_error_management(self, access_type=services.AccessTimingParameter.AccessType.readCurrentlyActiveTimingParameters)
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.readCurrentlyActiveTimingParameters)
 
 	# Performs an AccessTimingParameter service request
-	@standard_error_management
 	def set_timing_parameters(self, params):
-		return self.access_timing_parameter._func_no_error_management(self, access_type=services.AccessTimingParameter.AccessType.setTimingParametersToGivenValues, request_record=params)
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToGivenValues, request_record=params)
 	
 	# Performs an AccessTimingParameter service request
-	@standard_error_management
 	def reset_default_timing_parameters(self):
-		return self.access_timing_parameter._func_no_error_management(self, access_type=services.AccessTimingParameter.AccessType.setTimingParametersToDefaultValues)
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToDefaultValues)
 	
 	# Performs an AccessTimingParameter service request
 	@standard_error_management
@@ -537,14 +530,12 @@ class Client:
 		return response
 
 	#Performs a RequestDownload service request
-	@standard_error_management
 	def request_download(self, memory_location, dfi=None):
-		return self.request_upload_download._func_no_error_management(self, services.RequestDownload, memory_location, dfi)
+		return self.request_upload_download(services.RequestDownload, memory_location, dfi)
 
 	#Performs a RequestUpload service request
-	@standard_error_management
 	def request_upload(self, memory_location, dfi=None):
-		return self.request_upload_download._func_no_error_management(self, services.RequestUpload, memory_location, dfi)
+		return self.request_upload_download(services.RequestUpload, memory_location, dfi)
 
 	# Common code for both RequestDownload and RequestUpload services
 	@standard_error_management
@@ -851,89 +842,68 @@ class Client:
 		return response
 
 # ====  ReadDTCInformation
-	@standard_error_management
 	def get_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCByStatusMask, status_mask=status_mask)
 
-	@standard_error_management
 	def get_emission_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
 
-	@standard_error_management
 	def get_mirrormemory_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCByStatusMask, status_mask=status_mask)
 
-	@standard_error_management
 	def get_dtc_by_status_severity_mask(self, status_mask, severity_mask):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 
-	@standard_error_management
 	def get_number_of_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportNumberOfDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfDTCByStatusMask, status_mask=status_mask)
 	
-	@standard_error_management
 	def get_mirrormemory_number_of_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportNumberOfMirrorMemoryDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfMirrorMemoryDTCByStatusMask, status_mask=status_mask)
 	
-	@standard_error_management
 	def get_number_of_emission_dtc_by_status_mask(self, status_mask):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportNumberOfEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
 
-	@standard_error_management
 	def get_number_of_dtc_by_status_severity_mask(self, status_mask, severity_mask):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportNumberOfDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 	
-	@standard_error_management
 	def get_dtc_severity(self, dtc):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC, dtc=dtc)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC, dtc=dtc)
 
-	@standard_error_management
 	def get_supported_dtc(self):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportSupportedDTCs)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportSupportedDTCs)
 
-	@standard_error_management
 	def get_first_test_failed_dtc(self):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportFirstTestFailedDTC)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportFirstTestFailedDTC)
 
-	@standard_error_management
 	def get_first_confirmed_dtc(self):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportFirstConfirmedDTC)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportFirstConfirmedDTC)
 
-	@standard_error_management
 	def get_most_recent_test_failed_dtc(self):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportMostRecentTestFailedDTC)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMostRecentTestFailedDTC)
 
-	@standard_error_management
 	def get_most_recent_confirmed_dtc(self):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportMostRecentConfirmedDTC)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMostRecentConfirmedDTC)
 
-	@standard_error_management
 	def get_dtc_with_permanent_status(self):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportDTCWithPermanentStatus)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCWithPermanentStatus)
 
-	@standard_error_management
 	def get_dtc_fault_counter(self):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportDTCFaultDetectionCounter)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCFaultDetectionCounter)
 
-	@standard_error_management
 	def get_dtc_snapshot_identification(self):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportDTCSnapshotIdentification)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotIdentification)
 
-	@standard_error_management
 	def get_dtc_snapshot_by_dtc_number(self, dtc, record_number=0xFF):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber, dtc=dtc, snapshot_record_number=record_number)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber, dtc=dtc, snapshot_record_number=record_number)
 
-	@standard_error_management
 	def get_dtc_snapshot_by_record_number(self, record_number):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber, snapshot_record_number=record_number)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber, snapshot_record_number=record_number)
 
-	@standard_error_management
 	def get_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number,data_size=data_size)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number,data_size=data_size)
 
-	@standard_error_management
 	def get_mirrormemory_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
-		return self.read_dtc_information._func_no_error_management(self, services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number, data_size=data_size)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number, data_size=data_size)
 
 	# Performs a ReadDiagnsticInformation service request.
 	# Many request are encoded the same way and many response are encoded the same way. Request grouping and response grouping are independent.
