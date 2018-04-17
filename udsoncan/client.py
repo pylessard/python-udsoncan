@@ -63,7 +63,6 @@ class Client:
 	# There is a security mechanism to avoid nesting try_catch by calling a decorated function from another decorated function.
 	# if func1 and func2 are decorated and func2 calls func1, it should be done this way : self.func1._func_no_error_management(self, ...)
 	def standard_error_management(func):
-		# Note this works because it is defined within the class that uses it. If moved outside, name collision could be a problem
 		def norecurse(f):	
 			def func(*args, **kwargs):
 				if len([l[2] for l in traceback.extract_stack() if l[2] == f.__name__]) > 0:
@@ -72,7 +71,8 @@ class Client:
 			return func
 
 		@norecurse
-		def decorated(self, *args, **kwargs):
+		# Long name to minimize chances of name collision
+		def client_standard_error_management_decorated_fn(self, *args, **kwargs):
 			try:
 				return func(self, *args, **kwargs)
 			
@@ -108,9 +108,9 @@ class Client:
 				self.logger.error('[%s] : %s' % (e.__class__.__name__, str(e)))
 				raise
 
-		decorated._func_no_error_management = func
-		return decorated
-		
+		client_standard_error_management_decorated_fn._func_no_error_management = func
+		return client_standard_error_management_decorated_fn
+
 	# Performs a DiagnosticSessionControl service request
 	@standard_error_management
 	def change_session(self, newsession):
