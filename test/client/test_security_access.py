@@ -239,10 +239,29 @@ class TestUnlockSecurityService(ClientServerTest):
 		self.udsclient.config['security_algo'] = self.dummy_algo
 		self.udsclient.config['security_algo_params'] = 0xFF
 		response = self.udsclient.unlock_security_access(0x07)	
+		response = self.udsclient.unlock_security_access(0x08)	
 		self.assertTrue(response.positive)
 
-		response = self.udsclient.unlock_security_access(0x08)
-		self.assertTrue(response.positive)
+
+	def test_unlock_seed_fail_exception(self):
+		self.wait_request_and_respond(b"\x7F\x27\x11")	
+
+	def _test_unlock_seed_fail_exception(self):
+		self.udsclient.config['security_algo'] = self.dummy_algo
+		self.udsclient.config['security_algo_params'] = 0xFF
+		with self.assertRaises(NegativeResponseException):
+			response = self.udsclient.unlock_security_access(0x07)	
+
+	def test_unlock_seed_fail_no_exception(self):
+		self.wait_request_and_respond(b"\x7F\x27\x11")	
+
+	def _test_unlock_seed_fail_no_exception(self):
+		self.udsclient.config['security_algo'] = self.dummy_algo
+		self.udsclient.config['security_algo_params'] = 0xFF
+		self.udsclient.config['exception_on_negative_response'] = False
+		response = self.udsclient.unlock_security_access(0x07)
+		self.assertTrue(response.valid)
+		self.assertFalse(response.positive)
 
 	def test_no_algo_set(self):
 		pass

@@ -26,7 +26,6 @@ class Client:
 		self.conn = conn
 		self.request_timeout = request_timeout
 		self.config = dict(config) # Makes a copy of given configuration
-		self.
 
 		self.refresh_config()
 
