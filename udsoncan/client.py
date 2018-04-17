@@ -57,9 +57,14 @@ class Client:
 	def refresh_config(self):
 		self.configure_logger()
 	
-
+	# Decorator to apply on functions that the user will call.
+	# Each functions raises exceptions. This decorator handle these exception, log them, 
+	# then suppress them or not depending on the client configuration.
+	# There is a security mechanism to avoid nesting try_catch by calling a decorated function from another decorated function.
+	# if func1 and func2 are decorated and func2 calls func1, it should be done this way : self.func1._func_no_error_management(self, ...)
 	def standard_error_management(func):
-		def norecurse(f):
+		# Note this works because it is defined within the class that uses it. If moved outside, name collision could be a problem
+		def norecurse(f):	
 			def func(*args, **kwargs):
 				if len([l[2] for l in traceback.extract_stack() if l[2] == f.__name__]) > 0:
 					raise RuntimeError('Recursion within the error management system.')
@@ -105,10 +110,8 @@ class Client:
 
 		decorated._func_no_error_management = func
 		return decorated
-
-	def test(self):
-		return 
-
+		
+	# Performs a DiagnosticSessionControl service request
 	@standard_error_management
 	def change_session(self, newsession):
 		service = services.DiagnosticSessionControl(newsession)	
@@ -132,7 +135,7 @@ class Client:
 
 		return response
 
-##  SecurityAccess
+	# Performs a SecurityAccess service request. Request Seed
 	@standard_error_management
 	def request_seed(self, level):
 		service = services.SecurityAccess(level, mode=services.SecurityAccess.Mode.RequestSeed)
@@ -156,6 +159,7 @@ class Client:
 		response.parsed_data = seed
 		return response
 
+	# Performs a SecurityAccess service request. Send key
 	@standard_error_management
 	def send_key(self, level, key):
 		service = services.SecurityAccess(level, mode=services.SecurityAccess.Mode.SendKey)
@@ -179,7 +183,7 @@ class Client:
 
 		return response
 	
-	# successively request a seed, compute the key and sends it.	
+	# # Performs 2 SecurityAccess service request. successively request a seed, compute the key and sends it.	
 	@standard_error_management
 	def unlock_security_access(self, level):
 		if 'security_algo' not in self.config or not callable(self.config['security_algo']):
