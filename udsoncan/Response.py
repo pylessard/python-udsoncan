@@ -99,7 +99,7 @@ class Response:
 		self.code_name = ""
 		self.valid = False
 		self.invalid_reason = "Object not initialized"
-		self.parsed_data = None
+		self.service_data = None
 		self.original_payload = None
 		self.unexpected = False
 		

@@ -36,7 +36,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 	def _test_rdbi_single_success(self):
 		response = self.udsclient.read_data_by_identifier(dids = 1)
 		self.assertTrue(response.positive)
-		values = response.parsed_data
+		values = response.service_data
 		self.assertEqual(values[1], (0x1234,))
 
 	def test_rdbi_multiple_success(self):
@@ -47,7 +47,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 	def _test_rdbi_multiple_success(self):
 		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
 		self.assertTrue(response.positive)
-		values = response.parsed_data
+		values = response.service_data
 		self.assertEqual(values[1], (0x1234,))		
 		self.assertEqual(values[2], (0x7856,))		
 		self.assertEqual(values[3], 0x10)	
@@ -62,7 +62,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 		for i in range(8):
 			response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
 			self.assertTrue(response.positive)
-			values = response.parsed_data
+			values = response.service_data
 			self.assertEqual(values[1], (0x1234,))		
 			self.assertEqual(values[2], (0x7856,))		
 			self.assertEqual(values[3], 0x10)
@@ -100,7 +100,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 	def _test_rdbi_output_format(self):
 		for i in range(2):
 			response = self.udsclient.read_data_by_identifier(dids = [1,2,3], output_fmt="dict")
-			values = response.parsed_data
+			values = response.service_data
 			self.assertTrue(isinstance(values, dict))	
 			self.assertEqual(len(values), 3)			
 

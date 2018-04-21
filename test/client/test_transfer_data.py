@@ -15,7 +15,7 @@ class TestTransferData(ClientServerTest):
 
 	def _test_transfer_data_success(self):
 		response = self.udsclient.transfer_data(block_sequence_counter=0x22, data=b'\x12\x34\x56')
-		self.assertEqual(response.parsed_data, b'\x89\xab\xcd\xef')
+		self.assertEqual(response.service_data, b'\x89\xab\xcd\xef')
 
 	def test_transfer_data_no_data_ok(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -24,7 +24,7 @@ class TestTransferData(ClientServerTest):
 
 	def _test_transfer_data_no_data_ok(self):
 		response = self.udsclient.transfer_data(block_sequence_counter=0x22)
-		self.assertEqual(response.parsed_data, b'')	
+		self.assertEqual(response.service_data, b'')	
 
 	def test_transfer_data_denied_exception(self):
 		self.wait_request_and_respond(b"\x7F\x36\x73") # wrong block sequence number

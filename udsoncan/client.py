@@ -131,7 +131,7 @@ class Client:
 		if received != expected:
 			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (received, expected))
 
-		response.parsed_data = response.data[1:] if len(response.data) > 1 else b''
+		response.service_data = response.data[1:] if len(response.data) > 1 else b''
 
 		return response
 
@@ -156,7 +156,7 @@ class Client:
 
 		seed = response.data[1:]
 		self.logger.debug('Received seed : [%s]' % (binascii.hexlify(seed)))
-		response.parsed_data = seed
+		response.service_data = seed
 		return response
 
 	# Performs a SecurityAccess service request. Send key
@@ -189,7 +189,7 @@ class Client:
 		if 'security_algo' not in self.config or not callable(self.config['security_algo']):
 			raise NotImplementedError("Client configuration does not provide a security algorithm")
 		
-		seed = self.request_seed._func_no_error_management(self, level).parsed_data
+		seed = self.request_seed._func_no_error_management(self, level).service_data
 		params = self.config['security_algo_params'] if 'security_algo_params' in self.config else None
 		key = self.config['security_algo'].__call__(seed, params)
 		return self.send_key._func_no_error_management(self, level, key)
@@ -344,7 +344,7 @@ class Client:
 		if notreceived > 0:
 			raise UnexpectedResponseException(response, "%d data identifier values have not been received by the server" % notreceived)
 
-		response.parsed_data = values
+		response.service_data = values
 		return response
 
 	# Performs a WriteDataByIdentifier request.
@@ -459,7 +459,7 @@ class Client:
 		if received != expected:
 			raise UnexpectedResponseException(response, "Response received from server (ID = 0x%02x) is not for the requested routine ID (0x%02x)" % (received, expected))
 
-		response.parsed_data = response.data[3:] if len(response.data) >3 else b''
+		response.service_data = response.data[3:] if len(response.data) >3 else b''
 
 		return response
 
@@ -505,7 +505,7 @@ class Client:
 		if response.data is not None and service.access_type not in [services.AccessTimingParameter.AccessType.readExtendedTimingParameterSet, services.AccessTimingParameter.AccessType.readCurrentlyActiveTimingParameters]:
 			self.logger.warning("Server returned data for AccessTimingParameter altough none were asked")
 
-		response.parsed_data = response.data[1:] if len(response.data) > 1 else b''
+		response.service_data = response.data[1:] if len(response.data) > 1 else b''
 		return response
 
 	# Performs a CommunicationControl service request
@@ -578,7 +578,7 @@ class Client:
 		for i in range(1,lfid+1):
 			todecode[-i] = response.data[lfid+1-i]
 
-		response.parsed_data = struct.unpack('>q', todecode)[0]
+		response.service_data = struct.unpack('>q', todecode)[0]
 		return response
 
 	@standard_error_management
@@ -602,7 +602,7 @@ class Client:
 		if received != expected:
 			raise UnexpectedResponseException(response, "Block sequence number of response (0x%02x) does not match request block sequence number (0x%02x)" % (received, expected))
 
-		response.parsed_data = response.data[1:] if len(response.data) > 1 else b''
+		response.service_data = response.data[1:] if len(response.data) > 1 else b''
 		return response
 
 	@standard_error_management
@@ -615,7 +615,7 @@ class Client:
 
 		response = self.send_request(request)
 
-		response.parsed_data = response.data
+		response.service_data = response.data
 		return response
 
 	@standard_error_management
@@ -733,7 +733,7 @@ class Client:
 			except Exception as e:
 				raise UnexpectedResponseException(response, 'Response from server could not be decoded. Exception is : %s' % e)
 			
-			response.parsed_data = decoded_data
+			response.service_data = decoded_data
 			return response
 
 	@standard_error_management
@@ -790,7 +790,7 @@ class Client:
 			else:
 				raise UnexpectedResponseException(response, 'Data block given by the server is too long. Client requested for %d bytes but received %d bytes' % (memory_location.memorysize, len(response.data)))
 
-		response.parsed_data = response.data
+		response.service_data = response.data
 		return response
 
 	@standard_error_management
@@ -1506,7 +1506,7 @@ class Client:
 			parsed_response_container.dtcs.append(dtc)
 			parsed_response_container.dtc_count = len(parsed_response_container.dtcs)
 
-		response.parsed_data = parsed_response_container
+		response.service_data = parsed_response_container
 		return response
 
 	# Basic transmission of request. This will need to be improved

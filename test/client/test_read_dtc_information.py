@@ -20,8 +20,8 @@ class GenericTest_RequestStatusMask_ResponseNumberOfDTC():
 
 	def _test_normal_behaviour_param_int(self):
 		response = getattr(self.udsclient, self.client_function).__call__(0x5A)
-		self.assertEqual(response.parsed_data.dtc_format, Dtc.Format.ISO14229_1)
-		self.assertEqual(response.parsed_data.dtc_count, 0x1234)
+		self.assertEqual(response.service_data.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.service_data.dtc_count, 0x1234)
 
 	def test_normal_behaviour_param_instance(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -30,16 +30,16 @@ class GenericTest_RequestStatusMask_ResponseNumberOfDTC():
 
 	def _test_normal_behaviour_param_instance(self):
 		response = getattr(self.udsclient, self.client_function).__call__(Dtc.Status(test_failed_this_operation_cycle = True, confirmed = True, test_not_completed_since_last_clear = True, test_not_completed_this_operation_cycle = True))
-		self.assertEqual(response.parsed_data.dtc_format, Dtc.Format.ISO14229_1)
-		self.assertEqual(response.parsed_data.dtc_count, 0x1234)
+		self.assertEqual(response.service_data.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.service_data.dtc_count, 0x1234)
 
 	def test_normal_behaviour_harmless_extra_byte(self):
 		self.wait_request_and_respond(b"\x59"+self.sb+b"\xFB\x01\x12\x34\x00\x11\x22")
 
 	def _test_normal_behaviour_harmless_extra_byte(self):
 		response = getattr(self.udsclient, self.client_function).__call__(0x5A)
-		self.assertEqual(response.parsed_data.dtc_format, Dtc.Format.ISO14229_1)
-		self.assertEqual(response.parsed_data.dtc_count, 0x1234)		
+		self.assertEqual(response.service_data.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.service_data.dtc_count, 0x1234)		
 
 	def test_bad_response_subfn_exception(self):
 		self.wait_request_and_respond(b"\x59"+self.badsb+b"\xFB\x01\x12\x34")
@@ -124,24 +124,24 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 
 
 	def client_assert_response(self, response, expect_all_zero_third_dtc=False):
-		self.assertEqual(response.parsed_data.status_availability, 0xFB)
+		self.assertEqual(response.service_data.status_availability, 0xFB)
 		number_of_dtc = 3 if expect_all_zero_third_dtc else 2
 		
-		self.assertEqual(len(response.parsed_data.dtcs), number_of_dtc)
-		self.assertEqual(response.parsed_data.dtc_count, number_of_dtc)
+		self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
+		self.assertEqual(response.service_data.dtc_count, number_of_dtc)
 
-		self.assertEqual(response.parsed_data.dtcs[0].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[0].status.get_byte_as_int(), 0x20)
-		self.assertEqual(response.parsed_data.dtcs[0].severity.get_byte_as_int(), 0x00)
+		self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[0].status.get_byte_as_int(), 0x20)
+		self.assertEqual(response.service_data.dtcs[0].severity.get_byte_as_int(), 0x00)
 
-		self.assertEqual(response.parsed_data.dtcs[1].id, 0x123457)
-		self.assertEqual(response.parsed_data.dtcs[1].status.get_byte_as_int(), 0x60)
-		self.assertEqual(response.parsed_data.dtcs[1].severity.get_byte_as_int(), 0x00)
+		self.assertEqual(response.service_data.dtcs[1].id, 0x123457)
+		self.assertEqual(response.service_data.dtcs[1].status.get_byte_as_int(), 0x60)
+		self.assertEqual(response.service_data.dtcs[1].severity.get_byte_as_int(), 0x00)
 		
 		if expect_all_zero_third_dtc:
-			self.assertEqual(response.parsed_data.dtcs[2].id, 0)
-			self.assertEqual(response.parsed_data.dtcs[2].status.get_byte_as_int(), 0x00)
-			self.assertEqual(response.parsed_data.dtcs[2].severity.get_byte_as_int(), 0x00)
+			self.assertEqual(response.service_data.dtcs[2].id, 0)
+			self.assertEqual(response.service_data.dtcs[2].status.get_byte_as_int(), 0x00)
+			self.assertEqual(response.service_data.dtcs[2].severity.get_byte_as_int(), 0x00)
 
 	def test_normal_behaviour(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -157,13 +157,13 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 
 	def _test_dtc_duplicate(self):
 		response = getattr(self.udsclient, self.client_function).__call__(0x5A)
-		self.assertEqual(len(response.parsed_data.dtcs), 2)	# We want both of them. Server should avoid duplicate
+		self.assertEqual(len(response.service_data.dtcs), 2)	# We want both of them. Server should avoid duplicate
 
-		self.assertEqual(response.parsed_data.dtcs[0].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[0].status.get_byte_as_int(), 0x20)
+		self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[0].status.get_byte_as_int(), 0x20)
 
-		self.assertEqual(response.parsed_data.dtcs[1].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[1].status.get_byte_as_int(), 0x60)
+		self.assertEqual(response.service_data.dtcs[1].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[1].status.get_byte_as_int(), 0x60)
 
 	def test_normal_behaviour_param_instance(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -290,7 +290,7 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 
 	def _test_no_dtc(self):
 		response = getattr(self.udsclient, self.client_function).__call__(0x5A)
-		self.assertEqual(len(response.parsed_data.dtcs), 0)
+		self.assertEqual(len(response.service_data.dtcs), 0)
 
 	def test_bad_response_subfunction_exception(self):
 		self.wait_request_and_respond(b"\x59"+self.badsb+b"\xFB")	
@@ -368,22 +368,22 @@ class TestReportDTCSnapshotIdentification(ClientServerTest):	# Subfn = 0x3
 	def client_assert_response(self, response, expect_all_zero_third_dtc=False):
 		number_of_dtc = 3 if expect_all_zero_third_dtc else 2
 		
-		self.assertEqual(len(response.parsed_data.dtcs), number_of_dtc)
-		self.assertEqual(response.parsed_data.dtc_count, number_of_dtc)
+		self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
+		self.assertEqual(response.service_data.dtc_count, number_of_dtc)
 
-		self.assertEqual(response.parsed_data.dtcs[0].id, 0x123456)		
-		self.assertEqual(len(response.parsed_data.dtcs[0].snapshots), 2)
-		self.assertEqual(response.parsed_data.dtcs[0].snapshots[0], 1)
-		self.assertEqual(response.parsed_data.dtcs[0].snapshots[1], 2)
+		self.assertEqual(response.service_data.dtcs[0].id, 0x123456)		
+		self.assertEqual(len(response.service_data.dtcs[0].snapshots), 2)
+		self.assertEqual(response.service_data.dtcs[0].snapshots[0], 1)
+		self.assertEqual(response.service_data.dtcs[0].snapshots[1], 2)
 
-		self.assertEqual(response.parsed_data.dtcs[1].id, 0x789abc)		
-		self.assertEqual(len(response.parsed_data.dtcs[1].snapshots), 1)
-		self.assertEqual(response.parsed_data.dtcs[1].snapshots[0], 3)
+		self.assertEqual(response.service_data.dtcs[1].id, 0x789abc)		
+		self.assertEqual(len(response.service_data.dtcs[1].snapshots), 1)
+		self.assertEqual(response.service_data.dtcs[1].snapshots[0], 3)
 		
 		if expect_all_zero_third_dtc:
-			self.assertEqual(response.parsed_data.dtcs[2].id, 0)		
-			self.assertEqual(len(response.parsed_data.dtcs[2].snapshots), 1)
-			self.assertEqual(response.parsed_data.dtcs[2].snapshots[0], 0)
+			self.assertEqual(response.service_data.dtcs[2].id, 0)		
+			self.assertEqual(len(response.service_data.dtcs[2].snapshots), 1)
+			self.assertEqual(response.service_data.dtcs[2].snapshots[0], 0)
 
 	def test_normal_behaviour(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -507,7 +507,7 @@ class TestReportDTCSnapshotIdentification(ClientServerTest):	# Subfn = 0x3
 
 	def _test_no_dtc(self):
 		response  = self.udsclient.get_dtc_snapshot_identification()
-		self.assertEqual(len(response.parsed_data.dtcs), 0)
+		self.assertEqual(len(response.service_data.dtcs), 0)
 
 	def test_bad_response_subfunction_exception(self):
 		self.wait_request_and_respond(b"\x59\x04")	
@@ -598,10 +598,10 @@ class TestReportDTCSnapshotRecordByDTCNumber(ClientServerTest):	# Subfn = 0x4
 		}
 
 	def single_snapshot_assert_response(self, response):
-		self.assertEqual(len(response.parsed_data.dtcs), 1)
-		self.assertEqual(response.parsed_data.dtc_count, 1)
+		self.assertEqual(len(response.service_data.dtcs), 1)
+		self.assertEqual(response.service_data.dtc_count, 1)
 
-		dtc = response.parsed_data.dtcs[0]
+		dtc = response.service_data.dtcs[0]
 
 		self.assertEqual(dtc.id, 0x123456)
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
@@ -619,10 +619,10 @@ class TestReportDTCSnapshotRecordByDTCNumber(ClientServerTest):	# Subfn = 0x4
 		self.assertEqual(dtc.snapshots[0].data['map'], 0x20)  	# Manifoled Absolute Value
 
 	def single_snapshot_2_dids_assert_response(self, response):
-		self.assertEqual(len(response.parsed_data.dtcs), 1)
-		self.assertEqual(response.parsed_data.dtc_count, 1)
+		self.assertEqual(len(response.service_data.dtcs), 1)
+		self.assertEqual(response.service_data.dtc_count, 1)
 
-		dtc = response.parsed_data.dtcs[0]
+		dtc = response.service_data.dtcs[0]
 
 		self.assertEqual(dtc.id, 0x123456)
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
@@ -717,10 +717,10 @@ class TestReportDTCSnapshotRecordByDTCNumber(ClientServerTest):	# Subfn = 0x4
 	def _test_multiple_snapshot_multiple_did(self):
 		response = self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0xFF)
 
-		self.assertEqual(len(response.parsed_data.dtcs), 1)
-		self.assertEqual(response.parsed_data.dtc_count, 1)
+		self.assertEqual(len(response.service_data.dtcs), 1)
+		self.assertEqual(response.service_data.dtc_count, 1)
 
-		dtc = response.parsed_data.dtcs[0]
+		dtc = response.service_data.dtcs[0]
 
 		self.assertEqual(dtc.id, 0x123456)
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
@@ -909,9 +909,9 @@ class TestReportDTCSnapshotRecordByDTCNumber(ClientServerTest):	# Subfn = 0x4
 	def _test_no_record(self):
 		response = self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02)
 		
-		self.assertEqual(len(response.parsed_data.dtcs), 1)
-		self.assertEqual(response.parsed_data.dtc_count, 1)
-		dtc = response.parsed_data.dtcs[0]
+		self.assertEqual(len(response.service_data.dtcs), 1)
+		self.assertEqual(response.service_data.dtc_count, 1)
+		dtc = response.service_data.dtcs[0]
 		self.assertEqual(dtc.id, 0x123456)
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
 		self.assertEqual(len(dtc.snapshots), 0)
@@ -926,9 +926,9 @@ class TestReportDTCSnapshotRecordByDTCNumber(ClientServerTest):	# Subfn = 0x4
 		for i in range(8):
 			response = self.udsclient.get_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02)
 			
-			self.assertEqual(len(response.parsed_data.dtcs), 1)
-			self.assertEqual(response.parsed_data.dtc_count, 1)
-			dtc = response.parsed_data.dtcs[0]
+			self.assertEqual(len(response.service_data.dtcs), 1)
+			self.assertEqual(response.service_data.dtc_count, 1)
+			dtc = response.service_data.dtcs[0]
 			self.assertEqual(dtc.id, 0x123456)
 			self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
 			self.assertEqual(len(dtc.snapshots), 0)
@@ -1003,10 +1003,10 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
 		}
 
 	def single_snapshot_assert_response(self, response):
-		self.assertEqual(len(response.parsed_data.dtcs), 1)
-		self.assertEqual(response.parsed_data.dtc_count, 1)
+		self.assertEqual(len(response.service_data.dtcs), 1)
+		self.assertEqual(response.service_data.dtc_count, 1)
 
-		dtc = response.parsed_data.dtcs[0]
+		dtc = response.service_data.dtcs[0]
 
 		self.assertEqual(dtc.id, 0x123456)
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
@@ -1024,10 +1024,10 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
 		self.assertEqual(dtc.snapshots[0].data['map'], 0x20)  	# Manifoled Absolute Value
 
 	def single_snapshot_2_dids_assert_response(self, response):
-		self.assertEqual(len(response.parsed_data.dtcs), 1)
-		self.assertEqual(response.parsed_data.dtc_count, 1)
+		self.assertEqual(len(response.service_data.dtcs), 1)
+		self.assertEqual(response.service_data.dtc_count, 1)
 
-		dtc = response.parsed_data.dtcs[0]
+		dtc = response.service_data.dtcs[0]
 
 		self.assertEqual(dtc.id, 0x123456)
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
@@ -1070,7 +1070,7 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
 	def _test_single_snapshot_zeropadding_ok_1(self):
 		for i in range(7):
 			response = self.udsclient.get_dtc_snapshot_by_record_number(record_number=2)
-			self.assertEqual(len(response.parsed_data.dtcs), 0)
+			self.assertEqual(len(response.service_data.dtcs), 0)
 
 	def test_single_snapshot_zeropadding_ok_2(self): # Example provided in standard
 		data = b'\x59\x05\x02\x12\x34\x56\x24\x01\x47\x11\xa6\x66\x07\x50\x20'
@@ -1123,10 +1123,10 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
 	def _test_multiple_snapshot_multiple_dtc(self):
 		response = self.udsclient.get_dtc_snapshot_by_record_number(record_number=0xFF)
 
-		self.assertEqual(len(response.parsed_data.dtcs), 2)
-		self.assertEqual(response.parsed_data.dtc_count, 2)
+		self.assertEqual(len(response.service_data.dtcs), 2)
+		self.assertEqual(response.service_data.dtc_count, 2)
 
-		dtc = response.parsed_data.dtcs[0]
+		dtc = response.service_data.dtcs[0]
 
 		self.assertEqual(dtc.id, 0x123456)
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
@@ -1151,7 +1151,7 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
 		self.assertEqual(dtc.snapshots[1].data[1], 0x88)
 		self.assertEqual(dtc.snapshots[1].data[2], 0x77)
 
-		dtc = response.parsed_data.dtcs[1]
+		dtc = response.service_data.dtcs[1]
 
 		self.assertEqual(dtc.id, 0x123457)
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x25)
@@ -1321,8 +1321,8 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
 	def _test_no_record(self):
 		response = self.udsclient.get_dtc_snapshot_by_record_number(record_number=0x02)
 		
-		self.assertEqual(len(response.parsed_data.dtcs), 0)
-		self.assertEqual(response.parsed_data.dtc_count, 0)
+		self.assertEqual(len(response.service_data.dtcs), 0)
+		self.assertEqual(response.service_data.dtc_count, 0)
 
 	def test_no_record_zero_padding_ok(self):
 		data = b'\x59\x05\x02'
@@ -1333,8 +1333,8 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
 		self.udsclient.config['tolerate_zero_padding'] = True
 		for i in range(8):
 			response = self.udsclient.get_dtc_snapshot_by_record_number(record_number=0x02)
-			self.assertEqual(len(response.parsed_data.dtcs), 0)
-			self.assertEqual(response.parsed_data.dtc_count, 0)
+			self.assertEqual(len(response.service_data.dtcs), 0)
+			self.assertEqual(response.service_data.dtc_count, 0)
 
 	def test_no_record_zero_padding_not_ok_exception(self):
 		data = b'\x59\x05\x02'
@@ -1376,10 +1376,10 @@ class GenericReportExtendedDataByRecordNumber():
 		self.client_function = client_function
 
 	def assert_single_data_response(self, response):
-		self.assertEqual(len(response.parsed_data.dtcs), 1)
-		self.assertEqual(response.parsed_data.dtc_count, 1)
+		self.assertEqual(len(response.service_data.dtcs), 1)
+		self.assertEqual(response.service_data.dtc_count, 1)
 
-		dtc = response.parsed_data.dtcs[0]
+		dtc = response.service_data.dtcs[0]
 
 		self.assertEqual(dtc.id, 0x123456)
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
@@ -1458,10 +1458,10 @@ class GenericReportExtendedDataByRecordNumber():
 	def _test_double_data(self):
 		response = getattr(self.udsclient, self.client_function).__call__(dtc=0x123456, data_size=3)
 		
-		self.assertEqual(len(response.parsed_data.dtcs), 1)
-		self.assertEqual(response.parsed_data.dtc_count, 1)
+		self.assertEqual(len(response.service_data.dtcs), 1)
+		self.assertEqual(response.service_data.dtc_count, 1)
 
-		dtc = response.parsed_data.dtcs[0]
+		dtc = response.service_data.dtcs[0]
 
 		self.assertEqual(dtc.id, 0x123456)
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
@@ -1483,9 +1483,9 @@ class GenericReportExtendedDataByRecordNumber():
 	def _test_no_data(self):
 		response = getattr(self.udsclient, self.client_function).__call__(dtc=0x123456, data_size=3)
 		
-		self.assertEqual(len(response.parsed_data.dtcs), 1)
-		self.assertEqual(response.parsed_data.dtc_count, 1)
-		dtc = response.parsed_data.dtcs[0]
+		self.assertEqual(len(response.service_data.dtcs), 1)
+		self.assertEqual(response.service_data.dtc_count, 1)
+		dtc = response.service_data.dtcs[0]
 
 		self.assertEqual(dtc.id, 0x123456)
 		self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
@@ -1501,9 +1501,9 @@ class GenericReportExtendedDataByRecordNumber():
 		for i in range(8):
 			response = getattr(self.udsclient, self.client_function).__call__(dtc=0x123456, data_size=3)
 			
-			self.assertEqual(len(response.parsed_data.dtcs), 1)
-			self.assertEqual(response.parsed_data.dtc_count, 1)
-			dtc = response.parsed_data.dtcs[0]
+			self.assertEqual(len(response.service_data.dtcs), 1)
+			self.assertEqual(response.service_data.dtc_count, 1)
+			dtc = response.service_data.dtcs[0]
 
 			self.assertEqual(dtc.id, 0x123456)
 			self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
@@ -1684,8 +1684,8 @@ class TestReportNumberOfDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x7
 
 	def _test_normal_behaviour_param_int(self):
 		response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
-		self.assertEqual(response.parsed_data.dtc_format, Dtc.Format.ISO14229_1)
-		self.assertEqual(response.parsed_data.dtc_count, 0x1234)
+		self.assertEqual(response.service_data.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.service_data.dtc_count, 0x1234)
 
 	def test_normal_behaviour_param_instance(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -1694,16 +1694,16 @@ class TestReportNumberOfDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x7
 
 	def _test_normal_behaviour_param_instance(self):
 		response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = Dtc.Status(test_failed=True), severity_mask=Dtc.Severity(check_immediately=True, check_at_next_exit=True))
-		self.assertEqual(response.parsed_data.dtc_format, Dtc.Format.ISO14229_1)
-		self.assertEqual(response.parsed_data.dtc_count, 0x1234)
+		self.assertEqual(response.service_data.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.service_data.dtc_count, 0x1234)
 
 	def test_normal_behaviour_harmless_extra_byte(self):
 		self.wait_request_and_respond(b"\x59\x07\xFB\x01\x12\x34\x00\x11\x22")
 
 	def _test_normal_behaviour_harmless_extra_byte(self):
 		response = self.udsclient.get_number_of_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
-		self.assertEqual(response.parsed_data.dtc_format, Dtc.Format.ISO14229_1)
-		self.assertEqual(response.parsed_data.dtc_count, 0x1234)		
+		self.assertEqual(response.service_data.dtc_format, Dtc.Format.ISO14229_1)
+		self.assertEqual(response.service_data.dtc_count, 0x1234)		
 
 	def test_bad_response_subfn_exception(self):
 		self.wait_request_and_respond(b"\x59\x08\xFB\x01\x12\x34")
@@ -1786,27 +1786,27 @@ class TestReportNumberOfDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x7
 class TestReportDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x8
 
 	def client_assert_response(self, response, expect_all_zero_third_dtc=False):
-		self.assertEqual(response.parsed_data.status_availability, 0xFB)
+		self.assertEqual(response.service_data.status_availability, 0xFB)
 		number_of_dtc = 3 if expect_all_zero_third_dtc else 2
 		
-		self.assertEqual(len(response.parsed_data.dtcs), number_of_dtc)
-		self.assertEqual(response.parsed_data.dtc_count, number_of_dtc)
+		self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
+		self.assertEqual(response.service_data.dtc_count, number_of_dtc)
 
-		self.assertEqual(response.parsed_data.dtcs[0].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[0].status.get_byte_as_int(), 0x20)
-		self.assertEqual(response.parsed_data.dtcs[0].severity.get_byte_as_int(), 0x80)
-		self.assertEqual(response.parsed_data.dtcs[0].functional_unit, 0x99)
+		self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[0].status.get_byte_as_int(), 0x20)
+		self.assertEqual(response.service_data.dtcs[0].severity.get_byte_as_int(), 0x80)
+		self.assertEqual(response.service_data.dtcs[0].functional_unit, 0x99)
 
-		self.assertEqual(response.parsed_data.dtcs[1].id, 0x123457)
-		self.assertEqual(response.parsed_data.dtcs[1].status.get_byte_as_int(), 0x60)
-		self.assertEqual(response.parsed_data.dtcs[1].severity.get_byte_as_int(), 0x40)
-		self.assertEqual(response.parsed_data.dtcs[1].functional_unit, 0x88)
+		self.assertEqual(response.service_data.dtcs[1].id, 0x123457)
+		self.assertEqual(response.service_data.dtcs[1].status.get_byte_as_int(), 0x60)
+		self.assertEqual(response.service_data.dtcs[1].severity.get_byte_as_int(), 0x40)
+		self.assertEqual(response.service_data.dtcs[1].functional_unit, 0x88)
 		
 		if expect_all_zero_third_dtc:
-			self.assertEqual(response.parsed_data.dtcs[2].id, 0)
-			self.assertEqual(response.parsed_data.dtcs[2].status.get_byte_as_int(), 0x00)
-			self.assertEqual(response.parsed_data.dtcs[2].severity.get_byte_as_int(), 0x00)
-			self.assertEqual(response.parsed_data.dtcs[2].functional_unit, 0x00)
+			self.assertEqual(response.service_data.dtcs[2].id, 0)
+			self.assertEqual(response.service_data.dtcs[2].status.get_byte_as_int(), 0x00)
+			self.assertEqual(response.service_data.dtcs[2].severity.get_byte_as_int(), 0x00)
+			self.assertEqual(response.service_data.dtcs[2].functional_unit, 0x00)
 
 	def test_normal_behaviour(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -1830,17 +1830,17 @@ class TestReportDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x8
 
 	def _test_dtc_duplicate(self):
 		response = self.udsclient.get_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
-		self.assertEqual(len(response.parsed_data.dtcs), 2)	# We want both of them. Server should avoid duplicate
+		self.assertEqual(len(response.service_data.dtcs), 2)	# We want both of them. Server should avoid duplicate
 
-		self.assertEqual(response.parsed_data.dtcs[0].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[0].status.get_byte_as_int(), 0x20)
-		self.assertEqual(response.parsed_data.dtcs[0].severity.get_byte_as_int(), 0x80)
-		self.assertEqual(response.parsed_data.dtcs[0].functional_unit, 0x99)
+		self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[0].status.get_byte_as_int(), 0x20)
+		self.assertEqual(response.service_data.dtcs[0].severity.get_byte_as_int(), 0x80)
+		self.assertEqual(response.service_data.dtcs[0].functional_unit, 0x99)
 
-		self.assertEqual(response.parsed_data.dtcs[1].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[1].status.get_byte_as_int(), 0x60)
-		self.assertEqual(response.parsed_data.dtcs[1].severity.get_byte_as_int(), 0x40)
-		self.assertEqual(response.parsed_data.dtcs[1].functional_unit, 0x88)
+		self.assertEqual(response.service_data.dtcs[1].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[1].status.get_byte_as_int(), 0x60)
+		self.assertEqual(response.service_data.dtcs[1].severity.get_byte_as_int(), 0x40)
+		self.assertEqual(response.service_data.dtcs[1].functional_unit, 0x88)
 
 	def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
 		data = b'\x59\x08\xFB\x80\x99\x12\x34\x56\x20\x40\x88\x12\x34\x57\x60'
@@ -1913,7 +1913,7 @@ class TestReportDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x8
 
 	def _test_no_dtc(self):
 		response = self.udsclient.get_dtc_by_status_severity_mask(status_mask = 0x01, severity_mask=0xC0)
-		self.assertEqual(len(response.parsed_data.dtcs), 0)
+		self.assertEqual(len(response.service_data.dtcs), 0)
 
 	def test_bad_response_subfunction(self):
 		self.wait_request_and_respond(b'\x59\x09\xFB')	
@@ -1966,16 +1966,16 @@ class TestReportDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x8
 class TestReportSeverityInformationOfDTC(ClientServerTest):	# Subfn = 0x9
 
 	def client_assert_response(self, response):
-		self.assertEqual(response.parsed_data.status_availability, 0xFB)
+		self.assertEqual(response.service_data.status_availability, 0xFB)
 		number_of_dtc = 1
 		
-		self.assertEqual(len(response.parsed_data.dtcs), number_of_dtc)
-		self.assertEqual(response.parsed_data.dtc_count, number_of_dtc)
+		self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
+		self.assertEqual(response.service_data.dtc_count, number_of_dtc)
 
-		self.assertEqual(response.parsed_data.dtcs[0].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[0].status.get_byte_as_int(), 0x20)
-		self.assertEqual(response.parsed_data.dtcs[0].severity.get_byte_as_int(), 0x80)
-		self.assertEqual(response.parsed_data.dtcs[0].functional_unit, 0x99)
+		self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[0].status.get_byte_as_int(), 0x20)
+		self.assertEqual(response.service_data.dtcs[0].severity.get_byte_as_int(), 0x80)
+		self.assertEqual(response.service_data.dtcs[0].functional_unit, 0x99)
 
 	def test_normal_behaviour(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -2021,7 +2021,7 @@ class TestReportSeverityInformationOfDTC(ClientServerTest):	# Subfn = 0x9
 
 	def _test_no_dtc(self):
 		response = self.udsclient.get_dtc_severity(0x123456)
-		self.assertEqual(len(response.parsed_data.dtcs), 0)
+		self.assertEqual(len(response.service_data.dtcs), 0)
 
 	def test_bad_response_subfunction_exception(self):
 		self.wait_request_and_respond(b'\x59\x0A\xFB')	
@@ -2107,29 +2107,29 @@ class GenericTestNoParamRequest_DtcAndStatusMaskResponse():
 		return getattr(self.udsclient, self.client_function).__call__()
 	
 	def client_assert_response(self, response, expect_all_zero_fourth_dtc=False):
-		self.assertEqual(response.parsed_data.status_availability, 0x7F)
+		self.assertEqual(response.service_data.status_availability, 0x7F)
 		number_of_dtc = 4 if expect_all_zero_fourth_dtc else 3
 		
-		self.assertEqual(len(response.parsed_data.dtcs), number_of_dtc)
-		self.assertEqual(response.parsed_data.dtc_count, number_of_dtc)
+		self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
+		self.assertEqual(response.service_data.dtc_count, number_of_dtc)
 
-		self.assertEqual(response.parsed_data.dtcs[0].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[0].status.get_byte_as_int(), 0x24)
-		self.assertEqual(response.parsed_data.dtcs[0].severity.get_byte_as_int(), 0x00)
+		self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[0].status.get_byte_as_int(), 0x24)
+		self.assertEqual(response.service_data.dtcs[0].severity.get_byte_as_int(), 0x00)
 
-		self.assertEqual(response.parsed_data.dtcs[1].id, 0x234505)
-		self.assertEqual(response.parsed_data.dtcs[1].status.get_byte_as_int(), 0x00)
-		self.assertEqual(response.parsed_data.dtcs[1].severity.get_byte_as_int(), 0x00)
+		self.assertEqual(response.service_data.dtcs[1].id, 0x234505)
+		self.assertEqual(response.service_data.dtcs[1].status.get_byte_as_int(), 0x00)
+		self.assertEqual(response.service_data.dtcs[1].severity.get_byte_as_int(), 0x00)
 
 
-		self.assertEqual(response.parsed_data.dtcs[2].id, 0xabcd01)
-		self.assertEqual(response.parsed_data.dtcs[2].status.get_byte_as_int(), 0x2F)
-		self.assertEqual(response.parsed_data.dtcs[2].severity.get_byte_as_int(), 0x00)		
+		self.assertEqual(response.service_data.dtcs[2].id, 0xabcd01)
+		self.assertEqual(response.service_data.dtcs[2].status.get_byte_as_int(), 0x2F)
+		self.assertEqual(response.service_data.dtcs[2].severity.get_byte_as_int(), 0x00)		
 
 		if expect_all_zero_fourth_dtc:
-			self.assertEqual(response.parsed_data.dtcs[3].id, 0)
-			self.assertEqual(response.parsed_data.dtcs[3].status.get_byte_as_int(), 0x00)
-			self.assertEqual(response.parsed_data.dtcs[3].severity.get_byte_as_int(), 0x00)
+			self.assertEqual(response.service_data.dtcs[3].id, 0)
+			self.assertEqual(response.service_data.dtcs[3].status.get_byte_as_int(), 0x00)
+			self.assertEqual(response.service_data.dtcs[3].severity.get_byte_as_int(), 0x00)
 
 	def test_normal_behaviour(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -2144,13 +2144,13 @@ class GenericTestNoParamRequest_DtcAndStatusMaskResponse():
 
 	def _test_dtc_duplicate(self):
 		response = self.do_client_request()
-		self.assertEqual(len(response.parsed_data.dtcs), 2)	# We want both of them. Server should avoid duplicate
+		self.assertEqual(len(response.service_data.dtcs), 2)	# We want both of them. Server should avoid duplicate
 
-		self.assertEqual(response.parsed_data.dtcs[0].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[0].status.get_byte_as_int(), 0x24)
+		self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[0].status.get_byte_as_int(), 0x24)
 
-		self.assertEqual(response.parsed_data.dtcs[1].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[1].status.get_byte_as_int(), 0x25)
+		self.assertEqual(response.service_data.dtcs[1].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[1].status.get_byte_as_int(), 0x25)
 
 	def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
 		data = b'\x59'+self.sb+b'\x7F\x12\x34\x56\x24\x23\x45\x05\x00\xAB\xCD\x01\x2F'
@@ -2262,8 +2262,8 @@ class GenericTestNoParamRequest_DtcAndStatusMaskResponse():
 
 	def _test_no_dtc(self):
 		response = self.do_client_request()
-		self.assertEqual(len(response.parsed_data.dtcs), 0)
-		self.assertEqual(response.parsed_data.dtc_count, 0)
+		self.assertEqual(len(response.service_data.dtcs), 0)
+		self.assertEqual(response.service_data.dtc_count, 0)
 
 	def test_bad_response_subfunction_exception(self):
 		self.wait_request_and_respond(b"\x59"+self.badsb+b"\x7F")
@@ -2374,18 +2374,18 @@ class TestReportDTCFaultDetectionCounter(ClientServerTest):	# Subfn = 0x14
 	def client_assert_response(self, response, expect_all_zero_third_dtc=False):
 		number_of_dtc = 3 if expect_all_zero_third_dtc else 2
 		
-		self.assertEqual(len(response.parsed_data.dtcs), number_of_dtc)
-		self.assertEqual(response.parsed_data.dtc_count, number_of_dtc)
+		self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
+		self.assertEqual(response.service_data.dtc_count, number_of_dtc)
 
-		self.assertEqual(response.parsed_data.dtcs[0].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[0].fault_counter, 0x01)
+		self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[0].fault_counter, 0x01)
 
-		self.assertEqual(response.parsed_data.dtcs[1].id, 0x123457)
-		self.assertEqual(response.parsed_data.dtcs[1].fault_counter, 0x7E)
+		self.assertEqual(response.service_data.dtcs[1].id, 0x123457)
+		self.assertEqual(response.service_data.dtcs[1].fault_counter, 0x7E)
 
 		if expect_all_zero_third_dtc:
-			self.assertEqual(response.parsed_data.dtcs[2].id, 0)
-			self.assertEqual(response.parsed_data.dtcs[2].fault_counter, 0x00)
+			self.assertEqual(response.service_data.dtcs[2].id, 0)
+			self.assertEqual(response.service_data.dtcs[2].fault_counter, 0x00)
 
 	def test_normal_behaviour(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -2400,13 +2400,13 @@ class TestReportDTCFaultDetectionCounter(ClientServerTest):	# Subfn = 0x14
 
 	def _test_dtc_duplicate(self):
 		response = self.udsclient.get_dtc_fault_counter()
-		self.assertEqual(len(response.parsed_data.dtcs), 2)	# We want both of them. Server should avoid duplicate
+		self.assertEqual(len(response.service_data.dtcs), 2)	# We want both of them. Server should avoid duplicate
 
-		self.assertEqual(response.parsed_data.dtcs[0].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[0].fault_counter, 0x01)
+		self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[0].fault_counter, 0x01)
 
-		self.assertEqual(response.parsed_data.dtcs[1].id, 0x123456)
-		self.assertEqual(response.parsed_data.dtcs[1].fault_counter, 0x7E)
+		self.assertEqual(response.service_data.dtcs[1].id, 0x123456)
+		self.assertEqual(response.service_data.dtcs[1].fault_counter, 0x7E)
 
 	def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
 		data = b'\x59\x14\x12\x34\x56\x01\x12\x34\x57\x7E'
@@ -2514,8 +2514,8 @@ class TestReportDTCFaultDetectionCounter(ClientServerTest):	# Subfn = 0x14
 
 	def _test_no_dtc(self):
 		response = self.do_client_request()
-		self.assertEqual(len(response.parsed_data.dtcs), 0)
-		self.assertEqual(response.parsed_data.dtc_count, 0)
+		self.assertEqual(len(response.service_data.dtcs), 0)
+		self.assertEqual(response.service_data.dtc_count, 0)
 
 	def test_bad_response_subfunction_exception(self):
 		self.wait_request_and_respond(b"\x59\x15")	

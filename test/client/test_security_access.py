@@ -14,7 +14,7 @@ class TestRequestSeed(ClientServerTest):
 
 	def _test_request_seed_success(self):
 		response = self.udsclient.request_seed(0x05)
-		self.assertEqual(response.parsed_data, b"\x99\x88\x77\x66")
+		self.assertEqual(response.service_data, b"\x99\x88\x77\x66")
 
 	def test_request_seed_denied_exception(self):
 		self.wait_request_and_respond(b"\x7F\x27\x22")	# Conditions Not Correct

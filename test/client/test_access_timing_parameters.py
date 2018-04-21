@@ -15,7 +15,7 @@ class TestAccessTimingParameter(ClientServerTest):
 
 	def _test_read_extended_params_success(self):
 		response = self.udsclient.read_extended_timing_parameters()
-		param = response.parsed_data
+		param = response.service_data
 		self.assertEqual(param, b"\x99\x88\x77\x66")
 
 	def test_read_active_params_success(self):
@@ -26,7 +26,7 @@ class TestAccessTimingParameter(ClientServerTest):
 	def _test_read_active_params_success(self):
 		response = self.udsclient.read_active_timing_parameters()
 		self.assertTrue(response.positive)
-		param = response.parsed_data		
+		param = response.service_data		
 		self.assertEqual(param, b"\x99\x88\x77\x66")		
 
 	def test_set_params_success(self):

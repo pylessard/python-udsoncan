@@ -64,7 +64,7 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_single_reset(self):
 		response = self.udsclient.io_control(control_param=1, did=0x132)	# Reset to default
-		self.assertEqual(response.parsed_data, 0x4A)	# 0x4B-1 as defined by codec decode method
+		self.assertEqual(response.service_data, 0x4A)	# 0x4B-1 as defined by codec decode method
 
 	def test_io_control_no_control_param(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -73,7 +73,7 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_no_control_param(self):
 		response = self.udsclient.io_control(did=0x132, values=[0x77]) # No control_param, skip directly to data	
-		self.assertEqual(response.parsed_data, 0x4A)	# 0x4B-1 as defined by codec decode method
+		self.assertEqual(response.service_data, 0x4A)	# 0x4B-1 as defined by codec decode method
 
 	def test_io_control_with_repsonse_record(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -82,7 +82,7 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_with_repsonse_record(self):
 		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	# Short Term Adjustment
-		self.assertEqual(response.parsed_data, (0x333, 0x444))	
+		self.assertEqual(response.service_data, (0x333, 0x444))	
 
 	def test_io_control_with_repsonse_record_zero_padding_tolerated(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -95,13 +95,13 @@ class TestIOControl(ClientServerTest):
 	def _test_io_control_with_repsonse_record_zero_padding_tolerated(self):
 		self.udsclient.config['tolerate_zero_padding'] = True
 		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-		self.assertEqual(response.parsed_data, (0x333, 0x444))	
+		self.assertEqual(response.service_data, (0x333, 0x444))	
 
 		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-		self.assertEqual(response.parsed_data, (0x333, 0x444))	
+		self.assertEqual(response.service_data, (0x333, 0x444))	
 
 		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-		self.assertEqual(response.parsed_data, (0x333, 0x444))	
+		self.assertEqual(response.service_data, (0x333, 0x444))	
 
 
 	def test_io_control_with_repsonse_record_zero_padding_not_tolerated_exception(self):
@@ -163,7 +163,7 @@ class TestIOControl(ClientServerTest):
 			'pedalB' 	: 0x2,
 			'EGR_duty' 	: 0x59
 		}
-		self.assertEqual(response.parsed_data, expected_values)	
+		self.assertEqual(response.service_data, expected_values)	
 
 	def test_io_control_composite_did_list(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -180,7 +180,7 @@ class TestIOControl(ClientServerTest):
 			'pedalB' 	: 0x2,
 			'EGR_duty' 	: 0x59
 		}
-		self.assertEqual(response.parsed_data, expected_values)
+		self.assertEqual(response.service_data, expected_values)
 
 	def test_io_control_non_existent_mask_error(self):
 		pass

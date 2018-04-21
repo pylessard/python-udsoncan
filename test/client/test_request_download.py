@@ -16,7 +16,7 @@ class TestRequestDownload(ClientServerTest):
 	def _test_request_download_success(self):
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
 		response = self.udsclient.request_download(memory_location=memloc)
-		nblock = response.parsed_data
+		nblock = response.service_data
 		self.assertEqual(nblock,0xabcd)
 
 	def test_request_download_config_format(self):
@@ -28,7 +28,7 @@ class TestRequestDownload(ClientServerTest):
 		self.udsclient.config = {'server_address_format':32, 'server_memorysize_format':16}
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF)
 		response = self.udsclient.request_download(memory_location=memloc)
-		nblock = response.parsed_data
+		nblock = response.service_data
 		self.assertEqual(nblock,0xabcd)
 
 	def test_request_download_success_lfid(self):
@@ -39,7 +39,7 @@ class TestRequestDownload(ClientServerTest):
 	def _test_request_download_success_lfid(self):
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
 		response = self.udsclient.request_download(memory_location=memloc)
-		nblock = response.parsed_data
+		nblock = response.service_data
 		self.assertEqual(nblock,0xabcd)
 
 	def test_request_download_success_dfi(self):
@@ -51,7 +51,7 @@ class TestRequestDownload(ClientServerTest):
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
 		dfi  =DataFormatIdentifier(compression=5, encryption=2)
 		response = self.udsclient.request_download(memory_location=memloc, dfi=dfi)
-		nblock = response.parsed_data
+		nblock = response.service_data
 		self.assertEqual(nblock,0xabcd)
 
 	def test_incomplete_nblock_response_exception(self):

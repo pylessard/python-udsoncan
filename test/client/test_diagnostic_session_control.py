@@ -15,7 +15,7 @@ class TestDiagnosticSessionControl(ClientServerTest):
 
 	def _test_dsc_success(self):
 		response = self.udsclient.change_session(services.DiagnosticSessionControl.Session.defaultSession)
-		sessionParamRecords = response.parsed_data
+		sessionParamRecords = response.service_data
 		self.assertEqual(sessionParamRecords, b"\x99\x88")
 
 	def test_dsc_denied_exception(self):
