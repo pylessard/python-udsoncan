@@ -217,9 +217,12 @@ class AddressAndLengthFormatIdentifier:
 		self.memorysize_format = memorysize_format
 		self.address_format = address_format
 
+	def get_byte_as_int(self):
+		return  ((self.memsize_map[self.memorysize_format] << 4) | (self.address_map[self.address_format])) & 0xFF
+
 	# Byte given alongside a memory address and a length so that they are decoded properly.
 	def get_byte(self):
-		return  struct.pack('B', ((self.memsize_map[self.memorysize_format] << 4) | (self.address_map[self.address_format])) & 0xFF)
+		return  struct.pack('B', self.get_byte_as_int())
 
 # This class defines a memory location including : address, size, AddressAndLengthFormatIdentifier
 class MemoryLocation:
@@ -280,12 +283,38 @@ class MemoryLocation:
 		data = struct.pack('>q', self.address)
 		return data[-n:]
 
+
 	# Get the memory size byte in the requested format
 	def get_memorysize_bytes(self):
 		n = AddressAndLengthFormatIdentifier.memsize_map[self.alfid.memorysize_format]
 
 		data = struct.pack('>q', self.memorysize)
 		return data[-n:]
+
+	# Generate an instance from the a byte stream
+	@classmethod
+	def from_bytes(cls, address_bytes, memorysize_bytes):
+		if not isinstance(address_bytes, bytes):
+			raise ValueError('address_bytes must be a valid bytes object')
+
+		if not isinstance(memorysize_bytes, bytes):
+			raise ValueError('memorysize_bytes must be a valid bytes object')
+
+		if len(address_bytes) > 5:
+			raise ValueError('Address must be at most 40 bits long')
+
+		if len(memorysize_bytes) > 4:
+			raise ValueError('Memory size must be at most 32 bits long')
+
+		address_bytes_padded = b'\x00' * (8-len(address_bytes)) + address_bytes
+		memorysize_bytes_padded = b'\x00' * (8-len(memorysize_bytes)) + memorysize_bytes
+
+		address = struct.unpack('>q', address_bytes_padded)[0]
+		memorysize = struct.unpack('>q', memorysize_bytes_padded)[0]
+		address_format = len(address_bytes) * 8
+		memorysize_format = len(memorysize_bytes) * 8
+
+		return cls(address=address, memorysize=memorysize, address_format=address_format, memorysize_format=memorysize_format)
 
 	def __str__(self):
 		return 'Address=0x%x (%d bits), Size=0x%x (%d bits)' % (self.address, self.alfid.address_format, self.memorysize, self.alfid.memorysize_format)

@@ -15,7 +15,7 @@ class TestReadMemoryByAddress(ClientServerTest):
 
 	def _test_4byte_block(self):
 		response = self.udsclient.read_memory_by_address(MemoryLocation(address=0x1234, memorysize=4, address_format=16, memorysize_format=8))
-		self.assertEqual(response.service_data, b'\x99\x88\x77\x66')
+		self.assertEqual(response.service_data.memory_block, b'\x99\x88\x77\x66')
 
 	def test_config_format(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -36,7 +36,7 @@ class TestReadMemoryByAddress(ClientServerTest):
 		self.udsclient.config['tolerate_zero_padding'] = True
 		for i in range(8):
 			response = self.udsclient.read_memory_by_address(MemoryLocation(address=0x1234, memorysize=4, address_format=16, memorysize_format=8))
-			self.assertEqual(response.service_data, b'\x99\x88\x77\x66')
+			self.assertEqual(response.service_data.memory_block, b'\x99\x88\x77\x66')
 
 	def test_4byte_block_zeropadding_not_ok_exception(self):
 		data = b"\x63\x99\x88\x77\x66"

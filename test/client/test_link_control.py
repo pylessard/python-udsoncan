@@ -18,6 +18,7 @@ class TestLinkContorl(ClientServerTest):
 		response = self.udsclient.link_control(control_type=1, baudrate=baudrate)
 		self.assertTrue(response.valid)
 		self.assertTrue(response.positive)
+		self.assertEqual(response.service_data.control_type_echo, 1)
 
 	def test_linkcontrol_verify_fixed_from_specific(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -29,6 +30,7 @@ class TestLinkContorl(ClientServerTest):
 		response = self.udsclient.link_control(control_type=1, baudrate=baudrate)
 		self.assertTrue(response.valid)
 		self.assertTrue(response.positive)
+		self.assertEqual(response.service_data.control_type_echo, 1)
 
 	def test_linkcontrol_verify_specific(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -40,6 +42,7 @@ class TestLinkContorl(ClientServerTest):
 		response = self.udsclient.link_control(control_type=2, baudrate=baudrate)
 		self.assertTrue(response.valid)
 		self.assertTrue(response.positive)
+		self.assertEqual(response.service_data.control_type_echo, 2)
 
 	def test_linkcontrol_verify_specific_from_fixed(self):
 		request = self.conn.touserqueue.get(timeout=0.2)

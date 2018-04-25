@@ -1,6 +1,7 @@
-from . import BaseService, BaseSubfunction
+from . import *
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
+import struct
 
 class ClearDiagnosticInformation(BaseService):
 	_sid = 0x14
@@ -12,10 +13,21 @@ class ClearDiagnosticInformation(BaseService):
 							Response.Code.RequestOutOfRange
 							]
 
-	def __init__(self, group=0xFFFFFF):
-		if not isinstance(group, int):
-			raise ValueError("Group of DTC must be a valid integer")
-		if group < 0 or group > 0xFFFFFF:
-			raise ValueError("Group of DTC must be an integer between 0 and 0xFFFFFF")
+	@classmethod
+	def make_request(cls, group=0xFFFFFF):
+		from udsoncan import Request
+		ServiceHelper.validate_int(group, min=0, max=0xFFFFFF, name='Group of DTC')
+		request = Request(service=cls)
+		hb = (group >> 16) & 0xFF
+		mb = (group >> 8) & 0xFF
+		lb = (group >> 0) & 0xFF 
+		request.data = struct.pack("BBB", hb,mb,lb)
+		return request
 
-		self.group = group
+	@classmethod
+	def interpret_response(cls, response):
+		response.service_data = cls.ResponseData()
+
+	class ResponseData(BaseResponseData):
+		def __init__(self):
+			super().__init__(ClearDiagnosticInformation)

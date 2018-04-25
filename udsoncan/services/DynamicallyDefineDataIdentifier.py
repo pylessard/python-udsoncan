@@ -1,4 +1,4 @@
-from . import BaseService, BaseSubfunction
+from . import *
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
 
@@ -12,5 +12,6 @@ class DynamicallyDefineDataIdentifier(BaseService):
 							Response.Code.SecurityAccessDenied
 							]
 
-	def __init__(self):
-		pass
+	def __init__(self, config=None):
+		
+		raise NotImplementedError('Service is not implemented')

@@ -1,4 +1,4 @@
-from . import BaseService, BaseSubfunction
+from . import *
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
 
@@ -11,5 +11,6 @@ class ResponseOnEvent(BaseService):
 							Response.Code.RequestOutOfRange
 							]
 
-	def __init__(self):
+	def __init__(self, config=None):
+		
 		pass

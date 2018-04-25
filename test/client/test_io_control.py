@@ -64,7 +64,9 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_single_reset(self):
 		response = self.udsclient.io_control(control_param=1, did=0x132)	# Reset to default
-		self.assertEqual(response.service_data, 0x4A)	# 0x4B-1 as defined by codec decode method
+		self.assertEqual(response.service_data.control_param_echo, 1)	
+		self.assertEqual(response.service_data.did_echo, 0x132)	
+		self.assertEqual(response.service_data.decoded_data, 0x4A)	# 0x4B-1 as defined by codec decode method
 
 	def test_io_control_no_control_param(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -73,7 +75,9 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_no_control_param(self):
 		response = self.udsclient.io_control(did=0x132, values=[0x77]) # No control_param, skip directly to data	
-		self.assertEqual(response.service_data, 0x4A)	# 0x4B-1 as defined by codec decode method
+		self.assertEqual(response.service_data.control_param_echo, None)	
+		self.assertEqual(response.service_data.did_echo, 0x132)	
+		self.assertEqual(response.service_data.decoded_data, 0x4A)	# 0x4B-1 as defined by codec decode method
 
 	def test_io_control_with_repsonse_record(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -82,71 +86,47 @@ class TestIOControl(ClientServerTest):
 
 	def _test_io_control_with_repsonse_record(self):
 		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	# Short Term Adjustment
-		self.assertEqual(response.service_data, (0x333, 0x444))	
+		self.assertEqual(response.service_data.decoded_data, (0x333, 0x444))	
 
 	def test_io_control_with_repsonse_record_zero_padding_tolerated(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00")
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00")
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00\x00")
+		data = b'\x6F\x04\x56\x03\x33\x03\x44\x04'
 
+		for i in range(3):
+			self.wait_request_and_respond(data + b'\x00' * (i+1))
+		
 	def _test_io_control_with_repsonse_record_zero_padding_tolerated(self):
 		self.udsclient.config['tolerate_zero_padding'] = True
-		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-		self.assertEqual(response.service_data, (0x333, 0x444))	
 
-		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-		self.assertEqual(response.service_data, (0x333, 0x444))	
-
-		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-		self.assertEqual(response.service_data, (0x333, 0x444))	
-
+		for i in range(3):
+			response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
+			self.assertEqual(response.service_data.control_param_echo, 3)
+			self.assertEqual(response.service_data.did_echo, 0x456)
+			self.assertEqual(response.service_data.decoded_data, (0x333, 0x444))
 
 	def test_io_control_with_repsonse_record_zero_padding_not_tolerated_exception(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00")
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00")
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00\x00")
+		data = b'\x6F\x04\x56\x03\x33\x03\x44\x04'
+		for i in range(3):
+			self.wait_request_and_respond(data + b'\x00' * (i+1))
 
 	def _test_io_control_with_repsonse_record_zero_padding_not_tolerated_exception(self):
 		self.udsclient.config['tolerate_zero_padding'] = False
-		with self.assertRaises(UnexpectedResponseException):
-			self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-
-		with self.assertRaises(UnexpectedResponseException):
-			self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))
-
-		with self.assertRaises(UnexpectedResponseException):
-			self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
+		for i in range(3):
+			with self.assertRaises(UnexpectedResponseException):
+				self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
 
 	def test_io_control_with_repsonse_record_zero_padding_not_tolerated_no_exception(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00")
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00")
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.conn.fromuserqueue.put(b"\x6F\x04\x56\x03\x33\x03\x44\x04\x00\x00\x00")
+		data = b'\x6F\x04\x56\x03\x33\x03\x44\x04'
+		for i in range(3):
+			self.wait_request_and_respond(data + b'\x00' * (i+1))
 
 	def _test_io_control_with_repsonse_record_zero_padding_not_tolerated_no_exception(self):
 		self.udsclient.config['exception_on_unexpected_response'] = False
 		self.udsclient.config['tolerate_zero_padding'] = False
 		
-		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-		self.assertTrue(response.valid)
-		self.assertTrue(response.unexpected)
-
-		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))
-		self.assertTrue(response.valid)
-		self.assertTrue(response.unexpected)
-
-		response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-		self.assertTrue(response.valid)
-		self.assertTrue(response.unexpected)
-
+		for i in range(3):
+			response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
+			self.assertTrue(response.valid)
+			self.assertTrue(response.unexpected)
 
 	def test_io_control_composite_did_dict(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -163,7 +143,9 @@ class TestIOControl(ClientServerTest):
 			'pedalB' 	: 0x2,
 			'EGR_duty' 	: 0x59
 		}
-		self.assertEqual(response.service_data, expected_values)	
+		self.assertEqual(response.service_data.did_echo, 0x155)	
+		self.assertEqual(response.service_data.control_param_echo, 3)	
+		self.assertEqual(response.service_data.decoded_data, expected_values)	
 
 	def test_io_control_composite_did_list(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -180,14 +162,16 @@ class TestIOControl(ClientServerTest):
 			'pedalB' 	: 0x2,
 			'EGR_duty' 	: 0x59
 		}
-		self.assertEqual(response.service_data, expected_values)
+		self.assertEqual(response.service_data.did_echo, 0x155)	
+		self.assertEqual(response.service_data.control_param_echo, 3)	
+		self.assertEqual(response.service_data.decoded_data, expected_values)	
 
 	def test_io_control_non_existent_mask_error(self):
 		pass
 
 	def _test_io_control_non_existent_mask_error(self):
 		values = [0x07, 0x1234, 0x4, 0x5, 0x99]
-		with self.assertRaises(ValueError):
+		with self.assertRaises(ConfigError):
 			self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=['xxxx'])	# mask xxxx does not exist in config
 	
 	def test_io_control_mask_all_set1(self):
@@ -231,7 +215,7 @@ class TestIOControl(ClientServerTest):
 			self.udsclient.config['input_output'][0x155]['mask_size'] = None   # Bad value
 			self.udsclient.io_control(control_param=3, did=0x155, values=values) 
 
-		with self.assertRaises(LookupError):
+		with self.assertRaises(ConfigError):
 			del self.udsclient.config['input_output'][0x155]['mask_size']
 			self.udsclient.io_control(control_param=3, did=0x155, values=values, masks=True) # Set mask, no size defined
 

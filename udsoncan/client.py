@@ -1,4 +1,4 @@
-from udsoncan import Response, Request, services, DidCodec, Routine, IOMasks, Dtc, DataIdentifier
+from udsoncan import Response, Request, services, DidCodec, Routine, IOMasks, Dtc, DataIdentifier, MemoryLocation
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
 import struct
@@ -6,19 +6,6 @@ import logging
 import math
 import binascii
 import traceback
-
-# This object is returned for every ReadDiagnosticInformation subfunction and 
-# contains the response data from the server. Every subfunctions partly-populate this object.
-# It gives some consistency in return format across the 21 subfunctions.
-class DTCServerResponseContainer(object):
-	def __init__(self):
-		self.dtcs = []
-		self.dtc_count = 0
-		self.dtc_format = None
-		self.status_availability = None
-		self.dtc_snapshot_map = {}
-		self.extended_data = []
-
 
 class Client:
 
@@ -114,72 +101,51 @@ class Client:
 	# Performs a DiagnosticSessionControl service request
 	@standard_error_management
 	def change_session(self, newsession):
-		service = services.DiagnosticSessionControl(newsession)	
-		
-		named_newsession = '%s (0x%02x)' % (services.DiagnosticSessionControl.Session.get_name(service.session), service.session)
-		
+		req = services.DiagnosticSessionControl.make_request(newsession)
+
+		named_newsession = '%s (0x%02x)' % (services.DiagnosticSessionControl.Session.get_name(newsession), newsession)
 		self.logger.info('Switching session to : %s' % (named_newsession))
-		req = Request(service)
-		# No additional data
+		
 		response = self.send_request(req)
+		services.DiagnosticSessionControl.interpret_response(response)
 
-		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
-			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
-
-		received = response.data[0]
-		expected = service.subfunction_id()
-		if received != expected:
-			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (received, expected))
-
-		response.service_data = response.data[1:] if len(response.data) > 1 else b''
+		if newsession != response.service_data.session_echo:
+			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (response.service_data.session_echo, newsession))
 
 		return response
 
 	# Performs a SecurityAccess service request. Request Seed
 	@standard_error_management
 	def request_seed(self, level):
-		service = services.SecurityAccess(level, mode=services.SecurityAccess.Mode.RequestSeed)
-		self.logger.info('Requesting seed to unlock security access level 0x%02x' % (service.level))
+		req = services.SecurityAccess.make_request(level, mode=services.SecurityAccess.Mode.RequestSeed)
 
-		req = Request(service)
-		# No additional data
-
-		response = self.send_request(req)
+		self.logger.info('Requesting seed to unlock security access level 0x%02x' % (req.subfunction))	# level may be corrected by service.
 		
-		if len(response.data) < 2:
-			raise InvalidResponseException(response, "Response data must be at least 2 bytes")
+		response = self.send_request(req)
+		services.SecurityAccess.interpret_response(response, mode=services.SecurityAccess.Mode.RequestSeed)
 
-		received = int(response.data[0])
-		expected = service.subfunction_id()	# Should be the given level with LSB set to 1
-		if received != expected:
-			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (received, expected))
+		expected_level = services.SecurityAccess.normalize_level(mode=services.SecurityAccess.Mode.RequestSeed, level=level)
+		received_level = response.service_data.security_level_echo
+		if expected_level != received_level:
+			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (received_level, expected_level))
 
-		seed = response.data[1:]
-		self.logger.debug('Received seed : [%s]' % (binascii.hexlify(seed)))
-		response.service_data = seed
+		self.logger.debug('Received seed : [%s]' % (binascii.hexlify(response.service_data.seed)))
 		return response
 
 	# Performs a SecurityAccess service request. Send key
 	@standard_error_management
 	def send_key(self, level, key):
-		service = services.SecurityAccess(level, mode=services.SecurityAccess.Mode.SendKey)
-		if not isinstance(key, bytes):
-			raise ValueError('key must be a valid bytes object')
-
-		self.logger.info('Sending key to unlock security access level 0x%02x' % (service.level))
+		req = services.SecurityAccess.make_request(level, mode=services.SecurityAccess.Mode.SendKey, key=key)
+		self.logger.info('Sending key to unlock security access level 0x%02x' % (req.subfunction))
 		self.logger.debug('Key to send : [%s]' % (binascii.hexlify(key)))
 
-		req = Request(service)
-		req.data = key
 		response = self.send_request(req)
-		
-		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
-			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
+		services.SecurityAccess.interpret_response(response, mode=services.SecurityAccess.Mode.SendKey)
 
-		received = int(response.data[0])
-		expected = service.subfunction_id()	# Should be the given level with LSB set to 0
-		if received != expected:
-			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (received, expected))
+		expected_level = services.SecurityAccess.normalize_level(mode=services.SecurityAccess.Mode.SendKey, level=level)
+		received_level = response.service_data.security_level_echo
+		if expected_level != received_level:
+			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (received_level, expected_level))
 
 		return response
 	
@@ -189,229 +155,118 @@ class Client:
 		if 'security_algo' not in self.config or not callable(self.config['security_algo']):
 			raise NotImplementedError("Client configuration does not provide a security algorithm")
 		
-		seed = self.request_seed._func_no_error_management(self, level).service_data
+		seed = self.request_seed._func_no_error_management(self, level).service_data.seed
 		params = self.config['security_algo_params'] if 'security_algo_params' in self.config else None
 		key = self.config['security_algo'].__call__(seed, params)
 		return self.send_key._func_no_error_management(self, level, key)
 
 	# Sends a TesterPresent request to keep the session active.
 	@standard_error_management
-	def tester_present(self, suppress_positive_response=False):
-		service = services.TesterPresent()
+	def tester_present(self):
+		req = services.TesterPresent.make_request()
+
 		self.logger.info('Sending TesterPresent request')
-		req = Request(service, suppress_positive_response=suppress_positive_response)
 		response = self.send_request(req)
-		# No additional data
+		services.TesterPresent.interpret_response(response)
 
-		if not suppress_positive_response:
-			if response.data is None or len(response.data) < 1:
-				raise InvalidResponseException(response, "Response data must be at least 1 bytes")
-
-			received = int(response.data[0])
-			expected = service.subfunction_id()
-			if received != expected:
-				raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (received, expected))
+		if req.subfunction != response.service_data.subfunction_echo:
+			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (response.service_data.subfunction_echo, req.subfunction))
 
 		return response
-
-	# Make sure that the actual client configuration contains valid definition for given Data Identifiers
-	def check_did_config(self, didlist):
-		didlist = [didlist] if not isinstance(didlist, list) else didlist
-		if 'data_identifiers' not in self.config or  not isinstance(self.config['data_identifiers'], dict):
-			raise AttributeError('Configuration does not contains a valid data identifier description.')
-		didconfig = self.config['data_identifiers']
-
-		for did in didlist:
-			if did not in didconfig:
-				raise LookupError('Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
-
-		return didconfig
-
-	# Make sure that the actual client configuration contains valid definition for given Input/Output Data Identifiers
-	def check_io_config(self, didlist):
-		didlist = [didlist] if not isinstance(didlist, list) else didlist
-		if not 'input_output' in self.config or  not isinstance(self.config['input_output'], dict):
-			raise AttributeError('Configuration does not contains an Input/Output section (config[input_output].')
-		ioconfigs = self.config['input_output']
-
-		for did in didlist:
-			if did not in ioconfigs:
-				raise LookupError('Actual Input/Output configuration contains no definition for data identifier 0x%04x' % did)
-			if isinstance(ioconfigs[did], dict):	# IO Control services has that concept of composite DID. We define them with dicts.
-				if 'codec'not in ioconfigs[did]:
-					raise LookupError('Configuration for Input/Output identifier 0x%04x is missing a codec')
-
-				if 'mask' in ioconfigs[did]:
-					mask_def = ioconfigs[did]['mask']
-					for mask_name in mask_def:
-						if not isinstance(mask_def[mask_name], int):
-							raise ValueError('In Input/Output configuration for did 0x%04x, mask "%s" is not an integer' % (did, mask_name))
-
-						if mask_def[mask_name] < 0:
-							raise ValueError('In Input/Output configuration for did 0x%04x, mask "%s" is not a positive integer' % (did, mask_name))
-
-				
-				if 'mask_size' in ioconfigs[did]:
-					if not isinstance(ioconfigs[did]['mask_size'], int):
-						raise ValueError('mask_size in Input/Output configuration for did 0x%04x must be a valid integer' % (did))
-
-					if ioconfigs[did]['mask_size'] < 0:
-						raise ValueError('mask_size in Input/Output configuration for did 0x%04x must be greater than 0' % (did))
-
-					if 'mask' in ioconfigs[did]:
-						mask_def = ioconfigs[did]['mask']
-						for mask_name in mask_def:
-							if mask_def[mask_name] > 2**(ioconfigs[did]['mask_size']*8)-1:
-								raise ValueError('In Input/Output configuration for did 0x%04x, mask "%s" cannot fit in %d bytes (defined by mask_size)' % (did, mask_name,ioconfigs[did]['mask_size']))
-
-		return ioconfigs
 
 	# Returns the first DID read if more than one is given.
 	@standard_error_management
-	def read_data_by_identifier_first(self, did):
-		values = self.read_data_by_identifier(did, output_fmt='list')
-		if len(values) > 0:
-			return values[0]
+	def read_data_by_identifier_first(self, didlist):
+		values = self.read_data_by_identifier(didlist)
+		if len(values) > 0 and len(didlist) > 0:
+			return values[didlist[0]]
 
 	# Perform a ReadDataByIdentifier request.
 	@standard_error_management
-	def read_data_by_identifier(self, dids, output_fmt='dict'):
-		service = services.ReadDataByIdentifier(dids)
-		if isinstance(service.dids, list):
-			self.logger.info("Reading %d data identifier : %s" % (len(service.dids), service.dids))
+	def read_data_by_identifier(self, dids):
+		didlist = services.ReadDataByIdentifier.validate_didlist_input(dids)
+		req = services.ReadDataByIdentifier.make_request(didlist=didlist, didconfig=self.config['data_identifiers'])
+
+		if len(didlist) == 1:
+			self.logger.info("Reading data identifier : %s (%s)" % (didlist[0], DataIdentifier.name_from_id(didlist[0])))
 		else:
-			self.logger.info("Reading data identifier : %s (%s)" % (service.dids, DataIdentifier.name_from_id(service.dids)))
-		req = Request(service)
-		didlist = [service.dids] if not isinstance(service.dids, list) else service.dids
-
-		didconfig = self.check_did_config(didlist)	# Make sure all DID are correctly defined in client config
-		req.data = struct.pack('>'+'H'*len(didlist), *didlist) #Encode list of DID
-		response = self.send_request(req)
-
-		if output_fmt in ['list']:
-			values = []
-		elif output_fmt == 'dict':
-			values = {}
-		else:
-			raise ValueError("Output format cannot be %s. Use list or dict" % output_fmt)
-
-		# Parsing algorithm to extract DID value
-		offset = 0
-		received = {}
-		for did in didlist:
-			received[did] = False
+			self.logger.info("Reading %d data identifier : %s" % (len(didlist), didlist))
 		
-		while True:
-			if len(response.data) <= offset:
-				break	# Done
+		if 'data_identifiers' not in self.config or  not isinstance(self.config['data_identifiers'], dict):
+			raise AttributeError('Configuration does not contains a valid data identifier description.')
 
-			if len(response.data) <= offset +1:
-				if self.config['tolerate_zero_padding'] and response.data[-1] == 0:	# One extra byte, but its a 0 and we accept that. So we're done
-					break
-				raise UnexpectedResponseException(response, "Response given by server is incomplete.")
+		response = self.send_request(req)
+		
+		params = {
+			'didlist' : didlist, 
+			'didconfig' : self.config['data_identifiers'],
+			'tolerate_zero_padding' : self.config['tolerate_zero_padding']
+			}
+		
+		try:
+			services.ReadDataByIdentifier.interpret_response(response, **params)
+		except ConfigError as e:
+			if e.key in didlist:
+				raise
+			else:
+				raise UnexpectedResponseException(response, "Server returned values for data identifier 0x%04x that was not requested and no Codec was defined for it. Parsing must be stopped." % (e.key))
+		
+		set_request_didlist = set(didlist)
+		set_response_didlist = set(response.service_data.values.keys())
+		extra_did  = set_response_didlist - set_request_didlist
+		missing_did  = set_request_didlist - set_response_didlist
 
-			did = struct.unpack('>H', response.data[offset:offset+2])[0]	# Get the DID number
-			if did == 0 and did not in didconfig and self.config['tolerate_zero_padding']: # We read two zeros and that is not a DID bu we accept that. So we're done.
-				if response.data[offset:] == b'\x00' * (len(response.data) - offset):
-					break
+		if len(extra_did) > 0:
+			raise UnexpectedResponseException(response, "Server returned values for %d data identifier that were not requested. Dids are : %s" % (len(extra_did), extra_did))
 
-			if did not in didlist:	# We didn't request that DID. Server is confused
-				raise UnexpectedResponseException(response, "Server returned a value for data identifier 0x%04x which was not requested" % did)
+		if len(missing_did) > 0:
+			raise UnexpectedResponseException(response, "%d data identifier values are missing from server response. Dids are : %s" % (len(missing_did), missing_did))
 
-			if did not in didconfig:	# Already checked in check_did_config. Paranoid check
-				raise LookupError('Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
-			
-			codec = DidCodec.from_config(didconfig[did])
-			offset+=2
-
-			if len(response.data) < offset+len(codec):
-				raise UnexpectedResponseException(response, "Value fo data identifier 0x%04x was incomplete according to definition in configuration" % did)
-
-			subpayload = response.data[offset:offset+len(codec)]
-			offset += len(codec)	# Codec must define a __len__ function that metches the encoded payload length.
-			val = codec.decode(subpayload)
-			received[did] = True
-
-			if output_fmt in ['list']:
-				values.append(val)
-			elif output_fmt == 'dict':
-				values[did] = val
-
-		notreceived = 0
-		for k in received:
-			notreceived += 1 if k == False else 0
-
-		if notreceived > 0:
-			raise UnexpectedResponseException(response, "%d data identifier values have not been received by the server" % notreceived)
-
-		response.service_data = values
 		return response
+		
 
 	# Performs a WriteDataByIdentifier request.
 	@standard_error_management
 	def write_data_by_identifier(self, did, value):
-		service = services.WriteDataByIdentifier(did)
-		self.logger.info("Writing data identifier %s (%s)", service.did, DataIdentifier.name_from_id(service.did))
-		req = Request(service)
+		req = services.WriteDataByIdentifier.make_request(did, value, didconfig=self.config['data_identifiers'])
+		self.logger.info("Writing data identifier %s (%s)", did, DataIdentifier.name_from_id(did))
 		
-		didconfig = self.check_did_config(service.did)		# Make sure DID is configured in client configuration
-		req.data = struct.pack('>H', service.did)	# encode DID number
-
-		codec = DidCodec.from_config(didconfig[service.did])
-		req.data += codec.encode(value)
 		response = self.send_request(req)
+		services.WriteDataByIdentifier.interpret_response(response)
 
-		if len(response.data) < 2:
-			raise InvalidResponseException(response, "Response must be at least 2 bytes long")
-
-		did_fb = struct.unpack(">H", response.data[0:2])[0]
-
-		if did_fb != service.did:
-			raise UnexpectedResponseException(response, "Server returned a response for data identifier 0x%02x while client requested for did 0x%02x" % (did_fb, did))
+		if response.service_data.did_feedback != did:
+			raise UnexpectedResponseException(response, "Server returned a response for data identifier 0x%02x while client requested for did 0x%02x" % (response.service_data.did_feedback, did))
 		
 		return response
 
 	# Performs a ECUReset service request
 	@standard_error_management
-	def ecu_reset(self, resettype, powerdowntime=None):
-		service = services.ECUReset(resettype, powerdowntime)
-		self.logger.info("Requesting ECU reset of type 0x%02x (%s)" % (service.resettype, services.ECUReset.ResetType.get_name(service.resettype)))
-		req = Request(service)
-		if powerdowntime is not None:	
-			if resettype == services.ECUReset.ResetType.enableRapidPowerShutDown:
-				req.data =struct.pack('B', service.powerdowntime)
-			else:
-				raise ValueError("Power down time is only used when reset type is enableRapidShutdown")
-		
+	def ecu_reset(self, reset_type):
+		req = services.ECUReset.make_request(reset_type)
+		self.logger.info("Requesting ECU reset of type 0x%02x (%s)" % (reset_type, services.ECUReset.ResetType.get_name(reset_type)))
+	
 		response = self.send_request(req)
+		services.ECUReset.interpret_response(response)
+		
+		if response.service_data.reset_type_echo != reset_type:
+			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (response.service_data.reset_type_echo, reset_type))
 
-		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
-			raise UnexpectedResponseException(response, "Response data must be at least 1 bytes")
-
-		received = int(response.data[0])
-		expected = service.subfunction_id()
-		if received != expected:
-			raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) is not for the requested subfunction (0x%02x)" % (received, expected))
+		if response.service_data.reset_type_echo == services.ECUReset.ResetType.enableRapidPowerShutDown and response.service_data.powerdown_time != 0xFF:
+			self.logger.info('Server will shutdown in %d seconds.' % (response.service_data.powerdown_time))
 
 		return response
 
 	# Performs a ClearDTC service request.
 	@standard_error_management 
-	def clear_dtc(self, group=0xFFFFFF, suppress_positive_response=False):
-		service = services.ClearDiagnosticInformation(group)
-		if service.group == 0xFFFFFF:
+	def clear_dtc(self, group=0xFFFFFF):
+		request = services.ClearDiagnosticInformation.make_request(group)
+		if group == 0xFFFFFF:
 			self.logger.info('Clearing all DTCs (group mask : 0xFFFFFF)')
 		else:
-			self.logger.info('Clearing DTCs matching group mask : 0x%06x' % service.group)
-		request = Request(service, suppress_positive_response=suppress_positive_response)
-		group = service.group  # Service object can filter that value
+			self.logger.info('Clearing DTCs matching group mask : 0x%06x' % group)
 
-		hb = (group >> 16) & 0xFF
-		mb = (group >> 8) & 0xFF
-		lb = (group >> 0) & 0xFF 
-
-		request.data = struct.pack("BBB", hb,mb,lb)
 		response = self.send_request(request)
+		services.ClearDiagnosticInformation.interpret_response(response)
 
 		return response
 
@@ -430,36 +285,19 @@ class Client:
 	# Performs a RoutineControl Service request
 	@standard_error_management
 	def routine_control(self, routine_id, control_type, data=None):
-		service = services.RoutineControl(routine_id, control_type, data=data)
-		payload_length = 0 if service.data is None else len(service.data)
+		request = services.RoutineControl.make_request(routine_id, control_type, data=data)
+		payload_length = 0 if data is None else len(data)
 
-		self.logger.info("Sending RoutineControl request with control type %s (0x%02x) for Routine ID : 0x%04x (%s) with a payload of %d bytes" % ( services.RoutineControl.ControlType.get_name(service.control_type), service.control_type, service.routine_id, Routine.name_from_id(service.routine_id), payload_length))
+		self.logger.info("Sending RoutineControl request with control type %s (0x%02x) for Routine ID : 0x%04x (%s) with a payload of %d bytes" % ( services.RoutineControl.ControlType.get_name(control_type), control_type, routine_id, Routine.name_from_id(routine_id), payload_length))
 
-		req = Request(service)
+		response = self.send_request(request)
+		services.RoutineControl.interpret_response(response)
 
-		req.data = struct.pack('>H', service.routine_id)
+		if control_type != response.service_data.control_type_echo:
+			raise UnexpectedResponseException(response, "Control type of response (0x%02x) does not match request control type (0x%02x)" % (response.service_data.control_type_echo, control_type))
 
-		# Data can be optionally be given to server. Implementation specific
-		if data is not None:
-			req.data += service.data 	
-
-		response = self.send_request(req)
-
-		if len(response.data) < 3: 	
-			raise InvalidResponseException(response, "Response data must be at least 3 bytes")
-
-		received = int(response.data[0])
-		expected = service.subfunction_id()
-		if received != expected:
-			raise UnexpectedResponseException(response, "Control type of response (0x%02x) does not match request control type (0x%02x)" % (received, expected))
-
-		received = struct.unpack(">H", response.data[1:3])[0]
-		expected = service.routine_id
-
-		if received != expected:
-			raise UnexpectedResponseException(response, "Response received from server (ID = 0x%02x) is not for the requested routine ID (0x%02x)" % (received, expected))
-
-		response.service_data = response.data[3:] if len(response.data) >3 else b''
+		if routine_id != response.service_data.routine_id_echo:
+			raise UnexpectedResponseException(response, "Response received from server (ID = 0x%02x) is not for the requested routine ID (0x%02x)" % (response.service_data.routine_id_echo, routine_id))
 
 		return response
 
@@ -481,51 +319,41 @@ class Client:
 	
 	# Performs an AccessTimingParameter service request
 	@standard_error_management
-	def access_timing_parameter(self, access_type, request_record=None):
-		service = services.AccessTimingParameter(access_type, request_record)
+	def access_timing_parameter(self, access_type, timing_param_record=None):
+		request = services.AccessTimingParameter.make_request(access_type, timing_param_record)
+		payload_length = 0 if timing_param_record is None else len(timing_param_record)
 
-		payload_length = 0 if service.request_record is None else len(service.request_record)
-		self.logger.info('Sending AccessTimingParameter service request with access type 0x%02x (%s) and a request record payload of %d bytes' % (service.access_type, services.AccessTimingParameter.AccessType.get_name(service.access_type), payload_length))
-
-		request = Request(service)
-
-		if service.request_record is not None:
-			request.data += service.request_record
+		self.logger.info('Sending AccessTimingParameter service request with access type 0x%02x (%s) and a request record payload of %d bytes' % (access_type, services.AccessTimingParameter.AccessType.get_name(access_type), payload_length))
 
 		response = self.send_request(request)
+		services.AccessTimingParameter.interpret_response(response)
 
-		if len(response.data) < 1: 	
-			raise InvalidResponseException(response, "Response data must be at least 1 byte")
+		if access_type != response.service_data.access_type_echo:
+			raise UnexpectedResponseException(response, "Access type of response (0x%02x) does not match request access type (0x%02x)" % (response.service_data.access_type_echo, access_type))
 
-		received = int(response.data[0])
-		expected = service.subfunction_id()
-		if received != expected:
-			raise UnexpectedResponseException(response, "Access type of response (0x%02x) does not match request access type (0x%02x)" % (received, expected))
+		allowed_response_record_access_type = [
+			services.AccessTimingParameter.AccessType.readExtendedTimingParameterSet, 
+			services.AccessTimingParameter.AccessType.readCurrentlyActiveTimingParameters
+		]
 
-		if response.data is not None and service.access_type not in [services.AccessTimingParameter.AccessType.readExtendedTimingParameterSet, services.AccessTimingParameter.AccessType.readCurrentlyActiveTimingParameters]:
+		if len(response.service_data.timing_param_record) > 0 and access_type not in allowed_response_record_access_type:
 			self.logger.warning("Server returned data for AccessTimingParameter altough none were asked")
 
-		response.service_data = response.data[1:] if len(response.data) > 1 else b''
 		return response
 
 	# Performs a CommunicationControl service request
 	@standard_error_management
 	def communication_control(self, control_type, communication_type):
-		service = services.CommunicationControl(control_type, communication_type)
-		self.logger.info('Sending CommunicationControl service request with control type 0x%02x (%s) and a communication type byte of 0x%02x (%s)' % (service.control_type, services.CommunicationControl.ControlType.get_name(service.control_type), communication_type.get_byte_as_int(), str(communication_type)))
-		req = Request(service)
-		req.data = service.communication_type.get_byte()  # subnet and message type
+		communication_type = services.CommunicationControl.normalize_communication_type(communication_type)
 
-		response = self.send_request(req)
+		request = services.CommunicationControl.make_request(control_type, communication_type)
+		self.logger.info('Sending CommunicationControl service request with control type 0x%02x (%s) and a communication type byte of 0x%02x (%s)' % (control_type, services.CommunicationControl.ControlType.get_name(control_type), communication_type.get_byte_as_int(), str(communication_type)))
 
-		if len(response.data) < 1: 	
-			raise InvalidResponseException(response, "Response data must be at least 1 byte")
+		response = self.send_request(request)
+		services.CommunicationControl.interpret_response(response)
 
-		received = int(response.data[0])
-		expected = service.subfunction_id()
-
-		if received != expected:
-			raise UnexpectedResponseException(response, "Control type of response (0x%02x) does not match request control type (0x%02x)" % (received, expected))
+		if control_type != response.service_data.control_type_echo:
+			raise UnexpectedResponseException(response, "Control type of response (0x%02x) does not match request control type (0x%02x)" % (response.service_data.control_type_echo, control_type))
 
 		return response
 
@@ -540,304 +368,169 @@ class Client:
 	# Common code for both RequestDownload and RequestUpload services
 	@standard_error_management
 	def request_upload_download(self, service_cls, memory_location, dfi=None):
+		dfi = service_cls.normalize_data_format_identifier(dfi)
+
 		if service_cls not in [services.RequestDownload, services.RequestUpload]:
 			raise ValueError('services must either be RequestDownload or RequestUpload')
 
-		service = service_cls(memory_location=memory_location, dfi=dfi)
-		self.logger.info('Sending %s service request for memory location [%s] and DataFormatIdentifier 0x%02x (%s)' % (service_cls.__name__, str(service.memory_location), service.dfi.get_byte_as_int(), str(service.dfi)))
-
-		req = Request(service)
+		if not isinstance(memory_location, MemoryLocation):
+			raise ValueError('memory_location must be an instance of MemoryLocation')
 
 		# If user does not specify a byte format, we apply the one in client configuration.
 		if 'server_address_format' in self.config:
-			service.memory_location.set_format_if_none(address_format=self.config['server_address_format'])
+			memory_location.set_format_if_none(address_format=self.config['server_address_format'])
 
 		if 'server_memorysize_format' in self.config:
-			service.memory_location.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
+			memory_location.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
 
-		req.data=b""
-		req.data += service.dfi.get_byte()	# Data Format Identifier
-		req.data += service.memory_location.alfid.get_byte()	# AddressAndLengthFormatIdentifier
-		req.data += service.memory_location.get_address_bytes()
-		req.data += service.memory_location.get_memorysize_bytes()
+		request = service_cls.make_request(memory_location=memory_location, dfi=dfi)
+		self.logger.info('Sending %s service request for memory location [%s] and DataFormatIdentifier 0x%02x (%s)' % (service_cls.__name__, str(memory_location), dfi.get_byte_as_int(), str(dfi)))
 
-		response = self.send_request(req)
-
-		if len(response.data) < 1:
-			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
-
-		lfid = int(response.data[0]) >> 4
-
-		if lfid > 8:
-			raise NotImplementedError('This client does not support number bigger than %d bits' % (8*8))
-
-		if len(response.data) < lfid+1:
-			raise InvalidResponseException(response, "Length of data (%d) is too short to contains the number of block of given length (%d)" % (len(response.data), lfid))
-		
-		todecode = bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00')
-		for i in range(1,lfid+1):
-			todecode[-i] = response.data[lfid+1-i]
-
-		response.service_data = struct.unpack('>q', todecode)[0]
-		return response
-
-	@standard_error_management
-	def transfer_data(self, block_sequence_counter, data=None):
-		service = services.TransferData(block_sequence_counter, data)
-		
-		data_len = 0 if service.data is None else len(service.data)
-		self.logger.info('Sending TransferData service request with SequenceNumber=%d and %d bytes of data.' % (service.block_sequence_counter, data_len))
-		if data_len > 0:
-			self.logger.debug('Data to transfer : %s' % binascii.hexlify(service.data))
-		
-		request = Request(service)
-		request.data = service.data
 		response = self.send_request(request)
-
-		if len(response.data) < 1:
-			raise InvalidResponseException(response, "Response data must be at least 1 bytes") # Should be catched by response decoder first
-
-		received = int(response.data[0])
-		expected = service.subfunction_id()
-		if received != expected:
-			raise UnexpectedResponseException(response, "Block sequence number of response (0x%02x) does not match request block sequence number (0x%02x)" % (received, expected))
-
-		response.service_data = response.data[1:] if len(response.data) > 1 else b''
+		service_cls.interpret_response(response)
+		
 		return response
 
 	@standard_error_management
-	def request_transfer_exit(self, data=None, suppress_positive_response=False):
-		service = services.RequestTransferExit(data)
+	def transfer_data(self, sequence_number, data=None):
+		request = services.TransferData.make_request(sequence_number, data)
+		
+		data_len = 0 if data is None else len(data)
+		self.logger.info('Sending TransferData service request with SequenceNumber=%d and %d bytes of data.' % (sequence_number, data_len))
+		if data_len > 0:
+			self.logger.debug('Data to transfer : %s' % binascii.hexlify(data))
+		
+		response = self.send_request(request)
+		services.TransferData.interpret_response(response)
+
+		if sequence_number != response.service_data.sequence_number_echo:
+			raise UnexpectedResponseException(response, "Block sequence number of response (0x%02x) does not match request block sequence number (0x%02x)" % (response.service_data.sequence_number_echo, sequence_number))
+
+		return response
+
+	@standard_error_management
+	def request_transfer_exit(self, data=None):
+		request = services.RequestTransferExit.make_request(data)
 		self.logger.info('Sending RequestTransferExit service request')
 
-		request = Request(service, suppress_positive_response=suppress_positive_response)
-		request.data = service.data
-
 		response = self.send_request(request)
+		services.RequestTransferExit.interpret_response(response)
 
-		response.service_data = response.data
 		return response
 
 	@standard_error_management
 	def link_control(self, control_type, baudrate=None):
-		service = services.LinkControl(control_type, baudrate)
-		baudrate_str = 'No baudrate specified' if service.baudrate is None else 'Baudrate : ' + str(service.baudrate)
-
-		self.logger.info('Sending LinkControl service request with control type of 0x%02x (%s). %s' % (service.control_type, services.LinkControl.ControlType.get_name(service.control_type), baudrate_str))
-		request = Request(service)
-		if service.baudrate is not None:
-			request.data = service.baudrate.get_bytes()
-
+		request = services.LinkControl.make_request(control_type, baudrate)
+		baudrate_str = 'No baudrate specified' if baudrate is None else 'Baudrate : ' + str(baudrate)
+		self.logger.info('Sending LinkControl service request with control type of 0x%02x (%s). %s' % (control_type, services.LinkControl.ControlType.get_name(control_type), baudrate_str))
+		
 		response = self.send_request(request)
-
-		if len(response.data) < 1:
-			raise InvalidResponseException(response, "Response data must be at least 1 bytes") # Should be catched by response decoder first
-
-		received = int(response.data[0])
-		expected = service.subfunction_id()
-		if received != expected:
-			raise UnexpectedResponseException(response, "Control type of response (0x%02x) does not match request control type (0x%02x)" % (received, expected))
+		services.LinkControl.interpret_response(response)
+		
+		if control_type != response.service_data.control_type_echo:
+			raise UnexpectedResponseException(response, "Control type of response (0x%02x) does not match request control type (0x%02x)" % (response.service_data.control_type_echo, control_type))
 
 		return response
 
 	#Perform InputOutputControlByIdentifier service request
 	@standard_error_management
 	def io_control(self,  did, control_param=None, values=None, masks=None):
-		service = services.InputOutputControlByIdentifier( did, control_param=control_param, values=values, masks=masks)
-		control_param_str = 'no control parameter' if service.control_param is None else 'control parameter 0x%02x (%s)' % (service.control_param, services.InputOutputControlByIdentifier.ControlParam.get_name(service.control_param))
+		if 'input_output' not in self.config:
+			raise ConfigError('input_output', msg='input_output must be defined in client configuration in order to use InputOutputControlByIdentifier service')
+
+		request = services.InputOutputControlByIdentifier.make_request( did, control_param=control_param, values=values, masks=masks, ioconfig=self.config['input_output'])
 		
-		self.logger.info('Sending InputOutputControlByIdentifier service request for DID=0x%04x, %s.' % (service.did, control_param_str))
+		control_param_str = 'no control parameter' if control_param is None else 'control parameter 0x%02x (%s)' % (control_param, services.InputOutputControlByIdentifier.ControlParam.get_name(control_param))		
+		self.logger.info('Sending InputOutputControlByIdentifier service request for DID=0x%04x, %s.' % (did, control_param_str))
 
-		req = Request(service)
-		req.data = b''
-		ioconfig = self.check_io_config(service.did)	# IO dids are defined in client config.
-		req.data += struct.pack('>H', service.did)
+		response = self.send_request(request)
+		services.InputOutputControlByIdentifier.interpret_response(response, control_param=control_param, tolerate_zero_padding=self.config['tolerate_zero_padding'], ioconfig=self.config['input_output'])
 
-		# This parameters is optional according to standard
-		if service.control_param is not None:
-			req.data += struct.pack('B', control_param)
-		
-		codec = DidCodec.from_config(ioconfig[did])	# Get IO codec from config
-		
-		if service.values is not None:
-			req.data += codec.encode(*service.values.args, **service.values.kwargs)
+		if response.service_data.did_echo != did:
+			raise UnexpectedResponseException(response, "Echo of the DID number (0x%02x) does not match the value in the request (0x%02x)" % (response.service_data.did_echo, did))
 
-		if service.masks is not None: # Skip the masks byte if none is given.
-			if isinstance(service.masks, bool):
-				byte = b'\xFF' if service.masks == True else b'\x00'
-				if 'mask_size' in  ioconfig[did]:
-					req.data += (byte * ioconfig[did]['mask_size'])
-				else:
-					raise LookupError('Given mask is boolean value, indicating that all mask should be set to same value, but no mask_size is defined in configuration. Cannot guess how many bits to set.')
+		if control_param != response.service_data.control_param_echo:
+			raise UnexpectedResponseException(response, 'Echo of the InputOutputControlParameter (0x%02x) does not match the value in the request (0x%02x)' % (response.service_data.control_param_echo, control_param))	
 
-			elif isinstance(service.masks, IOMasks):
-				if 'mask' not in ioconfig[did]:
-					raise ValueError('Cannot apply given mask. Input/Output configuration does not define their position (and size).')
-				masks_config = ioconfig[did]['mask']
-				given_masks = service.masks.get_dict()
-
-				numeric_val = 0
-				for mask_name in given_masks:
-					if mask_name not in masks_config:
-						raise ValueError('Cannot set mask bit for mask %s. The configuration does not define its position' % (mask_name))	
-					
-					if given_masks[mask_name] == True:
-						numeric_val |= masks_config[mask_name]
-
-				minsize = math.ceil(math.log(numeric_val+1, 2)/8.0)
-				size = minsize if 'mask_size' not in ioconfig[did] else ioconfig[did]['mask_size']
-				req.data += numeric_val.to_bytes(size, 'big')
-
-		response = self.send_request(req)
-		min_response_size = 2 if service.control_param is not None else 1	# Spec specifies that if first by is a ControlParameter, it must be echoed back by the server
-
-		if len(response.data) < min_response_size:
-			raise InvalidResponseException(response, "Response must be at least %d bytes long" % min_response_size)
-
-		did_fb = struct.unpack(">H", response.data[0:2])[0]
-
-		if did_fb != did:
-			raise UnexpectedResponseException(response, "Server returned a response for data identifier 0x%02x while client requested for did 0x%02x" % (did_fb, did))
-
-		next_byte = 2
-		if service.control_param is not None:
-			if len(response.data) < next_byte:
-				raise InvalidResponseException(response, 'Response should include an echoe of the InputOutputControlParameter (0x%02x)' % service.control_param)
-
-			control_param_fb = response.data[next_byte]
-			if service.control_param != control_param_fb:
-				raise UnexpectedResponseException(response, 'Echo of the InputOutputControlParameter (0x%02x) does not match the value in the request (0x%02x)' % (control_param_fb, service.control_param))	
-
-			next_byte +=1
-
-		if len(response.data) >= next_byte:
-			remaining_data = response.data[next_byte:]
-			size_ok = True 
-			
-			if len(remaining_data) > len(codec):
-				if remaining_data[len(codec):] == b'\x00' * (len(remaining_data) - len(codec)):
-					if self.config['tolerate_zero_padding']:
-						remaining_data = remaining_data[0:len(codec)]
-					else:
-						size_ok = False
-				else:
-					size_ok = False
-			elif len(remaining_data) < len(codec):
-				size_ok = False
-
-			if not size_ok:
-				raise UnexpectedResponseException(response, 'The server did not returned the expected amount of data. Expecting %d bytes, received %d. Trying to decode anyways.' % (len(codec), len(remaining_data)))
-
-			try:
-				decoded_data = codec.decode(remaining_data)
-			except Exception as e:
-				raise UnexpectedResponseException(response, 'Response from server could not be decoded. Exception is : %s' % e)
-			
-			response.service_data = decoded_data
-			return response
+		return response
 
 	@standard_error_management
 	def control_dtc_setting(self, setting_type, data=None):
-		service = services.ControlDTCSetting(setting_type, data)
-		data_len = 0 if service.data is None else len(service.data)
-		self.logger.info('Sending ControlDTCSetting service request with setting type 0x%02x (%s) and %d bytes of data' % (service.setting_type, services.ControlDTCSetting.SettingType.get_name(service.setting_type), data_len))
-		req = Request(service)
+		request = services.ControlDTCSetting.make_request(setting_type, data)
+		data_len = 0 if data is None else len(data)
+		self.logger.info('Sending ControlDTCSetting service request with setting type 0x%02x (%s) and %d bytes of data' % (setting_type, services.ControlDTCSetting.SettingType.get_name(setting_type), data_len))
 
-		if service.data is not None:
-			req.data = service.data
+		response = self.send_request(request)
+		services.ControlDTCSetting.interpret_response(response)
 
-		response = self.send_request(req)
-
-		if len(response.data) < 1:
-			raise InvalidResponseException(response, 'Response data must be at least 1 byte, received %d bytes' % len(response.data))
-
-		received = response.data[0]
-		expected = service.setting_type
-
-		if received != expected:
-			raise UnexpectedResponseException(response, "Setting type of response (0x%02x) does not match request control type (0x%02x)" % (received, expected))
+		if response.service_data.setting_type_echo != setting_type:
+			raise UnexpectedResponseException(response, "Setting type of response (0x%02x) does not match request control type (0x%02x)" % (response.service_data.setting_type_echo, setting_type))
 
 		return response
 
 	@standard_error_management
 	def read_memory_by_address(self, memory_location):
-		service = services.ReadMemoryByAddress(memory_location)
+		if not isinstance(memory_location, MemoryLocation):
+			raise ValueError('memory_location must be an instance of MemoryLocation')
 
 		if 'server_address_format' in self.config:
-			service.memory_location.set_format_if_none(address_format=self.config['server_address_format'])
+			memory_location.set_format_if_none(address_format=self.config['server_address_format'])
 
 		if 'server_memorysize_format' in self.config:
-			service.memory_location.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
+			memory_location.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
 
-		self.logger.info('Reading memory address (ReadMemoryByAddress) - %s' % str(service.memory_location))
-
-		req = Request(service)
-
-		req.data = b''
-		req.data += service.memory_location.alfid.get_byte() # AddressAndLengthFormatIdentifier
-		req.data += service.memory_location.get_address_bytes()
-		req.data += service.memory_location.get_memorysize_bytes()
-
-		response = self.send_request(req)
-
-		if len(response.data) < memory_location.memorysize:
+		request = services.ReadMemoryByAddress.make_request(memory_location)
+		self.logger.info('Reading memory address (ReadMemoryByAddress) - %s' % str(memory_location))
+		
+		response = self.send_request(request)
+		services.ReadMemoryByAddress.interpret_response(response)
+		memdata = response.service_data.memory_block
+		
+		if len(memdata) < memory_location.memorysize:
 			raise UnexpectedResponseException(response, 'Data block given by the server is too short. Client requested for %d bytes but only received %d bytes' % (memory_location.memorysize, len(response.data)))
 
-		if len(response.data) > memory_location.memorysize:
-			extra_bytes = len(response.data) - memory_location.memorysize
-			if response.data[memory_location.memorysize:] == b'\x00' * extra_bytes and self.config['tolerate_zero_padding']:
-				response.data = response.data[0:memory_location.memorysize]	# trim exceeding zeros
+		if len(memdata) > memory_location.memorysize:
+			extra_bytes = len(memdata) - memory_location.memorysize
+			if memdata[memory_location.memorysize:] == b'\x00' * extra_bytes and self.config['tolerate_zero_padding']:
+				response.service_data.memory_block = memdata[0:memory_location.memorysize]	# trim exceeding zeros
 			else:
 				raise UnexpectedResponseException(response, 'Data block given by the server is too long. Client requested for %d bytes but received %d bytes' % (memory_location.memorysize, len(response.data)))
 
-		response.service_data = response.data
 		return response
 
 	@standard_error_management
 	def write_memory_by_address(self, memory_location, data):
-		service = services.WriteMemoryByAddress(memory_location, data)
+		if not isinstance(memory_location, MemoryLocation):
+			raise ValueError('memory_location must be an instance of MemoryLocation')
 
 		if 'server_address_format' in self.config:
-			service.memory_location.set_format_if_none(address_format=self.config['server_address_format'])
+			memory_location.set_format_if_none(address_format=self.config['server_address_format'])
 
 		if 'server_memorysize_format' in self.config:
-			service.memory_location.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
+			memory_location.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
 
-		self.logger.info('Writing %d bytes to memory address (WriteMemoryByAddress) - %s' % (len(service.data), str(service.memory_location)))
+		request = services.WriteMemoryByAddress.make_request(memory_location, data)
+		self.logger.info('Writing %d bytes to memory address (WriteMemoryByAddress) - %s' % (len(data), str(memory_location)))
 
-		req = Request(service)
+		if len(data) != memory_location.memorysize:
+			self.logger.warning('WriteMemoryByAddress: data block length (%d bytes) does not match MemoryLocation size (%d bytes)' % (len(data, memory_location.memorysize)))
 
-		if len(service.data) != service.memory_location.memorysize:
-			self.logger.warning('WriteMemoryByAddress: data block length (%d bytes) does not match MemoryLocation size (%d bytes)' % (len(service.data, service.memory_location.memorysize)))
+		response = self.send_request(request)
+		services.WriteMemoryByAddress.interpret_response(response, memory_location)
 
-		alfid_byte 			= service.memory_location.alfid.get_byte()   # AddressAndLengthFormatIdentifier
-		address_bytes 		= service.memory_location.get_address_bytes()
-		memorysize_bytes 	=  service.memory_location.get_memorysize_bytes()
-
-		req.data = alfid_byte + address_bytes + memorysize_bytes + service.data
-
-		response = self.send_request(req)
-
-		expected_response_size = len(alfid_byte) + len(address_bytes) + len(memorysize_bytes)
-		if len(response.data) < expected_response_size:
-			raise InvalidResponseException(response, 'Repsonse should be at least %d bytes' % (expected_response_size))
-
-		offset = 0
-		# We make sure that the echo from the server matches the request we sent.
-		response_alfid_byte = response.data[offset:offset+len(alfid_byte)]
-		offset += len(alfid_byte)
-		if response_alfid_byte != alfid_byte:
-			raise UnexpectedResponseException(response, 'AddressAndLengthFormatIdentifier echoed back by the server (%s) does not match the one requested by the client (%s)' % (binascii.hexlify(response_alfid_byte), binascii.hexlify(alfid_byte)) )
+		alfid_byte 			= memory_location.alfid.get_byte_as_int()   # AddressAndLengthFormatIdentifier
+		address_bytes 		= memory_location.get_address_bytes()
+		memorysize_bytes 	= memory_location.get_memorysize_bytes()
 		
-		response_address_bytes = response.data[offset:offset+len(address_bytes)]
-		offset+=len(address_bytes)
-		if response_address_bytes != address_bytes:
-			raise UnexpectedResponseException(response, 'Address echoed back by the server (%s) does not match the one requested by the client (%s)' % (binascii.hexlify(response_address_bytes), binascii.hexlify(address_bytes)) )
+		# We make sure that the echo from the server matches the request we sent.
+		if response.service_data.alfid_echo != alfid_byte:
+			raise UnexpectedResponseException(response, 'AddressAndLengthFormatIdentifier echoed back by the server (0x%02X) does not match the one requested by the client (0x%02X)' % (response.service_data.alfid_echo, int(alfid_byte)) )
+		
+		if response.service_data.memory_location_echo.address != memory_location.address:
+			raise UnexpectedResponseException(response, 'Address echoed back by the server (0x%X) does not match the one requested by the client (0x%X)' % (response.service_data.memory_location_echo.address, memory_location.address) )
 
-		response_memorysize_bytes = response.data[offset:offset+len(memorysize_bytes)]
-		offset+=len(memorysize_bytes)
-		if response_memorysize_bytes != memorysize_bytes:
-			raise UnexpectedResponseException(response, 'Memory size echoed back by the server (%s) does not match the one requested by the client (%s)' % (binascii.hexlify(response_memorysize_bytes), binascii.hexlify(memorysize_bytes)) )
+		if response.service_data.memory_location_echo.memorysize != memory_location.memorysize:
+			raise UnexpectedResponseException(response, 'Memory size echoed back by the server (0x%X) does not match the one requested by the client (0x%X)' % (response.service_data.memory_location_echo.memorysize, memory_location.memorysize) )
 
 		return response
 
@@ -900,613 +593,82 @@ class Client:
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber, snapshot_record_number=record_number)
 
 	def get_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
-		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number,data_size=data_size)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number,extended_data_size=data_size)
 
 	def get_mirrormemory_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
-		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number, data_size=data_size)
+		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number, extended_data_size=data_size)
 
 	# Performs a ReadDiagnsticInformation service request.
 	# Many request are encoded the same way and many response are encoded the same way. Request grouping and response grouping are independent.
 	@standard_error_management
-	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None, data_size=None):
-		# Process params		
-		if status_mask is not None and isinstance(status_mask, Dtc.Status):
-			status_mask = status_mask.get_byte_as_int()
-
-		if severity_mask is not None and isinstance(severity_mask, Dtc.Severity):
-			severity_mask = severity_mask.get_byte_as_int()
-
+	def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None, extended_data_size=None):
 		if dtc is not None and isinstance(dtc, Dtc):
 			dtc = dtc.id
 
-		# Request grouping for subfunction that have the same request format
-		request_subfn_no_param = [
-			services.ReadDTCInformation.Subfunction.reportSupportedDTCs,
-			services.ReadDTCInformation.Subfunction.reportFirstTestFailedDTC,
-			services.ReadDTCInformation.Subfunction.reportFirstConfirmedDTC,
-			services.ReadDTCInformation.Subfunction.reportMostRecentTestFailedDTC,
-			services.ReadDTCInformation.Subfunction.reportMostRecentConfirmedDTC,
-			services.ReadDTCInformation.Subfunction.reportDTCFaultDetectionCounter,
-			services.ReadDTCInformation.Subfunction.reportDTCWithPermanentStatus,
+		request_params = {
+			'subfunction' : subfunction,
+			'status_mask' : status_mask,
+			'severity_mask' : severity_mask,
+			'dtc' : dtc,
+			'snapshot_record_number' : snapshot_record_number,
+			'extended_data_record_number' : extended_data_record_number,
+			'tolerate_zero_padding' : self.config['tolerate_zero_padding']
+		}
 
-			# Documentation is confusing about reportDTCSnapshotIdentification subfunction.
-			# It is presented with reportDTCSnapshotRecordByDTCNumber (2 params) but a footnote says that these 2 parameters
-			# are not to be provided for reportDTCSnapshotIdentification. Therefore, it is the same as other no-params subfn
-			services.ReadDTCInformation.Subfunction.reportDTCSnapshotIdentification	
+		request = services.ReadDTCInformation.make_request(**request_params)
 
-			]
+		self.logger.info('Sending a ReadDtcInformation service request with subfunction "%s" (0x%02X).' % (services.ReadDTCInformation.Subfunction.get_name(subfunction), subfunction))
+		self.logger.debug('Params are : %s' % str(request_params))
+		response = self.send_request(request)
 
-		request_subfn_status_mask = [
-			services.ReadDTCInformation.Subfunction.reportNumberOfDTCByStatusMask,
-			services.ReadDTCInformation.Subfunction.reportDTCByStatusMask,
-			services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCByStatusMask,
-			services.ReadDTCInformation.Subfunction.reportNumberOfMirrorMemoryDTCByStatusMask,
-			services.ReadDTCInformation.Subfunction.reportNumberOfEmissionsRelatedOBDDTCByStatusMask,
-			services.ReadDTCInformation.Subfunction.reportEmissionsRelatedOBDDTCByStatusMask
-		]
+		response_params = {
+			'subfunction' : subfunction,
+			'status_mask' : status_mask,
+			'severity_mask' : severity_mask,
+			'dtc' : dtc,
+			'snapshot_record_number' : snapshot_record_number,
+			'extended_data_record_number' : extended_data_record_number,
+			'tolerate_zero_padding' : self.config['tolerate_zero_padding'],
+			'ignore_all_zero_dtc' : self.config['ignore_all_zero_dtc'],
+			'dtc_snapshot_did_size' : self.config['dtc_snapshot_did_size'],
+			'didconfig' : self.config['data_identifiers'] if 'data_identifiers' in self.config else None,
+			'extended_data_size' : extended_data_size
+		}
 
-		request_subfn_mask_record_plus_snapshot_record_number = [
-			services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber
-		]
+		if extended_data_size is None:
+			if 'extended_data_size' in self.config:
+				if dtc is not None and dtc in self.config['extended_data_size']:
+					response_params['extended_data_size'] = self.config['extended_data_size'][dtc]
 
-		request_subfn_snapshot_record_number = [
-			services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber
-		]
-
-		request_subfn_mask_record_plus_extdata_record_number = [
-			services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber,
-			services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber
-		]
-
-		request_subfn_severity_plus_status_mask = [
-			services.ReadDTCInformation.Subfunction.reportNumberOfDTCBySeverityMaskRecord,
-			services.ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord
-		]
-
-		request_subfn_mask_record = [
-			services.ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC		
-			]
-
-		# Response grouping for responses that are encoded the same way
-		response_subfn_dtc_availability_mask_plus_dtc_record = [
-			services.ReadDTCInformation.Subfunction.reportDTCByStatusMask,
-			services.ReadDTCInformation.Subfunction.reportSupportedDTCs,
-			services.ReadDTCInformation.Subfunction.reportFirstTestFailedDTC,
-			services.ReadDTCInformation.Subfunction.reportFirstConfirmedDTC,
-			services.ReadDTCInformation.Subfunction.reportMostRecentTestFailedDTC,
-			services.ReadDTCInformation.Subfunction.reportMostRecentConfirmedDTC,
-			services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCByStatusMask,
-			services.ReadDTCInformation.Subfunction.reportEmissionsRelatedOBDDTCByStatusMask,
-			services.ReadDTCInformation.Subfunction.reportDTCWithPermanentStatus
-		]
-
-		response_subfn_number_of_dtc = [
-			services.ReadDTCInformation.Subfunction.reportNumberOfDTCByStatusMask,
-			services.ReadDTCInformation.Subfunction.reportNumberOfDTCBySeverityMaskRecord,
-			services.ReadDTCInformation.Subfunction.reportNumberOfMirrorMemoryDTCByStatusMask,
-			services.ReadDTCInformation.Subfunction.reportNumberOfEmissionsRelatedOBDDTCByStatusMask,
-		]
-
-		response_subfn_dtc_availability_mask_plus_dtc_record_with_severity = [
-			services.ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord,
-			services.ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC
-		]
+		services.ReadDTCInformation.interpret_response(response, **response_params)
 		
-		response_subfn_dtc_plus_fault_counter = [
-			services.ReadDTCInformation.Subfunction.reportDTCFaultDetectionCounter
-		]
+		if response.service_data.subfunction_echo != subfunction:
+			raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation subfunction gotten from server(0x%02x) does not match the value in the request subfunction (0x%02x)' % (response.service_data.subfunction_echo, subfunction))	
+
+		if subfunction == services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber:
+			if len(response.service_data.dtcs) == 1:
+				if dtc != response.service_data.dtcs[0].id:
+					raise UnexpectedResponseException(response, 'Server returned snapshot with DTC ID 0x%06x while client requested for 0x%06x' % (response.service_data.dtcs[0].id, dtc))
+
+		if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber, services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber]:
+			if len(response.service_data.dtcs) == 1 and snapshot_record_number != 0xFF:
+				for snapshot in response.service_data.dtcs[0].snapshots:
+					if snapshot.record_number != snapshot_record_number:
+						raise UnexpectedResponseException(response, 'Server returned snapshot with record number 0x%02x while client requested for 0x%02x' % (snapshot.record_number, snapshot_record_number)) 
+
+		if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber]:
+			if len(response.service_data.dtcs) == 1 and extended_data_record_number < 0xF0: # Standard specifies that values between 0xF0 and 0xFF are for reporting groups (more than one record)
+				for extended_data in response.service_data.dtcs[0].extended_data:
+					if extended_data.record_number != extended_data_record_number :	
+						raise UnexpectedResponseException(response, 'Extended data record number given by the server (0x%02x) does not match the record number requested by the client (0x%02x)' % (extended_data.record_number, extended_data_record_number))
+
+		for dtc in response.service_data.dtcs:
+			if dtc.fault_counter is not None and (dtc.fault_counter >= 0x7F or dtc.fault_counter < 0x01):
+				self.logger.warning('Server returned a fault counter value of 0x%02x for DTC id 0x%06x while value should be between 0x01 and 0x7E.' % (dtc.fault_counter, dtc.id))
+
+		if Dtc.Format.get_name(response.service_data.dtc_format) is None:
+			self.logger.warning('Unknown DTC Format Identifier 0x%02x. Value should be between 0 and 3' % response.service_data.dtc_format)
 
-		response_subfn_dtc_plus_sapshot_record = [
-			services.ReadDTCInformation.Subfunction.reportDTCSnapshotIdentification
-		]
-
-		response_sbfn_dtc_status_snapshots_records = [
-			services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber
-		]
-
-		response_sbfn_dtc_status_snapshots_records_record_first = [
-			services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber
-		]
-
-		response_subfn_mask_record_plus_extdata = [
-			services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber,
-			services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber
-		]
-
-		# Craft Request and validate input params according the request group.
-
-		service = services.ReadDTCInformation(subfunction)
-		log_service_declaration_str = 'Sending a ReadDtcInformation service request with subfunction "%s" (0x%02X).' % (services.ReadDTCInformation.Subfunction.get_name(service.subfunction), service.subfunction)
-		req = Request(service)
-
-		if service.subfunction in request_subfn_no_param:		# Service ID + Subfunction
-			self.logger.info(log_service_declaration_str)
-			pass
-
-		elif service.subfunction in request_subfn_status_mask:
-			if status_mask is None:
-				raise ValueError('status_mask must be provided for subfunction 0x%02x' % service.subfunction)
-				
-			if not isinstance(status_mask, int) or status_mask < 0 or status_mask > 0xFF:
-				raise ValueError('status_mask must be a Dtc.Status instance or an integer between 0 and 0xFF')
-
-			self.logger.info('%s - StatusMask=0x%02x' % (log_service_declaration_str, status_mask))
-			req.data = struct.pack('B', (status_mask & 0xFF))
-
-		elif service.subfunction in request_subfn_mask_record_plus_snapshot_record_number:
-			if dtc is None:
-				raise ValueError('A dtc value must be provided for subfunction 0x%02x' % service.subfunction)
-
-			if not isinstance(dtc, int) or (isinstance(dtc, int) and (dtc < 0 or dtc > 0xFFFFFF)):
-				raise ValueError('dtc parameter must be an instance of Dtcor an integer between 0 and 0xFFFFFF')
-
-			if snapshot_record_number is None:
-				raise ValueError('snapshot_record_number must be provided for subfunction 0x%02x' % service.subfunction)
-
-			if not isinstance(snapshot_record_number, int) or (isinstance(snapshot_record_number, int) and (snapshot_record_number < 0 or snapshot_record_number > 0xFF)):
-				raise ValueError('snapshot_record_number must be an integer between 0 and 0xFF')
-
-			self.logger.info('%s - DTC=0x%06x, snapshot record number=0x%02x' % (log_service_declaration_str, dtc, snapshot_record_number))
-
-			req.data = b''
-			req.data += struct.pack('B', (dtc >> 16) & 0xFF)
-			req.data += struct.pack('B', (dtc >> 8) & 0xFF)
-			req.data += struct.pack('B', (dtc >> 0) & 0xFF)
-			req.data += struct.pack('B', snapshot_record_number)
-
-		elif service.subfunction in request_subfn_snapshot_record_number:
-			if snapshot_record_number is None:
-				raise ValueError('snapshot_record_number must be provided for subfunction 0x%02x' % service.subfunction)
-
-			if not isinstance(snapshot_record_number, int) or (isinstance(snapshot_record_number, int) and (snapshot_record_number < 0 or snapshot_record_number > 0xFF)):
-				raise ValueError('snapshot_record_number must be an integer between 0 and 0xFF')
-
-			self.logger.info('%s - Snapshot record number=0x%02x' % (log_service_declaration_str, snapshot_record_number))
-
-			req.data = struct.pack('B', snapshot_record_number)
-
-		elif service.subfunction in request_subfn_mask_record_plus_extdata_record_number:
-			if dtc is None:
-				raise ValueError('A dtc value must be provided for subfunction 0x%02x' % service.subfunction)
-
-			if not isinstance(dtc, int) or dtc < 0 or dtc > 0xFFFFFF:
-				raise ValueError('dtc parameter must be an instance of Dtcor an integer between 0 and 0xFFFFFF')
-
-			if extended_data_record_number is None:
-				raise ValueError('extended_data_record_number must be provided for subfunction 0x%02x' % service.subfunction)
-
-			if not isinstance(extended_data_record_number, int) or (isinstance(extended_data_record_number, int) and (extended_data_record_number < 0 or extended_data_record_number > 0xFF)):
-				raise ValueError('extended_data_record_number must be an integer between 0 and 0xFF')
-			if data_size is None and 'extended_data_size' in self.config and dtc in self.config['extended_data_size']:
-				data_size = self.config['extended_data_size'][dtc]
-			
-			if data_size is None:
-				raise ValueError('data_size must be provided or config[extended_data_size][dtc] must be set as length of data is not given by the server.')
-
-			if not isinstance(data_size, int) or (isinstance(data_size, int) and data_size <= 0):
-				raise ValueError('data_size or config[extended_data_size][dtc] must be a non-zero positive integer')
-
-			self.logger.info('%s - DTC=0x%06x, ExtendedData record number=0x%02x' % (log_service_declaration_str, dtc, extended_data_record_number))
-
-			req.data = b''
-			req.data += struct.pack('B', (dtc >> 16) & 0xFF)
-			req.data += struct.pack('B', (dtc >> 8) & 0xFF)
-			req.data += struct.pack('B', (dtc >> 0) & 0xFF)
-			req.data += struct.pack('B', extended_data_record_number)
-
-		elif service.subfunction in request_subfn_severity_plus_status_mask:
-
-			if status_mask is None:
-				raise ValueError('status_mask must be provided for subfunction 0x%02x' % service.subfunction)
-				
-			if not isinstance(status_mask, int) or status_mask < 0 or status_mask > 0xFF:
-				raise ValueError('status_mask must be a Dtc.Status instance or an integer between 0 and 0xFF')
-
-			if severity_mask is None:
-				raise ValueError('severity_mask must be provided for subfunction 0x%02x' % service.subfunction)
-				
-			if not isinstance(severity_mask, int) or severity_mask < 0 or severity_mask > 0xFF:
-				raise ValueError('severity_mask must be a Dtc.Severity instance or an integer between 0 and 0xFF')
-
-			self.logger.info('%s - StatusMask=0x%02x,SeverityMask=%02x' % (log_service_declaration_str, status_mask, severity_mask))
-
-			req.data = struct.pack('B', (severity_mask & 0xFF))
-			req.data += struct.pack('B', (status_mask & 0xFF))
-
-		elif service.subfunction in request_subfn_mask_record:
-			if dtc is None:
-				raise ValueError('A dtc value must be provided for subfunction 0x%02x' % service.subfunction)
-
-			if not isinstance(dtc, int) or dtc < 0 or dtc > 0xFFFFFF:
-				raise ValueError('dtc parameter must be an instance of Dtcor an integer between 0 and 0xFFFFFF')
-
-			self.logger.info('%s - DTC=0x%06x' % (log_service_declaration_str, dtc))
-
-			req.data = b''
-			req.data += struct.pack('B', (dtc >> 16) & 0xFF)
-			req.data += struct.pack('B', (dtc >> 8) & 0xFF)
-			req.data += struct.pack('B', (dtc >> 0) & 0xFF)
-
-		# Request is crafted. Send it to server and get response.
-
-		response = self.send_request(req)
-		parsed_response_container = DTCServerResponseContainer()	# what will be returned 
-		
-		if len(response.data) < 1:
-			raise InvalidResponseException(response, 'Response must be at least 1 byte long (echo of subfunction)')
-
-		# Parse and validate response
-		response_subfn = int(response.data[0])	# First byte is subfunction
-
-		if response_subfn != service.subfunction:
-			raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation subfunction gotten from server(0x%02x) does not match the value in the request subfunction (0x%02x)' % (response_subfn, service.subfunction))	
-
-		# Now for each response group, we have a different decoding algorithm
-		if service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record + response_subfn_dtc_availability_mask_plus_dtc_record_with_severity:
-
-			if service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record:
-				dtc_size = 4	# DTC ID (3) + Status (1)
-			elif service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record_with_severity:
-				dtc_size = 6	# DTC ID (3) + Status (1) + Severity (1) + FunctionalUnit (1)
-
-			if len(response.data) < 2:
-				raise InvalidResponseException(response, 'Response must be at least 2 byte long (echo of subfunction and DTCStatusAvailabilityMask)')
-
-			parsed_response_container.status_availability = response.data[1]
-
-			actual_byte = 2	# Increasing index
-
-			while True:	# Loop until we have read all dtc
-				if len(response.data) <= actual_byte:
-					break	# done
-
-				elif len(response.data) < actual_byte+dtc_size:
-					partial_dtc_length = len(response.data)-actual_byte
-					if self.config['tolerate_zero_padding'] and response.data[actual_byte:] == b'\x00'*partial_dtc_length:
-						break
-					else:
-						# We purposely ignore extra byte for subfunction reportSeverityInformationOfDTC as it is supposed to returns 0 or 1 DTC.
-						if service.subfunction != services.ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC or actual_byte == 2: 
-							raise InvalidResponseException(response, 'Incomplete DTC record. Missing %d bytes to response to complete the record' % (dtc_size-partial_dtc_length))
-
-				else:
-					dtc_bytes = response.data[actual_byte:actual_byte+dtc_size]
-					if dtc_bytes == b'\x00'*dtc_size and self.config['ignore_all_zero_dtc']:
-						pass # ignore
-					else:
-						# DTC decoding				
-						dtcid = 0
-						if service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record:
-							dtcid |= int(dtc_bytes[0]) << 16
-							dtcid |= int(dtc_bytes[1]) << 8
-							dtcid |= int(dtc_bytes[2]) << 0
-
-							dtc = Dtc(dtcid)
-							dtc.status.set_byte(dtc_bytes[3])
-						elif service.subfunction in response_subfn_dtc_availability_mask_plus_dtc_record_with_severity:
-							
-							dtcid |= int(dtc_bytes[2]) << 16
-							dtcid |= int(dtc_bytes[3]) << 8
-							dtcid |= int(dtc_bytes[4]) << 0
-
-							dtc = Dtc(dtcid)
-							dtc.severity.set_byte(dtc_bytes[0])
-							dtc.functional_unit = dtc_bytes[1]
-							dtc.status.set_byte(dtc_bytes[5])
-						parsed_response_container.dtcs.append(dtc)
-							
-				actual_byte += dtc_size
-
-			parsed_response_container.dtc_count = len(parsed_response_container.dtcs)
-
-		# The 2 following subfunctions response have different purpose but their construction is very similar.
-		elif service.subfunction in response_subfn_dtc_plus_fault_counter + response_subfn_dtc_plus_sapshot_record:
-			dtc_size = 4
-			if len(response.data) < 1:
-				raise InvalidResponseException(response, 'Response must be at least 1 byte long (echo of subfunction)')
-
-			actual_byte = 1 	# Increasing index
-			dtc_map = dict()	# This map is used to append snapshot to existing DTC.
-
-			while True: 	# Loop until we have read all dtc
-				if len(response.data) <= actual_byte:
-					break 	# done
-
-				elif len(response.data) < actual_byte+dtc_size:
-					partial_dtc_length = len(response.data)-actual_byte
-					if self.config['tolerate_zero_padding'] and response.data[actual_byte:] == b'\x00'*partial_dtc_length:
-						break
-					else:
-						raise InvalidResponseException(response, 'Incomplete DTC record. Missing %d bytes to response to complete the record' % (dtc_size-partial_dtc_length))
-				else:
-					dtc_bytes = response.data[actual_byte:actual_byte+dtc_size]
-					if dtc_bytes == b'\x00'*dtc_size and self.config['ignore_all_zero_dtc']:
-						pass # ignore
-					else:		
-						# DTC decoding
-
-						dtcid = 0
-						dtcid |= int(dtc_bytes[0]) << 16
-						dtcid |= int(dtc_bytes[1]) << 8
-						dtcid |= int(dtc_bytes[2]) << 0
-
-						# We create the DTC or get its reference if already created.
-						dtc_created = False	
-						if dtcid in dtc_map and service.subfunction in response_subfn_dtc_plus_sapshot_record:
-							dtc = dtc_map[dtcid]
-						else:
-							dtc = Dtc(dtcid)
-							dtc_map[dtcid] = dtc
-							dtc_created = True
-
-						# We either read the DTC fault counter or Snapshot record number. 
-						if service.subfunction in response_subfn_dtc_plus_fault_counter:
-							dtc.fault_counter = dtc_bytes[3]
-
-							if dtc.fault_counter >= 0x7F or dtc.fault_counter < 0x01:
-								self.logger.warning('Server returned a fault counter value of 0x%02x for DTC id 0x%06x while value should be between 0x01 and 0x7E.' % (dtc.fault_counter, dtc.id))
-
-						elif service.subfunction in response_subfn_dtc_plus_sapshot_record:
-							record_number = dtc_bytes[3]
-
-							if dtc.snapshots is None:
-								dtc.snapshots = []
-
-							dtc.snapshots.append(record_number)
-						
-						# Adds the DTC to the list.
-						if dtc_created:
-							parsed_response_container.dtcs.append(dtc)
-							
-				actual_byte += dtc_size
-
-			parsed_response_container.dtc_count = len(parsed_response_container.dtcs)
-
-		# This group of response returns a number of DTC available
-		elif service.subfunction in response_subfn_number_of_dtc:
-			if len(response.data) < 5:
-				raise InvalidResponseException(response, 'Response must be exactly 5 bytes long ')
-
-			parsed_response_container.status_availability = response.data[1]
-			parsed_response_container.dtc_format = response.data[2]
-
-			if Dtc.Format.get_name(parsed_response_container.dtc_format) is None:
-				self.logger.warning('Unknown DTC Format Identifier 0x%02x. Value should be between 0 and 3' % parsed_response_container.dtc_format)
-
-			parsed_response_container.dtc_count = struct.unpack('>H', response.data[3:5])[0]
-		
-		# This group of response returns DTC snapshots
-		# Response include a DTC, many snapshots records. For each records, we find many Data Identifier.
-		# We create one Dtc.Snapshot for each DID. That'll be easier to work with.
-		# <DTC,RecordNumber1,NumberOfDid_X,DID1,DID2,...DIDX, RecordNumber2,NumberOfDid_Y,DID1,DID2,...DIDY, etc>
-		elif service.subfunction in response_sbfn_dtc_status_snapshots_records :
-			if len(response.data) < 5:
-				raise InvalidResponseException(response, 'Response must be at least 5 bytes long ')
-
-			# DTC decoding
-			dtcid = 0
-			dtcid |= int(response.data[1]) << 16
-			dtcid |= int(response.data[2]) << 8
-			dtcid |= int(response.data[3]) << 0
-
-			# This response is triggered by a request that included a DTC number
-			if dtc != dtcid:
-				error_msg = 'Server returned snapshot with DTC ID 0x%06x while client requested for 0x%06x' % (dtcid, dtc)
-				raise UnexpectedResponseException(response, error_msg)
-
-			dtc = Dtc(dtcid)
-			dtc.status.set_byte(response.data[4])
-
-			actual_byte = 5		# Increasing index
-
-			# This configuration exists to overcome a lack of explanation in the documentation.
-			if self.config['dtc_snapshot_did_size'] > 8 or self.config['dtc_snapshot_did_size'] < 1:
-				raise RuntimeError('Configuration "dtc_snapshot_did_size" must be an integer between 1 and 8')
-
-			while True:		# Loop until we have read all dtc
-				if len(response.data) <= actual_byte:
-					break	# done
-
-				remaining_data = response.data[actual_byte:]
-				if self.config['tolerate_zero_padding'] and remaining_data == b'\x00' * len(remaining_data):
-					break
-					
-				if len(remaining_data) < 2:
-					raise InvalidResponseException(response, 'Incomplete response from server. Missing "number of identifier" and following data')
-
-				record_number = remaining_data[0]	
-				number_of_did = remaining_data[1]
-				# Validate record number and number of DID before continuing
-				if number_of_did == 0:
-					error_msg = 'Server returned snapshot record #%d with no data identifier included' % (record_number)
-					self.logger.warning(error_msg)
-					raise InvalidResponseException(response, error_msg) 
-
-				if (snapshot_record_number != 0xFF and record_number != snapshot_record_number):
-					error_msg = 'Server returned snapshot with record number 0x%02x while client requested for 0x%02x' % (record_number, snapshot_record_number)
-					self.logger.warning(error_msg)
-					raise UnexpectedResponseException(response, error_msg) 
-
-				if len(remaining_data) < 2 + self.config['dtc_snapshot_did_size']:
-					raise InvalidResponseException(response, 'Incomplete response from server. Missing DID number and associated data.')
-
-				actual_byte += 2
-				for i in range(number_of_did):
-					remaining_data = response.data[actual_byte:]
-					snapshot = Dtc.Snapshot()	# One snapshot per DID for convenience.
-					snapshot.record_number = record_number
-
-					# As standard does not specify the length of the DID, we craft it based on a config 
-					did = 0
-					for j in range(self.config['dtc_snapshot_did_size']):
-						offset = self.config['dtc_snapshot_did_size']-1-j
-						did |= (remaining_data[offset] << (8*j))
-					
-					# Decode the data based on DID number.
-					snapshot.did = did
-					didconfig = self.check_did_config(did)
-					codec = DidCodec.from_config(didconfig[did])
-					
-					data_offset =  self.config['dtc_snapshot_did_size'];
-					if len(remaining_data[data_offset:]) < len(codec):
-						raise InvalidResponseException(response, 'Incomplete response. Data for DID 0x%04x is only %d bytes while %d bytes is expected' % (did, len(remaining_data[data_offset:]), len(codec)))
-
-					snapshot.raw_data = remaining_data[data_offset:data_offset + len(codec)]
-					snapshot.data = codec.decode(snapshot.raw_data)
-
-					dtc.snapshots.append(snapshot)
-
-					actual_byte += self.config['dtc_snapshot_did_size'] + len(codec)
-
-
-			parsed_response_container.dtcs.append(dtc)
-			parsed_response_container.dtc_count = 1
-		
-		# This group of response returns DTC snapshots
-		# Response include a DTC, many snapshots records. For each records, we find many Data Identifier.
-		# We create one Dtc.Snapshot for each DID. That'll be easier to work with.
-		# Similar to previous subfunction group, but order of information is changed.
-
-		# <RecordNumber1, DTC1,NumberOfDid_X,DID1,DID2,...DIDX, RecordNumber2,DTC2, NumberOfDid_Y,DID1,DID2,...DIDY, etc>
-		elif service.subfunction in response_sbfn_dtc_status_snapshots_records_record_first :
-			if len(response.data) < 2:
-				raise InvalidResponseException(response, 'Response must be at least 2 bytes long. Subfunction echo + RecordNumber ')
-
-			actual_byte = 1	 # Increasing index
-			while True:	# Loop through response data
-				if len(response.data) <= actual_byte:
-					break	# done
-
-				remaining_data = response.data[actual_byte:]
-				record_number = remaining_data[0]
-
-				# If empty response but filled with 0, it is considered ok
-				if remaining_data == b'\x00' * len(remaining_data) and self.config['tolerate_zero_padding']:
-					break
-
-				# If record number does not match our request.
-				if (snapshot_record_number != 0xFF and record_number != snapshot_record_number):
-					error_msg = 'Server returned snapshot with record number 0x%02x while client requested for 0x%02x' % (record_number, snapshot_record_number)
-					self.logger.warning(error_msg)
-					raise UnexpectedResponseException(response, error_msg)
-
-				# If record number received but no DTC provided (allowed according to standard), we exit.
-				if len(remaining_data) == 1 or self.config['tolerate_zero_padding'] and remaining_data[1:] == b'\x00' * len(remaining_data[1:]):
-					break
-
-				if len(remaining_data) < 5: 	# Partial DTC (No DTC at all is checked above)
-					raise InvalidResponseException(response, 'Incomplete response from server. Missing "DTCAndStatusRecord" and following data')
-
-				if len(remaining_data) < 6:
-					raise InvalidResponseException(response, 'Incomplete response from server. Missing number of data identifier')
-
-				# DTC decoding
-				dtcid = 0
-				dtcid |= int(remaining_data[1]) << 16
-				dtcid |= int(remaining_data[2]) << 8
-				dtcid |= int(remaining_data[3]) << 0
-
-				dtc = Dtc(dtcid)
-				dtc.status.set_byte(remaining_data[4])
-
-				number_of_did = remaining_data[5]
-
-				actual_byte += 6
-				remaining_data = response.data[actual_byte:]
-
-				# Validate number of DID and DID size
-				if self.config['dtc_snapshot_did_size'] > 8 or self.config['dtc_snapshot_did_size'] < 1:
-					raise RuntimeError('Configuration "dtc_snapshot_did_size" must be an integer between 1 and 8')
-
-				if number_of_did == 0:
-					error_msg = 'Server returned snapshot record #%d with no data identifier included' % (record_number)
-					self.logger.warning(error_msg)
-					raise InvalidResponseException(response, error_msg) 
-
-				if len(remaining_data) < self.config['dtc_snapshot_did_size']:
-					error_msg = 'Incomplete response from server. Missing DID and associated data'
-					raise InvalidResponseException(response, error_msg)
-
-				# We have a DTC and 0 DID, next loop
-				if self.config['tolerate_zero_padding'] and remaining_data == b'\x00' * len(remaining_data):
-					break
-
-				# For each DID
-				for i in range(number_of_did):
-					remaining_data = response.data[actual_byte:]
-					snapshot = Dtc.Snapshot()	# One snapshot epr DID for convenience
-					snapshot.record_number = record_number
-
-					# As standard does not specify the length of the DID, we craft it based on a config 
-					did = 0
-					for j in range(self.config['dtc_snapshot_did_size']):
-						offset = self.config['dtc_snapshot_did_size']-1-j
-						did |= (remaining_data[offset] << (8*j))
-					
-					# Decode the data based on DID number.
-					snapshot.did = did
-					didconfig = self.check_did_config(did)
-					codec = DidCodec.from_config(didconfig[did])
-					
-					data_offset =  self.config['dtc_snapshot_did_size'];
-					if len(remaining_data[data_offset:]) < len(codec):
-						raise InvalidResponseException(response, 'Incomplete response. Data for DID 0x%04x is only %d bytes while %d bytes is expected' % (did, len(remaining_data[data_offset:]), len(codec)))
-
-					snapshot.raw_data = remaining_data[data_offset:data_offset + len(codec)]
-					snapshot.data = codec.decode(snapshot.raw_data)
-
-					dtc.snapshots.append(snapshot)
-
-					actual_byte += self.config['dtc_snapshot_did_size'] + len(codec)
-
-				parsed_response_container.dtcs.append(dtc)
-			parsed_response_container.dtc_count = len(parsed_response_container.dtcs)
-
-		# These subfunction include DTC ExtraData. We give it raw to user.
-		elif service.subfunction in response_subfn_mask_record_plus_extdata:
-
-			if len(response.data) < 5: 
-				raise InvalidResponseException(response, 'Incomplete response from server. Missing DTCAndStatusRecord')
-			# DTC decoding
-			dtcid = 0
-			dtcid |= int(response.data[1]) << 16
-			dtcid |= int(response.data[2]) << 8
-			dtcid |= int(response.data[3]) << 0
-
-			dtc = Dtc(dtcid)
-			dtc.status.set_byte(response.data[4])
-
-			actual_byte = 5	# Increasing index
-			while actual_byte < len(response.data):	# Loop through data
-				remaining_data = response.data[actual_byte:]
-				record_number = remaining_data[0]
-
-				if record_number == 0:
-					if remaining_data == b'\x00' * len(remaining_data) and self.config['tolerate_zero_padding']:
-						break
-					else:
-						raise InvalidResponseException(response, 'Extended data record number given by the server is 0 but this value is a reserved value.')
-
-				if record_number != extended_data_record_number and  extended_data_record_number < 0xF0:	# Standard specifies that values between 0xF0 and 0xFF are for reporting groups (more than one record)
-					raise UnexpectedResponseException(response, 'Extended data record number given by the server (0x%02x) does not match the record number requested by the client (0x%02x)' % (record_number, extended_data_record_number))
-
-				actual_byte +=1
-				remaining_data = response.data[actual_byte:]
-				if len(remaining_data) < data_size:
-					raise InvalidResponseException(response, 'Incomplete response from server. Length of extended data for DTC 0x%06x with record number 0x%02x is %d bytes but smaller than given data_size of %d bytes' % (dtcid, record_number, len(remaining_data), data_size))
-
-				exdata = Dtc.ExtendedData()
-				exdata.record_number = record_number
-				exdata.raw_data = remaining_data[0:data_size]
-
-				dtc.extended_data.append(exdata)
-
-				actual_byte+= data_size
-
-			parsed_response_container.dtcs.append(dtc)
-			parsed_response_container.dtc_count = len(parsed_response_container.dtcs)
-
-		response.service_data = parsed_response_container
 		return response
 
 	# Basic transmission of request. This will need to be improved

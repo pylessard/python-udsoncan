@@ -45,3 +45,7 @@ class UnexpectedResponseException(Exception):
 		servicename = response.service.get_name() if response.service is not None else ""
 		return "service execution returned a valid response for service %s, but unexpected. Details : %s " % (servicename, details)
 
+class ConfigError(Exception):
+	def __init__(self, key, msg="<No details given>", *args, **kwargs):
+		self.key=key
+		super().__init__(msg, *args, **kwargs)

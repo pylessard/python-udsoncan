@@ -1,4 +1,4 @@
-from . import BaseService, BaseSubfunction
+from . import *
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
 
@@ -17,14 +17,25 @@ class DiagnosticSessionControl(BaseService):
 		extendedDiagnosticSession = 3
 		safetySystemDiagnosticSession = 4
 
-	def __init__(self, session):
-		if not isinstance(session, int):
-			raise ValueError("Given session number is not a valid integer")
+	@classmethod
+	def make_request(cls, session):
+		from udsoncan import Request
+		ServiceHelper.validate_int(session, min=0, max=0xFF, name='Session number')
+		return Request(service=cls, subfunction=session)
 
-		if session < 0 or session > 0xFF:
-			raise ValueError("Session number must be an integer between 0 and 0xFF")
+	@classmethod
+	def interpret_response(cls, response):
+		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
+			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
 
-		self.session = session
+		response.service_data = cls.ResponseData()
+		response.service_data.session_echo = response.data[0]
+		response.service_data.session_param_records = response.data[1:] if len(response.data) > 1 else b''
 
-	def subfunction_id(self):
-		return self.session
+		return response
+
+	class ResponseData(BaseResponseData):
+		def __init__(self):
+			super().__init__(DiagnosticSessionControl)
+			self.session_echo = None
+			self.session_param_records = None

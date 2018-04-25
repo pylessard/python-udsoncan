@@ -1,4 +1,4 @@
-from . import BaseService, BaseSubfunction
+from . import *
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
 
@@ -20,21 +20,32 @@ class ECUReset(BaseService):
 		enableRapidPowerShutDown = 4
 		disableRapidPowerShutDown = 5
 
-	def __init__(self, resettype=None, powerdowntime=None):
-		if not isinstance(resettype, int):
-			raise ValueError('Reset type must be a integer')
-		if resettype < 0 or resettype > 0xFF:
-			raise ValueError('Reset type must be a value between 0 and 0x7F')
-
-		if resettype == self.ResetType.enableRapidPowerShutDown:
-			if powerdowntime is None:
-				raise ValueError('Power down time must be provided for reset of type enableRapidPowerShutDown')
-			
-			if not isinstance(powerdowntime, int) or powerdowntime < 0 or powerdowntime > 0xFF:
-				raise ValueError('Power down time must be an integer between 0 and 0xFF')
+	@classmethod
+	def make_request(cls, reset_type):
+		from udsoncan import Request
+		ServiceHelper.validate_int(reset_type, min=0, max=0xFF, name='Reset type')
+		return Request(service=cls, subfunction=reset_type)
 		
-		self.resettype = resettype
-		self.powerdowntime = powerdowntime
 
-	def subfunction_id(self):
-		return self.resettype
+	@classmethod
+	def interpret_response(cls, response):
+		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
+			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
+
+		response.service_data = cls.ResponseData()
+		response.service_data.reset_type_echo = response.data[0]
+
+		if response.service_data.reset_type_echo == cls.ResetType.enableRapidPowerShutDown:
+			if len(response.data) < 2:
+				raise InvalidResponseException(response, 'Response data is missing a second byte for rest type "enableRapidPowerShutDown"')
+
+			response.service_data.powerdown_time = response.data[1]
+
+	class ResponseData(BaseResponseData):
+		def __init__(self):
+			super().__init__(ECUReset)
+
+			self.reset_type_echo = None
+			self.powerdown_time = None
+
+

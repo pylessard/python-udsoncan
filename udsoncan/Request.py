@@ -6,23 +6,23 @@ class Request:
 	def __init__(self, service = None, subfunction = None, suppress_positive_response = False, data=None):
 		if service is None:
 			self.service = None
-			self.subfunction = None
-
 		elif isinstance(service, services.BaseService):
 			self.service = service.__class__
-			self.subfunction = service.subfunction_id()	# service instance are able toe generate the subfunction ID
 		elif inspect.isclass(service) and issubclass(service, services.BaseService):
-			if subfunction is not None:
-				if isinstance(subfunction, int):
-					self.service = service
-					self.subfunction = subfunction
-				else:
-					raise ValueError("Given subfunction must be a valid integer")
+			self.service = service
 		elif service is not None:
 			raise ValueError("Given service must be a service class or instance")
 
 		if not isinstance(suppress_positive_response, bool):
 			raise ValueError("suppress_positive_response must be a boolean value")
+
+		if subfunction is not None:
+			if isinstance(subfunction, int):
+				self.subfunction = subfunction
+			else:
+				raise ValueError("Given subfunction must be a valid integer")
+		else:
+			self.subfunction = None
 
 		self.suppress_positive_response = suppress_positive_response
 		
@@ -71,7 +71,7 @@ class Request:
 
 	def __repr__(self):
 		suppress_positive_response = '[SuppressPosResponse] ' if self.suppress_positive_response else ''
-		subfunction_name = '(subfunction=%d) ' % self.subfunction if self.service.use_subfunction() else ''
+		subfunction_name = '(subfunction=%d) ' % self.subfunction if self.service.use_subfunction() and self.subfunction is not None else ''
 		bytesize = len(self.data) if self.data is not None else 0
 		return '<Request: [%s] %s- %d data bytes %sat 0x%08x>' % (self.service.get_name(), subfunction_name, bytesize, suppress_positive_response, id(self))
 

@@ -1,4 +1,4 @@
-from . import BaseService, BaseSubfunction
+from . import *
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
 
@@ -19,25 +19,40 @@ class AccessTimingParameter(BaseService):
 							Response.Code.RequestOutOfRange
 							]	
 
-	def __init__(self, access_type, request_record=None):
-		if not isinstance(access_type, int):
-			raise ValueError('access_type must be an integer')
+	@classmethod
+	def make_request(cls, access_type, timing_param_record=None):
+		from udsoncan import Request
 
-		if access_type < 0 or access_type > 0x7F:
-			raise ValueError('access_type must be an integer between 0 and 0x7F')
+		ServiceHelper.validate_int(access_type, min=0, max=0x7F, name='Access type')
+		
+		if timing_param_record is not None and access_type != cls.AccessType.setTimingParametersToGivenValues :
+			raise ValueError('timing_param_record can only be set when access_type is setTimingParametersToGivenValues"')
 
-		if request_record is not None and access_type != self.AccessType.setTimingParametersToGivenValues :
-			raise ValueError('request_record can only be set when access_type is setTimingParametersToGivenValues"')
+		if timing_param_record is None and access_type == cls.AccessType.setTimingParametersToGivenValues :
+			raise ValueError('A timing_param_record must be provided when access_type is "setTimingParametersToGivenValues"')
 
-		if request_record is None and access_type == self.AccessType.setTimingParametersToGivenValues :
-			raise ValueError('A request_record must be provided when access_type is "setTimingParametersToGivenValues"')
+		if timing_param_record is not None:
+			if not isinstance(timing_param_record, bytes):
+				raise ValueError("timing_param_record must be a valid bytes objects")
 
-		if request_record is not None:
-			if not isinstance(request_record, bytes):
-				raise ValueError("request_record must be a valid bytes objects")
+		request = Request(service=cls, subfunction=access_type)
+		if timing_param_record is not None:
+			request.data += timing_param_record
+		
+		return request
 
-		self.access_type  = access_type
-		self.request_record = request_record
+	@classmethod
+	def interpret_response(cls, response):
+		if len(response.data) < 1: 	
+			raise InvalidResponseException(response, "Response data must be at least 1 byte")
 
-	def subfunction_id(self):
-		return self.access_type
+		response.service_data = cls.ResponseData()
+		response.service_data.access_type_echo = response.data[0]
+		response.service_data.timing_param_record = response.data[1:] if len(response.data) >1 else b''
+
+	class ResponseData(BaseResponseData):
+		def __init__(self):
+			super().__init__(AccessTimingParameter)
+			self.access_type_echo = None
+			self.timing_param_record = None
+

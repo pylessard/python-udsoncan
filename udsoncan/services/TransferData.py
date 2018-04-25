@@ -1,4 +1,4 @@
-from . import BaseService, BaseSubfunction
+from . import *
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
 
@@ -15,18 +15,29 @@ class TransferData(BaseService):
 							Response.Code.VoltageTooLow
 							]
 
-	def __init__(self, block_sequence_counter, data=None):
-		if not isinstance(block_sequence_counter, int):
-			raise ValueError('block_sequence_counter must be an integer')
-
-		if block_sequence_counter < 0 or block_sequence_counter > 0xFF:
-			raise ValueError('block_sequence_counter must be an integer between 0 and 0xFF')
+	@classmethod
+	def make_request(cls, sequence_number, data=None):
+		from udsoncan import Request, MemoryLocation
+		
+		ServiceHelper.validate_int(sequence_number, min=0, max=0xFF, name='Block sequence counter')
 
 		if data is not None and not isinstance(data, bytes):
 			raise ValueError('data must be a bytes object')
 
-		self.block_sequence_counter = block_sequence_counter
-		self.data= data
+		request = Request(service=cls, subfunction=sequence_number, data=data)
+		return request
 
-	def subfunction_id(self):
-		return self.block_sequence_counter
+	@classmethod
+	def interpret_response(cls, response):
+		if len(response.data) < 1:
+			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
+
+		response.service_data = cls.ResponseData()
+		response.service_data.sequence_number_echo = response.data[0]
+		response.service_data.parameter_records = response.data[1:] if len(response.data) > 1 else b''
+
+	class ResponseData(BaseResponseData):
+		def __init__(self):
+			super().__init__(TransferData)
+			self.sequence_number_echo = None
+			self.parameter_records = None

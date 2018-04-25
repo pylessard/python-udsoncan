@@ -70,10 +70,3 @@ class TestTesterPresent(ClientServerTest):
 		response = self.udsclient.tester_present()
 		self.assertTrue(response.valid)
 		self.assertTrue(response.unexpected)
-
-	def test_bad_param(self):
-		pass
-
-	def _test_bad_param(self):
-		with self.assertRaises(ValueError):
-			self.udsclient.tester_present(1) 

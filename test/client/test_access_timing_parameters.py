@@ -15,8 +15,8 @@ class TestAccessTimingParameter(ClientServerTest):
 
 	def _test_read_extended_params_success(self):
 		response = self.udsclient.read_extended_timing_parameters()
-		param = response.service_data
-		self.assertEqual(param, b"\x99\x88\x77\x66")
+		self.assertEqual(response.service_data.access_type_echo, 0x01)
+		self.assertEqual(response.service_data.timing_param_record, b"\x99\x88\x77\x66")
 
 	def test_read_active_params_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -26,8 +26,8 @@ class TestAccessTimingParameter(ClientServerTest):
 	def _test_read_active_params_success(self):
 		response = self.udsclient.read_active_timing_parameters()
 		self.assertTrue(response.positive)
-		param = response.service_data		
-		self.assertEqual(param, b"\x99\x88\x77\x66")		
+		self.assertEqual(response.service_data.access_type_echo, 0x03)
+		self.assertEqual(response.service_data.timing_param_record, b"\x99\x88\x77\x66")		
 
 	def test_set_params_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -119,10 +119,10 @@ class TestAccessTimingParameter(ClientServerTest):
 			response = self.udsclient.access_timing_parameter(access_type=0x80)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToGivenValues, request_record=None)
+			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToGivenValues, timing_param_record=None)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.readExtendedTimingParameterSet, request_record=b"\xaa\xbb")
+			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.readExtendedTimingParameterSet, timing_param_record=b"\xaa\xbb")
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToDefaultValues, request_record=123)
+			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToDefaultValues, timing_param_record=123)

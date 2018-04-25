@@ -11,29 +11,38 @@ class TestRoutineControl(ClientServerTest):
 	def test_start_routine_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x31\x01\x00\x12\x45\x67\x89\xaa")
-		self.conn.fromuserqueue.put(b"\x71\x01\x00\x12")	# Positive response
+		self.conn.fromuserqueue.put(b"\x71\x01\x00\x12\x99\x88")	# Positive response
 
 	def _test_start_routine_success(self):
 		response = self.udsclient.start_routine(routine_id=0x12, data = b'\x45\x67\x89\xaa')
 		self.assertTrue(response.positive)
+		self.assertEqual(response.service_data.control_type_echo, 0x1)
+		self.assertEqual(response.service_data.routine_id_echo, 0x12)
+		self.assertEqual(response.service_data.routine_status_record, b'\x99\x88')
 
 	def test_stop_routine_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x31\x02\x12\x34\x45\x67\x89\xaa")
-		self.conn.fromuserqueue.put(b"\x71\x02\x12\x34")	# Positive response
+		self.conn.fromuserqueue.put(b"\x71\x02\x12\x34\x99\x88")	# Positive response
 
 	def _test_stop_routine_success(self):
 		response = self.udsclient.stop_routine(routine_id=0x1234, data = b'\x45\x67\x89\xaa')
 		self.assertTrue(response.positive)
+		self.assertEqual(response.service_data.control_type_echo, 0x2)
+		self.assertEqual(response.service_data.routine_id_echo, 0x1234)
+		self.assertEqual(response.service_data.routine_status_record, b'\x99\x88')
 
 	def test_get_routine_result_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x31\x03\x12\x34\x45\x67\x89\xaa")
-		self.conn.fromuserqueue.put(b"\x71\x03\x12\x34")	# Positive response
+		self.conn.fromuserqueue.put(b"\x71\x03\x12\x34\x99\x88")	# Positive response
 
 	def _test_get_routine_result_success(self):
 		response = self.udsclient.get_routine_result(routine_id=0x1234, data = b'\x45\x67\x89\xaa')
 		self.assertTrue(response.positive)
+		self.assertEqual(response.service_data.control_type_echo, 0x3)
+		self.assertEqual(response.service_data.routine_id_echo, 0x1234)
+		self.assertEqual(response.service_data.routine_status_record, b'\x99\x88')
 
 	def test_routine_control_denied_exception(self):
 		self.wait_request_and_respond(b"\x7F\x31\x72") #General Programming FAilure

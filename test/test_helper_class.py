@@ -97,6 +97,29 @@ class TestMemoryLocation(UdsTest):
 		self.assertEqual(memloc.get_address_bytes(), b'\x00\x00\x12\x34')
 		self.assertEqual(memloc.get_memorysize_bytes(), b'\x00\x00\x78')
 
+	def test_memloc_from_bytes(self):
+		memloc = MemoryLocation.from_bytes(address_bytes=b'\x12\x34', memorysize_bytes=b'\xFF')
+		self.assertEqual(memloc.address, 0x1234)
+		self.assertEqual(memloc.memorysize, 0xFF)
+		self.assertEqual(memloc.address_format, 16)
+		self.assertEqual(memloc.memorysize_format, 8)
+
+		memloc = MemoryLocation.from_bytes(address_bytes=b'\x12\x34\x56', memorysize_bytes=b'\x66\x77\x88')
+		self.assertEqual(memloc.address, 0x123456)
+		self.assertEqual(memloc.memorysize, 0x667788)
+		self.assertEqual(memloc.address_format, 24)
+		self.assertEqual(memloc.memorysize_format, 24)
+
+	def test_memloc_max_size(self):
+		MemoryLocation.from_bytes(address_bytes=b'\x12\x34\x56\x78\x9a', memorysize_bytes=b'\xFF')
+		with self.assertRaises(ValueError):
+			MemoryLocation.from_bytes(address_bytes=b'\x12\x34\x56\x78\x9a\xbc', memorysize_bytes=b'\xFF')
+
+		MemoryLocation.from_bytes(address_bytes=b'\x12\x34', memorysize_bytes=b'\x12\x34\x56\x78')
+		with self.assertRaises(ValueError):
+			MemoryLocation.from_bytes(address_bytes=b'\x12\x34', memorysize_bytes=b'\x12\x34\x56\x78\x9a')
+
+
 class TestCommunicationType(UdsTest):
 	def test_make(self):
 		comtype = CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True, network_management_msg=False)

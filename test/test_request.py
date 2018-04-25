@@ -4,9 +4,6 @@ from test.UdsTest import UdsTest
 class DummyServiceNormal(services.BaseService):
 	_sid = 0x13
 
-	def subfunction_id(self):
-		return 0x44
-
 class DummyServiceNoSubunction(services.BaseService):
 	_sid = 0x13
 	_use_subfunction = False
@@ -17,32 +14,30 @@ class TestRequest(UdsTest):
 	def test_create_from_instance_ok(self):
 		req = Request(DummyServiceNormal())
 		self.assertEqual(req.service.request_id(), 0x13)
-		self.assertEqual(req.subfunction, 0x44)
 
 	def test_create_from_class_ok(self):
 		req = Request(DummyServiceNormal, subfunction=0x44)
 		self.assertEqual(req.service.request_id(), 0x13)
-		self.assertEqual(req.subfunction, 0x44)
 
 	def test_make_payload_basic(self):
-		req = Request(DummyServiceNormal())
+		req = Request(DummyServiceNormal, subfunction=0x44)
 		payload = req.get_payload()
 		self.assertEqual(b"\x13\x44", payload)
 
 	def test_make_payload_custom_data(self):
-		req = Request(DummyServiceNormal())
+		req = Request(DummyServiceNormal, subfunction=0x44)
 		req.data = b"\x12\x34\x56\x78"
 		payload = req.get_payload()
 		self.assertEqual(b"\x13\x44\x12\x34\x56\x78", payload)
 	
 	def test_make_payload_custom_data_no_subfunction(self):
-		req = Request(DummyServiceNoSubunction())
+		req = Request(DummyServiceNoSubunction, subfunction=0x44)
 		req.data = b"\x12\x34\x56\x78"
 		payload = req.get_payload()
 		self.assertEqual(b"\x13\x12\x34\x56\x78", payload)			
 
 	def test_suppress_positive_response(self):
-		req = Request(DummyServiceNormal(), suppress_positive_response=True)
+		req = Request(DummyServiceNormal, subfunction=0x44, suppress_positive_response=True)
 		payload = req.get_payload()
 		self.assertEqual(b"\x13\xC4", payload)	# Subfunction bit 7 is set
 
@@ -82,7 +77,7 @@ class TestRequest(UdsTest):
 		self.assertIsNone(req.data)
 
 	def test_str_repr(self):
-		req = Request(DummyServiceNormal())
+		req = Request(DummyServiceNormal)
 		str(req)
 		req.__repr__()
 

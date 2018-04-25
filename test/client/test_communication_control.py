@@ -18,6 +18,7 @@ class TestCommunicationControl(ClientServerTest):
 		com_type = CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True)
 		response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)
 		self.assertTrue(response.positive)
+		self.assertEqual(response.service_data.control_type_echo, control_type)
 
 	def test_comcontrol_disable_subnet(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -29,6 +30,7 @@ class TestCommunicationControl(ClientServerTest):
 		com_type = CommunicationType(subnet=3, normal_msg=True, network_management_msg=True)
 		response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)	
 		self.assertTrue(response.positive)
+		self.assertEqual(response.service_data.control_type_echo, control_type)
 
 	def test_comcontrol_negative_response_exception(self):
 		self.wait_request_and_respond(b"\x7F\x28\x31") 	# Request Out Of Range

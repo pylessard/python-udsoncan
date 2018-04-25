@@ -126,5 +126,5 @@ class TestReadDataByIdentifier(ClientServerTest):
 		pass
 
 	def _test_no_config(self):
-		with self.assertRaises(LookupError):
+		with self.assertRaises(ConfigError):
 			self.udsclient.write_data_by_identifier(did = 4, value=0x1234) 

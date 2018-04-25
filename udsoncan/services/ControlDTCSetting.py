@@ -1,4 +1,4 @@
-from . import BaseService, BaseSubfunction
+from . import *
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
 
@@ -18,20 +18,26 @@ class ControlDTCSetting(BaseService):
 		vehicleManufacturerSpecific = (0x40, 0x5F)	# To be able to print textual name for logging only.
 		systemSupplierSpecific = (0x60, 0x7E)		# To be able to print textual name for logging only.
 
-	def __init__(self, setting_type, data = None):
+	@classmethod
+	def make_request(cls, setting_type, data = None):
+		from udsoncan import Request
 
-		if not isinstance(setting_type, int):
-			raise ValueError('setting_type must be an integer')
-
-		if setting_type < 0 or setting_type > 0x7F:
-			raise ValueError('setting_type must be an integer between 0 and 0x7F')
-
+		ServiceHelper.validate_int(setting_type, min=0, max=0x7F, name='Setting type')
 		if data is not None:
 			if not isinstance(data, bytes):
 				raise ValueError('data must be a valid bytes object')
 
-		self.setting_type = setting_type
-		self.data = data
+		return Request(service=cls, subfunction=setting_type, data=data)
 
-	def subfunction_id(self):
-		return self.setting_type
+	@classmethod
+	def interpret_response(cls, response):
+		if len(response.data) < 1: 	
+			raise InvalidResponseException(response, "Response data must be at least 1 byte")
+
+		response.service_data = cls.ResponseData()
+		response.service_data.setting_type_echo = response.data[0]
+
+	class ResponseData(BaseResponseData):
+		def __init__(self):
+			super().__init__(ControlDTCSetting)
+			self.setting_type_echo = None

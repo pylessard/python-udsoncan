@@ -1652,23 +1652,26 @@ class GenericReportExtendedDataByRecordNumber():
 	def _test_oob_values(self):
 		with self.assertRaises(ValueError):
 			getattr(self.udsclient, self.client_function).__call__(dtc=-1, data_size=3, record_number=0x99)
-
 		with self.assertRaises(ValueError):
 			getattr(self.udsclient, self.client_function).__call__(dtc=0x1000000, data_size=3, record_number=0x99)
-
-		with self.assertRaises(ValueError):
-			getattr(self.udsclient, self.client_function).__call__(dtc=0x123456, data_size=-1, record_number=0x99)
-
-		with self.assertRaises(ValueError):
-			self.udsclient.config['extended_data_size'] = {0x123456 : -1}
-			getattr(self.udsclient, self.client_function).__call__(dtc=0x123456, record_number=0x99)
-		del self.udsclient.config['extended_data_size']
 
 		with self.assertRaises(ValueError):
 			getattr(self.udsclient, self.client_function).__call__(dtc=0x123456, data_size=3, record_number=-1)
 
 		with self.assertRaises(ValueError):
 			getattr(self.udsclient, self.client_function).__call__(dtc=0x123456, data_size=3, record_number=0x100)
+
+	def test_oob_values_data_size(self): # validation is made at interpret_response
+		self.wait_request_and_respond(b'\x59'  + self.sb + b'\x12\x34\x56\x20\x99\x01\x02\x03')
+		self.wait_request_and_respond(b'\x59'  + self.sb + b'\x12\x34\x56\x20\x99\x01\x02\x03')
+
+	def _test_oob_values_data_size(self):
+		with self.assertRaises(ValueError):
+			getattr(self.udsclient, self.client_function).__call__(dtc=0x123456, data_size=-1, record_number=0x99)
+
+		with self.assertRaises(ValueError):
+			self.udsclient.config['extended_data_size'] = {0x123456 : -1}
+			getattr(self.udsclient, self.client_function).__call__(dtc=0x123456, record_number=0x99)
 
 class TestReportDTCExtendedDataRecordByDTCNumber(ClientServerTest, GenericReportExtendedDataByRecordNumber):	# Subfn = 0x6
 	def __init__(self, *args, **kwargs):

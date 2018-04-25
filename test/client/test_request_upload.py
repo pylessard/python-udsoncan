@@ -16,8 +16,7 @@ class TestRequestUpload(ClientServerTest):
 	def _test_request_upload_success(self):
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
 		response = self.udsclient.request_upload(memory_location=memloc)
-		nblock = response.service_data
-		self.assertEqual(nblock,0xabcd)
+		self.assertEqual(response.service_data.max_length,0xabcd)
 
 	def test_request_upload_config_format(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -28,8 +27,7 @@ class TestRequestUpload(ClientServerTest):
 		self.udsclient.config = {'server_address_format':32, 'server_memorysize_format':16}
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF)
 		response = self.udsclient.request_upload(memory_location=memloc)
-		nblock = response.service_data
-		self.assertEqual(nblock,0xabcd)
+		self.assertEqual(response.service_data.max_length,0xabcd)
 
 	def test_request_upload_success_lfid(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -39,8 +37,7 @@ class TestRequestUpload(ClientServerTest):
 	def _test_request_upload_success_lfid(self):
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
 		response = self.udsclient.request_upload(memory_location=memloc)
-		nblock = response.service_data
-		self.assertEqual(nblock,0xabcd)
+		self.assertEqual(response.service_data.max_length,0xabcd)
 
 	def test_request_upload_success_dfi(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -51,8 +48,7 @@ class TestRequestUpload(ClientServerTest):
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
 		dfi  =DataFormatIdentifier(compression=5, encryption=2)
 		response = self.udsclient.request_upload(memory_location=memloc, dfi=dfi)
-		nblock = response.service_data
-		self.assertEqual(nblock,0xabcd)
+		self.assertEqual(response.service_data.max_length,0xabcd)
 
 	def test_incomplete_nblock_response_exception(self):
 		self.wait_request_and_respond(b"\x75\x40\xab\xcd")	# Missing 2 bytes to complete number of block

@@ -1,4 +1,4 @@
-from . import BaseService, BaseSubfunction
+from . import *
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
 
@@ -19,14 +19,9 @@ class CommunicationControl(BaseService):
 							Response.Code.RequestOutOfRange
 							]
 
-	def __init__(self, control_type, communication_type):
+	@classmethod
+	def normalize_communication_type(self, communication_type):
 		from udsoncan import CommunicationType
-
-		if not isinstance(control_type, int):
-			raise ValueError('control_type must be an integer')
-
-		if control_type < 0 or control_type > 0x7F:
-			raise ValueError('control_type must be an integer between 0 and 0x7F')
 
 		if not isinstance(communication_type, CommunicationType) and not isinstance(communication_type, int):
 			raise ValueError('communication_type must either be a CommunicationType object or an integer')
@@ -34,8 +29,29 @@ class CommunicationControl(BaseService):
 		if isinstance(communication_type, int):
 			communication_type = CommunicationType.from_byte(communication_type)
 
-		self.communication_type = communication_type
-		self.control_type = control_type
+		return communication_type
 
-	def subfunction_id(self):
-		return self.control_type
+	@classmethod
+	def make_request(cls, control_type, communication_type):
+		from udsoncan import Request
+
+		ServiceHelper.validate_int(control_type, min=0, max=0x7F, name='Control type')
+
+		communication_type = cls.normalize_communication_type(communication_type)
+		request = Request(service=cls, subfunction=control_type)
+		request.data = communication_type.get_byte()
+
+		return request
+
+	@classmethod
+	def interpret_response(cls, response):
+		if len(response.data) < 1: 	
+			raise InvalidResponseException(response, "Response data must be at least 1 byte")
+
+		response.service_data = cls.ResponseData()
+		response.service_data.control_type_echo = response.data[0]
+
+	class ResponseData(BaseResponseData):
+		def __init__(self):
+			super().__init__(CommunicationControl)
+			self.control_type_echo = None
