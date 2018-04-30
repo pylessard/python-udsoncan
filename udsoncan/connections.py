@@ -34,6 +34,9 @@ class BaseConnection(ABC):
 			self.logger.debug('Received %d bytes : [%s]' % (len(frame), binascii.hexlify(frame) ))
 		return frame
 	
+	def __enter__(self):
+		return self
+
 	@abstractmethod
 	def specific_send(self, payload):
 		pass
@@ -49,7 +52,7 @@ class BaseConnection(ABC):
 	@abstractmethod
 	def close(self):
 		pass
-	@abstractmethod
+	
 	def __exit__(self, type, value, traceback):
 		pass
 
@@ -128,6 +131,7 @@ class SocketConnection(BaseConnection):
 		while not self.rxqueue.empty():
 			self.rxqueue.get()
 
+
 class IsoTPConnection(BaseConnection):
 	def __init__(self, interface, rxid, txid, name=None, tpsock=None):
 		import isotp
@@ -205,3 +209,73 @@ class IsoTPConnection(BaseConnection):
 	def empty_rxqueue(self):
 		while not self.rxqueue.empty():
 			self.rxqueue.get()
+
+
+class QueueConnection(BaseConnection):
+	def __init__(self, name=None, mtu=4095):
+		BaseConnection.__init__(self, name)
+
+		self.fromuserqueue = queue.Queue()	# Client reads from this queue. Other end is simulated
+		self.touserqueue = queue.Queue()	# Client writes to this queue. Other end is simulated
+		self.opened = False
+		self.mtu = mtu
+
+	def open(self):
+		self.opened = True
+		self.logger.info('Connection opened')
+		return self
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, type, value, traceback):
+		self.close()
+
+	def is_open(self):
+		return self.opened 
+
+	def close(self):
+		self.empty_rxqueue()
+		self.empty_txqueue()
+		self.opened = False
+		self.logger.info('Connection closed')	
+
+	def specific_send(self, payload):
+		if self.mtu is not None:
+			if len(payload) > self.mtu:
+				self.logger.warning("Truncating payload to be set to a length of %d" % (self.mtu))
+				payload = payload[0:self.mtu]
+
+		self.touserqueue.put(payload)
+
+	def specific_wait_frame(self, timeout=2, exception=False):
+		if not self.opened:
+			if exception:
+				raise RuntimeException("Connection is not opened")
+			else:
+				return None
+
+		timedout = False
+		frame = None
+		try:
+			frame = self.fromuserqueue.get(block=True, timeout=timeout)
+		except queue.Empty:
+			timedout = True
+			
+		if exception and timedout:
+			raise TimeoutException("Did not receive frame from user in time (timeout=%s sec)" % timeout)
+		if self.mtu is not None:
+			if frame is not None and len(frame) > self.mtu:
+				self.logger.warning("Truncating received payload to a length of %d" % (self.mtu))
+				frame = frame[0:self.mtu]
+
+		return frame
+
+	def empty_rxqueue(self):
+		while not self.fromuserqueue.empty():
+			self.fromuserqueue.get()
+
+	def empty_txqueue(self):
+		while not self.touserqueue.empty():
+			self.touserqueue.get()
+

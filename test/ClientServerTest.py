@@ -1,4 +1,4 @@
-from test.stub import StubbedConnection
+from udsoncan.connections import QueueConnection
 from test.ThreadableTest import ThreadableTest
 from udsoncan.client import Client
 
@@ -7,7 +7,7 @@ class ClientServerTest(ThreadableTest):
 		ThreadableTest.__init__(self, *args, **kwargs)
 
 	def setUp(self):
-		self.conn = StubbedConnection(name='unittest')
+		self.conn = QueueConnection(name='unittest', mtu=4095)
 
 	def clientSetUp(self):
 		self.udsclient = Client(self.conn, request_timeout=0.2)
