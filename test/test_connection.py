@@ -1,5 +1,5 @@
 from test.UdsTest import UdsTest
-from udsoncan.Connection import IsoTPConnection, SocketConnection
+from udsoncan.connections import IsoTPConnection, SocketConnection
 from test.stub import StubbedIsoTPSocket
 import socket
 import threading

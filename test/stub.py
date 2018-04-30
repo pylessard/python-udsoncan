@@ -1,5 +1,5 @@
 from udsoncan.exceptions import TimeoutException
-from udsoncan import Connection, Request, Response
+from udsoncan import connections, Request, Response
 import queue
 import logging
 import socket
@@ -48,9 +48,9 @@ class StubbedIsoTPSocket(object):
 			raise socket.timeout 
 		return payload
 
-class StubbedConnection(Connection.BaseConnection):
+class StubbedConnection(connections.BaseConnection):
 	def __init__(self, name=None):
-		Connection.BaseConnection.__init__(self, name)
+		connections.BaseConnection.__init__(self, name)
 
 		self.fromuserqueue = queue.Queue()	# Client reads from this queue. Other end is simulated
 		self.touserqueue = queue.Queue()	# Client writes to this queue. Other end is simulated
