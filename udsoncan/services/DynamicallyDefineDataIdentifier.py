@@ -12,6 +12,14 @@ class DynamicallyDefineDataIdentifier(BaseService):
 							Response.Code.SecurityAccessDenied
 							]
 
-	def __init__(self, config=None):
-		
+	@classmethod
+	def make_request(cls):
 		raise NotImplementedError('Service is not implemented')
+
+	@classmethod
+	def interpret_response(cls, response):
+		raise NotImplementedError('Service is not implemented')
+
+	class ResponseData(BaseResponseData):	
+		def __init__(self):
+			super().__init__(DynamicallyDefineDataIdentifier)

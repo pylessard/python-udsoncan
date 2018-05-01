@@ -11,6 +11,14 @@ class ReadScalingDataByIdentifier(BaseService):
 							Response.Code.SecurityAccessDenied
 							]
 
-	def __init__(self, config=None):
-		
-		pass
+	@classmethod
+	def make_request(cls):
+		raise NotImplementedError('Service is not implemented')
+
+	@classmethod
+	def interpret_response(cls, response):
+		raise NotImplementedError('Service is not implemented')
+
+	class ResponseData(BaseResponseData):	
+		def __init__(self):
+			super().__init__(ReadScalingDataByIdentifier)
