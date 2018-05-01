@@ -106,9 +106,6 @@ class Response:
 		self.service = service
 
 		if data is not None:
-			if self.service is not None and not self.service.has_response_data():
-				raise ValueError("This service should not have any data in its response.")
-
 			if not isinstance(data, bytes):
 				raise ValueError("Given data must be a valid bytes object")
 
