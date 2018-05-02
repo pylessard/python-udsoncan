@@ -30,7 +30,23 @@ class SecurityAccess(BaseService):
 			return level if level % 2 == 0 else level+1
 
 	@classmethod
-	def make_request(cls, level, mode=Mode.RequestSeed, key=None):
+	def make_request(cls, level, mode, key=None):
+		"""
+		Generate a request for SecurityAccess
+
+		:param level: Service subfunction. The security level to unlock. 
+			For mode=RequestSeed, level must be an even value. For mode=SendKey, level must be an odd value.
+			If the even/odd constraint is not respected, the level value will be corrected to properly set the LSB.
+		:type level: int
+
+		:param mode: Type of request to perform. RequestSeed or SendKey 
+		:type mode: SecurityAccess.Mode, int
+
+		:param key: When mode=SendKey, this value must be provided.
+		:type key: bytes
+
+		:raises ValueError: If parameters are out of range or missing
+		"""		
 		from udsoncan import Request
 		cls.validate_mode(mode)
 
@@ -46,6 +62,16 @@ class SecurityAccess(BaseService):
 
 	@classmethod
 	def interpret_response(cls, response, mode):
+		"""
+		Populates the response `service_data` property with an instance of `SecurityAccess.ResponseData`
+
+		:param response: The received response to interpret
+		:type response: Response
+
+		:raises InvalidResponseException: If length of response.data is too small
+		:raises ValueError: If mode is not RequetsSeed or SendKey
+		"""
+
 		cls.validate_mode(mode)
 
 		response.service_data = cls.ResponseData()
@@ -65,6 +91,15 @@ class SecurityAccess(BaseService):
 			raise ValueError('Given mode must be either be RequestSeed (0) or SendKey (1).')
 
 	class ResponseData(BaseResponseData):
+		"""
+		.. data:: security_level_echo
+
+			Request subfunction echoed back by the server
+
+		.. data:: seed
+
+			Seed value. Only present if request mode was RequestSeed (even subfunction)
+		"""		
 		def __init__(self):
 			super().__init__(SecurityAccess)
 

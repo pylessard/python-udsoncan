@@ -111,7 +111,7 @@ class TestIOControl(ClientServerTest):
 	def _test_io_control_with_repsonse_record_zero_padding_not_tolerated_exception(self):
 		self.udsclient.config['tolerate_zero_padding'] = False
 		for i in range(3):
-			with self.assertRaises(UnexpectedResponseException):
+			with self.assertRaises(InvalidResponseException):
 				self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
 
 	def test_io_control_with_repsonse_record_zero_padding_not_tolerated_no_exception(self):
@@ -120,13 +120,12 @@ class TestIOControl(ClientServerTest):
 			self.wait_request_and_respond(data + b'\x00' * (i+1))
 
 	def _test_io_control_with_repsonse_record_zero_padding_not_tolerated_no_exception(self):
-		self.udsclient.config['exception_on_unexpected_response'] = False
+		self.udsclient.config['exception_on_invalid_response'] = False
 		self.udsclient.config['tolerate_zero_padding'] = False
 		
 		for i in range(3):
 			response = self.udsclient.io_control(control_param=3, did=0x456, values=IOValues(0x111,0x222))	
-			self.assertTrue(response.valid)
-			self.assertTrue(response.unexpected)
+			self.assertFalse(response.valid)
 
 	def test_io_control_composite_did_dict(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
@@ -257,17 +256,16 @@ class TestIOControl(ClientServerTest):
 		self.wait_request_and_respond(b"\x6F\x01\x32\x01\x4B\xAA")	# Last byte is extra
 
 	def _test_io_control_bad_response_too_much_data_exception(self):
-		with self.assertRaises(UnexpectedResponseException):
+		with self.assertRaises(InvalidResponseException):
 			self.udsclient.io_control(control_param=1, did=0x132)	
 
 	def test_io_control_bad_response_too_much_data_no_exception(self):
 		self.wait_request_and_respond(b"\x6F\x01\x32\x01\x4B\xAA")	# Last byte is extra
 
 	def _test_io_control_bad_response_too_much_data_no_exception(self):
-		self.udsclient.config['exception_on_unexpected_response'] = False
+		self.udsclient.config['exception_on_invalid_response'] = False
 		response = self.udsclient.io_control(control_param=1, did=0x132)
-		self.assertTrue(response.valid)
-		self.assertTrue(response.unexpected)
+		self.assertFalse(response.valid)
 
 	def test_io_control_bad_response_wrong_control_param_exception(self):
 		self.wait_request_and_respond(b"\x6F\x01\x32\x04\x4B")	# 0x04 should be 0x03

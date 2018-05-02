@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import inspect
 import struct
 import math
@@ -122,6 +125,12 @@ class Dtc:
 			self.test_failed_since_last_clear 				= True if byte & 0x20 > 0 else False
 			self.test_not_completed_this_operation_cycle	= True if byte & 0x40 > 0 else False
 			self.warning_indicator_requested 				= True if byte & 0x80 > 0 else False
+
+		@classmethod
+		def from_byte(cls, byte):
+			status = cls()
+			status.set_byte(byte)
+			return status
 
 	# DTC Severity byte, it's a 3 bits indicator telling how serious a trouble is.
 	class Severity:

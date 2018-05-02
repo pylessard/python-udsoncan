@@ -7,6 +7,9 @@ class RoutineControl(BaseService):
 	_sid = 0x31
 
 	class ControlType(BaseSubfunction):
+		"""
+		RoutineControl defined subfunctions
+		"""		
 		__pretty_name__ = 'control type'
 
 		startRoutine = 1
@@ -24,6 +27,20 @@ class RoutineControl(BaseService):
 
 	@classmethod
 	def make_request(cls, routine_id, control_type, data=None):
+		"""
+		Generate a request for RoutineControl
+
+		:param routine_id: The routine ID. Value shoudl be between 0 and 0xFFFF
+		:type routine_id: int
+
+		:param control_type: Service subfunction. Allowed values are from 0 to 0x7F
+		:type control_type: bytes
+
+		:param data: Optional additional data to provide to the server
+		:type data: bytes
+
+		:raises ValueError: If parameters are out of range or missing
+		"""		
 		from udsoncan import Request
 
 		ServiceHelper.validate_int(routine_id, min=0, max=0xFFFF, name='Routine ID')
@@ -42,6 +59,15 @@ class RoutineControl(BaseService):
 
 	@classmethod
 	def interpret_response(cls, response):
+		"""
+		Populates the response `service_data` property with an instance of `RoutineControl.ResponseData`
+
+		:param response: The received response to interpret
+		:type response: Response
+
+		:raises InvalidResponseException: If length of response.data is too small
+		"""
+
 		if len(response.data) < 3: 	
 			raise InvalidResponseException(response, "Response data must be at least 3 bytes")
 
@@ -51,6 +77,19 @@ class RoutineControl(BaseService):
 		response.service_data.routine_status_record = response.data[3:] if len(response.data) >3 else b''
 
 	class ResponseData(BaseResponseData):
+		"""
+		.. data:: control_type_echo
+
+			Request subfunction echoed back by the server
+
+		.. data:: routine_id_echo
+
+			Request routine ID echoed back by the server.
+
+		.. data:: routine_status_record
+
+			Additional data associated with the response.
+		"""		
 		def __init__(self):
 			super().__init__(RoutineControl)
 

@@ -32,6 +32,18 @@ class ReadDataByIdentifier(BaseService):
 
 	@classmethod
 	def make_request(cls, didlist, didconfig):
+		"""
+		Generate a request for ReadDataByIdentifier
+
+		:param didlist: List of data identifier to read.
+		:type didlist: list[int]
+
+		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<HelperClass_DidCodec>` class or pack/unpack string 
+		:type didconfig: dict[int] = :ref:`DidCodec<HelperClass_DidCodec>`
+
+		:raises ValueError: If parameters are out of range or missing
+		:raises ConfigError: If didlist contains a DID not defined in didconfig
+		"""		
 		from udsoncan import Request
 		didlist = cls.validate_didlist_input(didlist)
 
@@ -43,6 +55,25 @@ class ReadDataByIdentifier(BaseService):
 
 	@classmethod
 	def interpret_response(cls, response, didlist, didconfig, tolerate_zero_padding=True):
+		"""
+		Populates the response `service_data` property with an instance of `ReadDataByIdentifier.ResponseData`
+
+		:param response: The received response to interpret
+		:type response: Response
+		
+		:param didlist:  List of data identifier used for the request.
+		:type didlist: list[int]
+		
+		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<HelperClass_DidCodec>` class or pack/unpack string 
+		:type didconfig: dict[int] = :ref:`DidCodec<HelperClass_DidCodec>`
+
+		:param tolerate_zero_padding: Ignore trailing zeros in the response data avoiding reading an extra did with value 0.
+		:type tolerate_zero_padding: bool
+
+		:raises ValueError: If parameters are out of range or missing
+		:raises ConfigError: If didlist parameter or response contain a DID not defined in didconfig.
+		:raises InvalidResponseException: If response data is incomplete or if DID data does not match codec length.
+		"""	
 		from udsoncan import DidCodec
 
 		didlist = cls.validate_didlist_input(didlist)
@@ -74,7 +105,7 @@ class ReadDataByIdentifier(BaseService):
 			offset+=2
 
 			if len(response.data) < offset+len(codec):
-				raise UnexpectedResponseException(response, "Value fo data identifier 0x%04x was incomplete according to definition in configuration" % did)
+				raise InvalidResponseException(response, "Value fo data identifier 0x%04x was incomplete according to definition in configuration" % did)
 
 			subpayload = response.data[offset:offset+len(codec)]
 			offset += len(codec)	# Codec must define a __len__ function that metches the encoded payload length.
@@ -84,6 +115,11 @@ class ReadDataByIdentifier(BaseService):
 		return response
 
 	class ResponseData(BaseResponseData):
+		"""
+		.. data:: values
+
+			Dictionary mapping the DID (int) with the value returned by the associated :ref:`DidCodec<HelperClass_DidCodec>`.decode method
+		"""				
 		def __init__(self):
 			super().__init__(ReadDataByIdentifier)
 

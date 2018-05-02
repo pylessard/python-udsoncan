@@ -12,6 +12,9 @@ class LinkControl(BaseService):
 							Response.Code.RequestOutOfRange
 							]
 	class ControlType(BaseSubfunction):
+		"""
+		LinkControl defined subfunctions
+		"""
 		__pretty_name__ = 'control type'
 
 		verifyBaudrateTransitionWithFixedBaudrate = 1
@@ -20,6 +23,17 @@ class LinkControl(BaseService):
 
 	@classmethod
 	def make_request(cls, control_type, baudrate=None):
+		"""
+		Generate a request for LinkControl
+
+		:param control_type: Service subfunction. Allowed values are from 0 to 0xFF
+		:type control_type: int
+
+		:param baudrate: Required baudrate value when control_type is either verifyBaudrateTransitionWithFixedBaudrate (1) or verifyBaudrateTransitionWithSpecificBaudrate (2)
+		:type baudrate: :ref:`Baudrate <HelperClass_Baudrate>`
+
+		:raises ValueError: If parameters are out of range or missing
+		"""		
 		from udsoncan import Request, Baudrate
 		
 		ServiceHelper.validate_int(control_type, min=0, max=0x7F, name='Control type')
@@ -47,6 +61,14 @@ class LinkControl(BaseService):
 
 	@classmethod
 	def interpret_response(cls, response):
+		"""
+		Populates the response `service_data` property with an instance of `LinkControl.ResponseData`
+
+		:param response: The received response to interpret
+		:type response: Response
+
+		:raises InvalidResponseException: If length of response.data is too small
+		"""		
 		if len(response.data) < 1:
 			raise InvalidResponseException(response, "Response data must be at least 1 bytes") 
 
@@ -54,6 +76,11 @@ class LinkControl(BaseService):
 		response.service_data.control_type_echo = response.data[0]
 
 	class ResponseData(BaseResponseData):
+		"""
+		.. data:: control_type_echo
+
+			Request subfunction echoed back by the server
+		"""		
 		def __init__(self):
 			super().__init__(LinkControl)
 			self.control_type_echo = None

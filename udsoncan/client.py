@@ -234,8 +234,8 @@ class Client:
 		response = self.send_request(req)
 		services.WriteDataByIdentifier.interpret_response(response)
 
-		if response.service_data.did_feedback != did:
-			raise UnexpectedResponseException(response, "Server returned a response for data identifier 0x%02x while client requested for did 0x%02x" % (response.service_data.did_feedback, did))
+		if response.service_data.did_echo != did:
+			raise UnexpectedResponseException(response, "Server returned a response for data identifier 0x%02x while client requested for did 0x%02x" % (response.service_data.did_echo, did))
 		
 		return response
 
@@ -611,8 +611,7 @@ class Client:
 			'severity_mask' : severity_mask,
 			'dtc' : dtc,
 			'snapshot_record_number' : snapshot_record_number,
-			'extended_data_record_number' : extended_data_record_number,
-			'tolerate_zero_padding' : self.config['tolerate_zero_padding']
+			'extended_data_record_number' : extended_data_record_number
 		}
 
 		request = services.ReadDTCInformation.make_request(**request_params)
@@ -623,11 +622,6 @@ class Client:
 
 		response_params = {
 			'subfunction' : subfunction,
-			'status_mask' : status_mask,
-			'severity_mask' : severity_mask,
-			'dtc' : dtc,
-			'snapshot_record_number' : snapshot_record_number,
-			'extended_data_record_number' : extended_data_record_number,
 			'tolerate_zero_padding' : self.config['tolerate_zero_padding'],
 			'ignore_all_zero_dtc' : self.config['ignore_all_zero_dtc'],
 			'dtc_snapshot_did_size' : self.config['dtc_snapshot_did_size'],

@@ -26,6 +26,18 @@ class RequestDownload(BaseService):
 
 	@classmethod
 	def make_request(cls, memory_location, dfi=None):
+		"""
+		Generate a request for RequestDownload
+
+		:param memory_location: The address and the size of the memory block to be written.
+		:type memory_location: :ref:`MemoryLocation <HelperClass_MemoryLocation>`
+
+		:param dfi: Optional dataFormatIdentifier defining the compression and encryption scheme of the data. 
+			If not specified, the default value of 00 will be used, specifying no encryption and no compression
+		:type dfi: :ref:`DataFormatIdentifier <HelperClass_DataFormatIdentifier>`	
+
+		:raises ValueError: If parameters are out of range or missing
+		"""				
 		from udsoncan import Request, MemoryLocation
 		
 		dfi = cls.normalize_data_format_identifier(dfi)
@@ -44,6 +56,16 @@ class RequestDownload(BaseService):
 
 	@classmethod
 	def interpret_response(cls, response):
+		"""
+		Populates the response `service_data` property with an instance of `RequestDownload.ResponseData`
+
+		:param response: The received response to interpret
+		:type response: Response
+
+		:raises InvalidResponseException: If length of response.data is too small
+		:raises NotImplementedError: If the maxNumberOfBlockLength value is encoded over more than 8 bytes.
+		"""		
+
 		if len(response.data) < 1:
 			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
 
@@ -63,6 +85,11 @@ class RequestDownload(BaseService):
 		response.service_data.max_length = struct.unpack('>q', todecode)[0]
 
 	class ResponseData(BaseResponseData):
+		"""
+		.. data:: max_length
+
+			(int) Maximum number of data block to write
+		"""		
 		def __init__(self):
 			super().__init__(RequestDownload)
 			self.max_length = None

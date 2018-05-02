@@ -78,7 +78,32 @@ class ReadDTCInformation(BaseService):
 
 
 	@classmethod
-	def make_request(cls, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None, extended_data_size=None, tolerate_zero_padding=True):
+	def make_request(cls, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None):
+		"""
+		Generate a request for ReadDTCInformation. 
+		Each subfunction uses a subset of parameters. 
+
+		:param subfunction: The service subfunction. Values are defined in ReadDTCInformation.Subfunction
+		:type subfunction: int
+
+		:param status_mask: A DTC status mask used to filter DTC
+		:type status_mask: int or :ref:`Dtc.Status <HelperClass_DTC_Status>`
+
+		:param severity_mask: A severity mask used to filter DTC 
+		:type severity_mask: int or :ref:`Dtc.Severity <HelperClass_DTC_Severity>`
+
+		:param dtc: A DTC mask used to filter DTC
+		:type dtc: int or :ref:`Dtc <HelperClass_DTC>`
+
+		:param snapshot_record_number: Snapshot record number
+		:type snapshot_record_number: int
+
+		:param extended_data_record_number: Extended data record number
+		:type extended_data_record_number: int
+
+		:raises ValueError: If parameters are out of range, missing or wrong type
+		"""	
+
 		from udsoncan import Request, Dtc
 
 		# Request grouping for subfunction that have the same request format
@@ -176,7 +201,37 @@ class ReadDTCInformation(BaseService):
 		return req
 
 	@classmethod
-	def interpret_response(cls, response, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None, extended_data_size=None, tolerate_zero_padding=True, ignore_all_zero_dtc=True, dtc_snapshot_did_size=2, logger=None, didconfig=None):
+	def interpret_response(cls, response, subfunction,  extended_data_size=None, tolerate_zero_padding=True, ignore_all_zero_dtc=True, dtc_snapshot_did_size=2, didconfig=None):
+		"""
+		Populates the response `service_data` property with an instance of `ReadDTCInformation.ResponseData`
+
+		:param response: The received response to interpret
+		:type response: Response
+
+		:param subfunction: The service subfunction. Values are defined in ReadDTCInformation.Subfunction
+		:type subfunction: int
+
+		:param extended_data_size: Extended data size to expect. Extended data is implementation specific, therefore, size is not standardized
+		:type extended_data_size: int
+
+		:param tolerate_zero_padding: Ignore trailing zeros in the response data avoiding reading an extra DTC with ID 0 or raising InvalidResponseException because length is of data is wrong
+		:type tolerate_zero_padding:  bool
+
+		:param ignore_all_zero_dtc: Discard any DTC entry that have an ID of 0.
+		:type ignore_all_zero_dtc: bool
+
+		:param dtc_snapshot_did_size: Number of bytes to encode the data identifier number. Other services such as :ref:`ReadDataByIdentifier<ReadDataByIdentifier>` encode DID over 2 bytes.
+			UDS standard does not define the size of the snapshot DID, therefore, it must be supplied.
+		:type dtc_snapshot_did_size: int
+
+		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<HelperClass_DidCodec>` class or pack/unpack string 
+		:type didconfig: dict[int] = :ref:`DidCodec<HelperClass_DidCodec>`
+		
+		:raises InvalidResponseException: If response length is wrong or doe snot match DID configuration
+		:raises ValueError: If parameters are out of range or missing
+		:raises ConfigError: If the server return a snapshot DID not defined in didconfig
+		"""	
+
 		from udsoncan import Dtc, DidCodec
 		ServiceHelper.validate_int(subfunction, min=1, max=0x15, name='Subfunction')
 
@@ -245,7 +300,7 @@ class ReadDTCInformation(BaseService):
 			if len(response.data) < 2:
 				raise InvalidResponseException(response, 'Response must be at least 2 byte long (echo of subfunction and DTCStatusAvailabilityMask)')
 
-			response.service_data.status_availability = response.data[1]
+			response.service_data.status_availability = Dtc.Status.from_byte(response.data[1])
 
 			actual_byte = 2	# Increasing index
 			while True:	# Loop until we have read all dtc
@@ -338,7 +393,7 @@ class ReadDTCInformation(BaseService):
 			if len(response.data) < 5:
 				raise InvalidResponseException(response, 'Response must be exactly 5 bytes long ')
 
-			response.service_data.status_availability = response.data[1]
+			response.service_data.status_availability = Dtc.Status.from_byte(response.data[1])
 			response.service_data.dtc_format = response.data[2]
 			response.service_data.dtc_count = struct.unpack('>H', response.data[3:5])[0]
 		
@@ -528,6 +583,32 @@ class ReadDTCInformation(BaseService):
 			response.service_data.dtc_count = len(response.service_data.dtcs)
 
 	class ResponseData(BaseResponseData):
+		"""
+		.. data:: subfunction_echo
+			
+			Subfunction echoed back by the server
+
+		.. data:: dtcs
+			
+			:ref:`DTC<HelperClass_DTC>` instances and their status read from the server.
+
+		.. data:: dtc_count
+			
+			Number of DTC read or available
+
+		.. data:: dtc_format
+			
+			Integer indicating the format of the DTC. See :ref:`DTC.Format<HelperClass_DTC_Format>`
+
+		.. data:: status_availability
+			
+			:ref:`Dtc.Status<HelperClass_DTC_Status>` indicating which status the server supports
+
+		.. data:: extended_data
+			
+			List of bytes containing the DTC extended data
+
+		"""			
 		def __init__(self):
 			super().__init__(ReadDTCInformation)
 			self.subfunction_echo = None
@@ -535,5 +616,4 @@ class ReadDTCInformation(BaseService):
 			self.dtc_count = 0
 			self.dtc_format = None
 			self.status_availability = None
-			self.dtc_snapshot_map = {}
 			self.extended_data = []	

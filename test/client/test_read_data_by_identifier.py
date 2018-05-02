@@ -111,17 +111,16 @@ class TestReadDataByIdentifier(ClientServerTest):
 		self.wait_request_and_respond(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03")	
 
 	def _test_rdbi_incomplete_response_exception(self):
-		with self.assertRaises(UnexpectedResponseException):
+		with self.assertRaises(InvalidResponseException):
 			self.udsclient.read_data_by_identifier(dids = [1,2,3])
 
 	def test_rdbi_incomplete_response_no_exception(self):
 		self.wait_request_and_respond(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03")	
 
 	def _test_rdbi_incomplete_response_no_exception(self):
-		self.udsclient.config['exception_on_unexpected_response'] = False
+		self.udsclient.config['exception_on_invalid_response'] = False
 		response = self.udsclient.read_data_by_identifier(dids = [1,2,3])
-		self.assertTrue(response.valid)
-		self.assertTrue(response.unexpected)
+		self.assertFalse(response.valid)
 
 	def test_rdbi_unknown_did_exception(self):
 		self.wait_request_and_respond(b"\x62\x00\x09\x12\x34\x00\x02\x56\x78\x00\x03\x11")	

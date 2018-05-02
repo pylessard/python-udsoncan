@@ -6,6 +6,10 @@ class AccessTimingParameter(BaseService):
 	_sid = 0x83
 
 	class AccessType(BaseSubfunction):
+		"""
+		AccessTimingParameter defined subfunctions
+		"""
+
 		__pretty_name__ = 'access type'
 
 		readExtendedTimingParameterSet = 1
@@ -21,9 +25,20 @@ class AccessTimingParameter(BaseService):
 
 	@classmethod
 	def make_request(cls, access_type, timing_param_record=None):
+		"""
+		Generate a request for AccessTimingParameter
+
+		:param access_type: Service subfunction. Allowed values are from 0 to 0xFF
+		:type access_type: int
+
+		:param timing_param_record: Data associated with request. Must be present only when access_type=AccessType.setTimingParametersToGivenValues (4)
+		:type timing_param_record: bytes
+
+		:raises ValueError: If parameters are out of range or missing
+		"""
 		from udsoncan import Request
 
-		ServiceHelper.validate_int(access_type, min=0, max=0x7F, name='Access type')
+		ServiceHelper.validate_int(access_type, min=0, max=0xFF, name='Access type')
 		
 		if timing_param_record is not None and access_type != cls.AccessType.setTimingParametersToGivenValues :
 			raise ValueError('timing_param_record can only be set when access_type is setTimingParametersToGivenValues"')
@@ -31,18 +46,25 @@ class AccessTimingParameter(BaseService):
 		if timing_param_record is None and access_type == cls.AccessType.setTimingParametersToGivenValues :
 			raise ValueError('A timing_param_record must be provided when access_type is "setTimingParametersToGivenValues"')
 
+		request = Request(service=cls, subfunction=access_type)
+
 		if timing_param_record is not None:
 			if not isinstance(timing_param_record, bytes):
 				raise ValueError("timing_param_record must be a valid bytes objects")
-
-		request = Request(service=cls, subfunction=access_type)
-		if timing_param_record is not None:
 			request.data += timing_param_record
 		
 		return request
 
 	@classmethod
 	def interpret_response(cls, response):
+		"""
+		Populates the response `service_data` property with an instance of `AccessTimingParameter.ResponseData`
+
+		:param response: The received response to interpret
+		:type response: Response
+
+		:raises InvalidResponseException: If length of response.data is too small
+		"""
 		if len(response.data) < 1: 	
 			raise InvalidResponseException(response, "Response data must be at least 1 byte")
 
@@ -51,6 +73,16 @@ class AccessTimingParameter(BaseService):
 		response.service_data.timing_param_record = response.data[1:] if len(response.data) >1 else b''
 
 	class ResponseData(BaseResponseData):
+		"""
+		.. data:: access_type_echo
+
+			Request subfunction echoed back by the server
+
+		.. data:: timing_param_record
+
+			Additional data associated with the response.
+		"""
+
 		def __init__(self):
 			super().__init__(AccessTimingParameter)
 			self.access_type_echo = None

@@ -16,6 +16,22 @@ class WriteDataByIdentifier(BaseService):
 
 	@classmethod
 	def make_request(cls, did, value, didconfig):
+		"""
+		Generate a request for WriteDataByIdentifier
+
+		:param did: The data identifier to write
+		:type did: int
+
+		:param value: Value given to the :ref:`DidCodec <HelperClass_DidCodec>`.encode method
+		:type value: object
+
+		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec <HelperClass_DidCodec>` class or pack/unpack string 
+		:type didconfig: dict[int] = :ref:`DidCodec <HelperClass_DidCodec>`
+
+		:raises ValueError: If parameters are out of range or missing
+		:raises ConfigError: If didlist contains a DID not defined in didconfig
+		"""	
+
 		from udsoncan import Request, DidCodec
 		ServiceHelper.validate_int(did, min=0, max=0xFFFF, name='Data Identifier')
 		req = Request(cls)
@@ -28,15 +44,28 @@ class WriteDataByIdentifier(BaseService):
 
 	@classmethod
 	def interpret_response(cls, response):
+		"""
+		Populates the response `service_data` property with an instance of `WriteDataByIdentifier.ResponseData`
+
+		:param response: The received response to interpret
+		:type response: Response
+		
+		:raises InvalidResponseException: If response data is incomplete.
+		"""			
 		if len(response.data) < 2:
 			raise InvalidResponseException(response, "Response must be at least 2 bytes long")
 
 		response.service_data = cls.ResponseData()
-		response.service_data.did_feedback = struct.unpack(">H", response.data[0:2])[0]
+		response.service_data.did_echo = struct.unpack(">H", response.data[0:2])[0]
 
 		
 	class ResponseData(BaseResponseData):
+		"""
+		.. data:: did_echo
+
+			The DID echoed back by the server
+		"""			
 		def __init__(self):
 			super().__init__(WriteDataByIdentifier)
 
-			self.did_feedback = None
+			self.did_echo = None

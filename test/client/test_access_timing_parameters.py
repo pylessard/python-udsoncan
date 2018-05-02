@@ -116,7 +116,7 @@ class TestAccessTimingParameter(ClientServerTest):
 			response = self.udsclient.access_timing_parameter(access_type=-1)
 
 		with self.assertRaises(ValueError):
-			response = self.udsclient.access_timing_parameter(access_type=0x80)
+			response = self.udsclient.access_timing_parameter(access_type=0x100)
 
 		with self.assertRaises(ValueError):
 			response = self.udsclient.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToGivenValues, timing_param_record=None)

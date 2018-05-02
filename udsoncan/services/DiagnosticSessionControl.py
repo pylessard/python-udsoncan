@@ -10,7 +10,10 @@ class DiagnosticSessionControl(BaseService):
 									Response.Code.ConditionsNotCorrect
 									]
 	class Session(BaseSubfunction):
-		__pretty_name__ = 'session'	# Only to print "custom session" instead of "custom subfunction"
+		"""
+		DiagnosticSessionControl defined subfunctions
+		"""		
+		__pretty_name__ = 'session'	
 
 		defaultSession = 1
 		programmingSession = 2
@@ -19,12 +22,30 @@ class DiagnosticSessionControl(BaseService):
 
 	@classmethod
 	def make_request(cls, session):
+		"""
+		Generate a request for DiagnosticSessionControl service
+
+		:param session: Service subfunction. Allowed values are from 0 to 0xFF
+		:type session: int
+
+		:raises ValueError: If parameters are out of range or missing
+		"""
+
 		from udsoncan import Request
 		ServiceHelper.validate_int(session, min=0, max=0xFF, name='Session number')
 		return Request(service=cls, subfunction=session)
 
 	@classmethod
 	def interpret_response(cls, response):
+		"""
+		Populates the response `service_data` property with an instance of `DiagnosticSessionControl.ResponseData`
+
+		:param response: The received response to interpret
+		:type response: Response
+
+		:raises InvalidResponseException: If length of response.data is too small
+		"""
+
 		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
 			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
 
@@ -35,6 +56,15 @@ class DiagnosticSessionControl(BaseService):
 		return response
 
 	class ResponseData(BaseResponseData):
+		"""
+		.. data:: session_echo
+
+			Request subfunction echoed back by the server
+
+		.. data:: session_param_records
+
+			Additional data associated with the response.
+		"""		
 		def __init__(self):
 			super().__init__(DiagnosticSessionControl)
 			self.session_echo = None

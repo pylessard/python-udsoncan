@@ -12,6 +12,9 @@ class ECUReset(BaseService):
 								]
 
 	class ResetType(BaseSubfunction):
+		"""
+		ECUReset defined subfunctions
+		"""		
 		__pretty_name__ = 'reset type' # Only to print "custom reset type" instead of "custom subfunction"
 
 		hardReset = 1
@@ -22,6 +25,14 @@ class ECUReset(BaseService):
 
 	@classmethod
 	def make_request(cls, reset_type):
+		"""
+		Generate a request for ECUReset
+
+		:param reset_type: Service subfunction. Allowed values are from 0 to 0xFF
+		:type reset_type: int
+
+		:raises ValueError: If parameters are out of range or missing
+		"""		
 		from udsoncan import Request
 		ServiceHelper.validate_int(reset_type, min=0, max=0xFF, name='Reset type')
 		return Request(service=cls, subfunction=reset_type)
@@ -29,6 +40,15 @@ class ECUReset(BaseService):
 
 	@classmethod
 	def interpret_response(cls, response):
+		"""
+		Populates the response `service_data` property with an instance of `AccessTimingParameter.ResponseData`
+
+		:param response: The received response to interpret
+		:type response: Response
+
+		:raises InvalidResponseException: If length of response.data is too small
+		"""
+
 		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
 			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
 
@@ -42,6 +62,15 @@ class ECUReset(BaseService):
 			response.service_data.powerdown_time = response.data[1]
 
 	class ResponseData(BaseResponseData):
+		"""
+		.. data:: reset_type_echo
+
+			Request subfunction echoed back by the server
+
+		.. data:: powerdown_time
+
+			Amount of time, in second, before the power down sequence is executed. Should be provided only when reset type is enableRapidPowerShutDown
+		"""		
 		def __init__(self):
 			super().__init__(ECUReset)
 

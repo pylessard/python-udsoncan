@@ -124,7 +124,7 @@ class GenericTestStatusMaskRequest_DtcAndStatusMaskResponse():
 
 
 	def client_assert_response(self, response, expect_all_zero_third_dtc=False):
-		self.assertEqual(response.service_data.status_availability, 0xFB)
+		self.assertEqual(response.service_data.status_availability.get_byte_as_int(), 0xFB)
 		number_of_dtc = 3 if expect_all_zero_third_dtc else 2
 		
 		self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
@@ -1789,7 +1789,7 @@ class TestReportNumberOfDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x7
 class TestReportDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x8
 
 	def client_assert_response(self, response, expect_all_zero_third_dtc=False):
-		self.assertEqual(response.service_data.status_availability, 0xFB)
+		self.assertEqual(response.service_data.status_availability.get_byte_as_int(), 0xFB)
 		number_of_dtc = 3 if expect_all_zero_third_dtc else 2
 		
 		self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
@@ -1969,7 +1969,7 @@ class TestReportDTCBySeverityMaskRecord(ClientServerTest):	# Subfn = 0x8
 class TestReportSeverityInformationOfDTC(ClientServerTest):	# Subfn = 0x9
 
 	def client_assert_response(self, response):
-		self.assertEqual(response.service_data.status_availability, 0xFB)
+		self.assertEqual(response.service_data.status_availability.get_byte_as_int(), 0xFB)
 		number_of_dtc = 1
 		
 		self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
@@ -2110,7 +2110,7 @@ class GenericTestNoParamRequest_DtcAndStatusMaskResponse():
 		return getattr(self.udsclient, self.client_function).__call__()
 	
 	def client_assert_response(self, response, expect_all_zero_fourth_dtc=False):
-		self.assertEqual(response.service_data.status_availability, 0x7F)
+		self.assertEqual(response.service_data.status_availability.get_byte_as_int(), 0x7F)
 		number_of_dtc = 4 if expect_all_zero_fourth_dtc else 3
 		
 		self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
