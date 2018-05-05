@@ -26,6 +26,8 @@ The client configuration must be a dictionnary with the following keys defined.
 
 ---------
 
+.. _config_exception_on_negative_response:
+
 .. attribute:: exception_on_negative_response
    :annotation: (bool)
 
@@ -33,6 +35,8 @@ The client configuration must be a dictionnary with the following keys defined.
    When set to `False`, the returned `Response` will have a its property `positive` set to False
 
 ---------
+
+.. _config_exception_on_invalid_response:
 
 .. attribute:: exception_on_invalid_response
    :annotation: (bool)
@@ -42,6 +46,8 @@ The client configuration must be a dictionnary with the following keys defined.
 
 ---------
 
+.. _config_exception_on_unexpected_response:
+
 .. attribute:: exception_on_unexpected_response
    :annotation: (bool)
 
@@ -49,6 +55,8 @@ The client configuration must be a dictionnary with the following keys defined.
    When set to `False`, the returned `Response` will have a its property `unexpected` set to True in the same case.
 
 ---------
+
+.. _config_security_algo:
 
 .. attribute:: security_algo
    :annotation: (callable)
@@ -67,12 +75,16 @@ The client configuration must be a dictionnary with the following keys defined.
 
 ---------
 
+.. _config_security_algo_params:
+
 .. attribute:: security_algo_params
    :annotation: (...)
 
    This value will be given to the security algorithm defined in ``config['security_algo']``. This value can be any Python object, including a dictionary.
 
 ---------
+
+.. _config_data_identifiers:
 
 .. attribute:: data_identifiers
    :annotation: (dict)
@@ -89,6 +101,8 @@ The client configuration must be a dictionnary with the following keys defined.
       - ``DidCodec`` (class or instance) : The encode/decode method will be used to process the data
 
 ---------
+
+.. _config_input_output:
 
 .. attribute:: input_output
    :annotation: (dict)
@@ -111,12 +125,16 @@ The client configuration must be a dictionnary with the following keys defined.
 
 ---------
 
+.. _config_tolerate_zero_padding:
+
 .. attribute:: tolerate_zero_padding
    :annotation: (bool)
    
    This value will be passed to the services interpret_response when the parameter is supported like for :ref:`ReadDataByIdentifier<ReadDataByIdentifier>`, :ref:`ReadDTCInformation<ReadDTCInformation>`. It has for effect to ignore trailing zeros in the response data avoiding falsely raising :ref:'InvalidResponseException<InvalidResponseException>` if the underlying protocol uses some zero-padding. 
 
 ---------
+
+.. _config_ignore_all_zero_dtc:
 
 .. attribute:: ignore_all_zero_dtc
    :annotation: (bool)
@@ -135,6 +153,8 @@ The client configuration must be a dictionnary with the following keys defined.
 
 ---------
 
+.. _config_server_address_format:
+
 .. attribute:: server_address_format
    :annotation: (int)
 
@@ -144,6 +164,8 @@ The client configuration must be a dictionnary with the following keys defined.
 
 ---------
 
+.. _config_server_memorysize_format:
+
 .. attribute:: server_memorysize_format
    :annotation: (int)
 
@@ -152,6 +174,25 @@ The client configuration must be a dictionnary with the following keys defined.
    See :ref:`an example<example_default_memloc_format>`
 
 ---------
+
+.. _config_extended_data_size:
+
+.. attribute:: extended_data_size
+   :annotation: (dict[int] = int)
+   
+   The description of all the DTC extended data record size. This value is used to decode the server response when requesting a DTC extended data.
+   The value mus be specified as follow:
+
+.. code-block:: python
+
+   config['extended_data_size'] = {
+      0x123456 : 45, # Extended data for DTC 0x123456 is 45 bytes lond
+      0x123457 : 23 # Extended data for DTC 0x123457 is 23 bytes lond
+   }
+
+---------
+
+.. _config_dtc_snapshot_did_size:
 
 .. attribute:: dtc_snapshot_did_size
    :annotation: (int)
@@ -168,9 +209,9 @@ Methods
 ###################################################
 
 .. automethod:: udsoncan.client.Client.read_extended_timing_parameters
+.. automethod:: udsoncan.client.Client.reset_default_timing_parameters
 .. automethod:: udsoncan.client.Client.read_active_timing_parameters
 .. automethod:: udsoncan.client.Client.set_timing_parameters
-.. automethod:: udsoncan.client.Client.reset_default_timing_parameters
 
 -------------
 
@@ -266,8 +307,6 @@ Methods
 .. automethod:: udsoncan.client.Client.read_memory_by_address
 .. note:: See :ref:`an example<example_default_memloc_format>` showing how to use de fault format configuration.
 
-..note :: 
-
 -------------
 
 :ref:`RequestDownload<RequestDownload>`
@@ -338,6 +377,6 @@ Methods
 #################################################
 
 .. automethod:: udsoncan.client.Client.write_memory_by_address
-.. note:: See :ref:`an example<example_default_memloc_format>` showing how to use de fault format configuration.
+
 
 
