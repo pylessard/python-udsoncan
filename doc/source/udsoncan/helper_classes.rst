@@ -6,7 +6,7 @@ asdasdasd
 asda
 
 
-.. _HelperClass_CommunicationType:
+.. _CommunicationType:
 
 CommunicationType
 -----------------
@@ -15,7 +15,7 @@ sdsd
 
 
 
-.. _HelperClass_MemoryLocation:
+.. _MemoryLocation:
 
 MemoryLocation
 --------------
@@ -23,7 +23,7 @@ MemoryLocation
 sdsd
 
 
-.. _HelperClass_DidCodec:
+.. _DidCodec:
 
 DidCodec
 --------
@@ -32,7 +32,7 @@ asdasd
 
 
 
-.. _HelperClass_Baudrate:
+.. _Baudrate:
 
 Baudrate
 --------
@@ -40,7 +40,7 @@ Baudrate
 asdasd
 
 
-.. _HelperClass_DataFormatIdentifier:
+.. _DataFormatIdentifier:
 
 DataFormatIdentifier
 --------------------
@@ -48,7 +48,7 @@ DataFormatIdentifier
 asdasd
 
 
-.. _HelperClass_AddressAndLengthIdentifier:
+.. _AddressAndLengthIdentifier:
 
 AddressAndLengthIdentifier
 --------------------------
@@ -56,7 +56,7 @@ AddressAndLengthIdentifier
 asdasd
 
 
-.. _HelperClass_DTC:
+.. _DTC:
 
 DTC
 --------------------------
@@ -64,7 +64,7 @@ DTC
 asdasd
 
 
-.. _HelperClass_DTC_Status:
+.. _DTC_Status:
 
 DTC.Status
 --------------------------
@@ -72,28 +72,28 @@ DTC.Status
 asdasd
 
 
-.. _HelperClass_DTC_Severity:
+.. _DTC_Severity:
 
 DTC.Severity
 --------------------------
 
 asdasd
 
-.. _HelperClass_DTC_Format:
+.. _DTC_Format:
 
 DTC.Format
 --------------------------
 
 asdasd
 
-.. _HelperClass_IOValues:
+.. _IOValues:
 
 IOValues
 --------------------------
 
 asdasd
 
-.. _HelperClass_IOMask:
+.. _IOMask:
 
 IOMask
 --------------------------

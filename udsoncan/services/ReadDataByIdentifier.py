@@ -38,8 +38,8 @@ class ReadDataByIdentifier(BaseService):
 		:param didlist: List of data identifier to read.
 		:type didlist: list[int]
 
-		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<HelperClass_DidCodec>` class or pack/unpack string 
-		:type didconfig: dict[int] = :ref:`DidCodec<HelperClass_DidCodec>`
+		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<DidCodec>` class or pack/unpack string 
+		:type didconfig: dict[int] = :ref:`DidCodec<DidCodec>`
 
 		:raises ValueError: If parameters are out of range or missing
 		:raises ConfigError: If didlist contains a DID not defined in didconfig
@@ -56,7 +56,7 @@ class ReadDataByIdentifier(BaseService):
 	@classmethod
 	def interpret_response(cls, response, didlist, didconfig, tolerate_zero_padding=True):
 		"""
-		Populates the response `service_data` property with an instance of `ReadDataByIdentifier.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``ReadDataByIdentifier.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response
@@ -64,8 +64,8 @@ class ReadDataByIdentifier(BaseService):
 		:param didlist:  List of data identifier used for the request.
 		:type didlist: list[int]
 		
-		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<HelperClass_DidCodec>` class or pack/unpack string 
-		:type didconfig: dict[int] = :ref:`DidCodec<HelperClass_DidCodec>`
+		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<DidCodec>` class or pack/unpack string 
+		:type didconfig: dict[int] = :ref:`DidCodec<DidCodec>`
 
 		:param tolerate_zero_padding: Ignore trailing zeros in the response data avoiding reading an extra did with value 0.
 		:type tolerate_zero_padding: bool
@@ -118,7 +118,7 @@ class ReadDataByIdentifier(BaseService):
 		"""
 		.. data:: values
 
-			Dictionary mapping the DID (int) with the value returned by the associated :ref:`DidCodec<HelperClass_DidCodec>`.decode method
+			Dictionary mapping the DID (int) with the value returned by the associated :ref:`DidCodec<DidCodec>`.decode method
 		"""				
 		def __init__(self):
 			super().__init__(ReadDataByIdentifier)

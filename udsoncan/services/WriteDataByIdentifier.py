@@ -22,11 +22,11 @@ class WriteDataByIdentifier(BaseService):
 		:param did: The data identifier to write
 		:type did: int
 
-		:param value: Value given to the :ref:`DidCodec <HelperClass_DidCodec>`.encode method
+		:param value: Value given to the :ref:`DidCodec <DidCodec>`.encode method
 		:type value: object
 
-		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec <HelperClass_DidCodec>` class or pack/unpack string 
-		:type didconfig: dict[int] = :ref:`DidCodec <HelperClass_DidCodec>`
+		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec <DidCodec>` class or pack/unpack string 
+		:type didconfig: dict[int] = :ref:`DidCodec <DidCodec>`
 
 		:raises ValueError: If parameters are out of range or missing
 		:raises ConfigError: If didlist contains a DID not defined in didconfig
@@ -45,7 +45,7 @@ class WriteDataByIdentifier(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response `service_data` property with an instance of `WriteDataByIdentifier.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``WriteDataByIdentifier.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response

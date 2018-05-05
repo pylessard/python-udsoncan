@@ -30,7 +30,7 @@ class ControlDTCSetting(BaseService):
 		:param setting_type: Service subfunction. Allowed values are from 0 to 0x7F
 		:type setting_type: int
 
-		:param data: Optional additional data sent with the request. (DTCSettingControlOptionRecord)
+		:param data: Optional additional data sent with the request called `DTCSettingControlOptionRecord`
 		:type data: bytes
 
 		:raises ValueError: If parameters are out of range or missing
@@ -47,7 +47,7 @@ class ControlDTCSetting(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response `service_data` property with an instance of `ControlDTCSetting.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``ControlDTCSetting.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response

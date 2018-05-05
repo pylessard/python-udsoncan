@@ -30,11 +30,11 @@ class RequestDownload(BaseService):
 		Generate a request for RequestDownload
 
 		:param memory_location: The address and the size of the memory block to be written.
-		:type memory_location: :ref:`MemoryLocation <HelperClass_MemoryLocation>`
+		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
 
-		:param dfi: Optional dataFormatIdentifier defining the compression and encryption scheme of the data. 
+		:param dfi: Optional :ref:`DataFormatIdentifier <DataFormatIdentifier>` defining the compression and encryption scheme of the data. 
 			If not specified, the default value of 00 will be used, specifying no encryption and no compression
-		:type dfi: :ref:`DataFormatIdentifier <HelperClass_DataFormatIdentifier>`	
+		:type dfi: :ref:`DataFormatIdentifier <DataFormatIdentifier>`	
 
 		:raises ValueError: If parameters are out of range or missing
 		"""				
@@ -57,7 +57,7 @@ class RequestDownload(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response `service_data` property with an instance of `RequestDownload.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``RequestDownload.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response

@@ -38,7 +38,7 @@ class DiagnosticSessionControl(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response `service_data` property with an instance of `DiagnosticSessionControl.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``DiagnosticSessionControl.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response

@@ -1,2 +1,343 @@
 Client
 ======
+
+The UDS client is a simple client that work synchronously and can handle a single request/response at the time. When requesting a service, the client execute these task:
+
+ - Builds a payload
+ - Call the connection `empty_rxqueue` method.
+ - Sends the request
+ - Wait for a response, with timeout
+ - Interpret the response data
+ - Validate the response content
+ - Return the response
+
+The goal of this client is to simplify the usage of the **Services** object by exposing only the useful argument, hiding repetitive values, handling exceptions and logging. It can detect usage error as well as server malformed response. 
+
+.. autoclass:: udsoncan.client.Client
+
+.. _client_config:
+
+---------------
+
+Configuration
+-------------
+
+The client configuration must be a dictionnary with the following keys defined.
+
+---------
+
+.. attribute:: exception_on_negative_response
+   :annotation: (bool)
+
+   When set to `True`, the client will raise a :ref:`NegativeResponseException<NegativeResponseException>` when the server responsd with a negative response.
+   When set to `False`, the returned `Response` will have a its property `positive` set to False
+
+---------
+
+.. attribute:: exception_on_invalid_response
+   :annotation: (bool)
+
+   When set to `True`, the client will raise a :ref:`InvalidResponseException<InvalidResponseException>` when the underlying service `interpret_response` raises the same exception.
+   When set to `False`, the returned `Response` will have a its property `valid` set to False 
+
+---------
+
+.. attribute:: exception_on_unexpected_response
+   :annotation: (bool)
+
+   When set to `True`, the client will raise a :ref:`UnexpectedResponseException<UnexpectedResponseException>` when the server returns an response that is not expected. For instance a response for a different service or when the subfunction echo doesn't match the request.
+   When set to `False`, the returned `Response` will have a its property `unexpected` set to True in the same case.
+
+---------
+
+.. attribute:: security_algo
+   :annotation: (callable)
+
+   The implementation of the security algorithm necessary for the :ref:`SecurityAccess<SecurityAccess>` service. This function must have the following signature: 
+      
+      .. function:: SomeAlgorithm(seed, params=None)
+
+         :param seed: The seed given by the server
+         :type seed: bytes
+         :param params: The value provided by the client configuration ``security_algo_params``
+         :return: The security key
+         :rtype: bytes
+
+   See :ref:`an example <example_security_algo>`
+
+---------
+
+.. attribute:: security_algo_params
+   :annotation: (...)
+
+   This value will be given to the security algorithm defined in ``config['security_algo']``. This value can be any Python object, including a dictionary.
+
+---------
+
+.. attribute:: data_identifiers
+   :annotation: (dict)
+
+   This configuration is a dictionary mapping an integer (the data identifier) with a :ref:`DidCodec<DidCodec>`. These codec will be used to convert values to byte payload and vice-versa when sending/receiveing data for a service that needs a DID, i.e.:
+   
+      - :ref:`ReadDataByIdentifier<ReadDataByIdentifier>`
+      - :ref:`WriteDataByIdentifier<WriteDataByIdentifier>`
+      - :ref:`ReadDTCInformation<ReadDTCInformation>` with subfunction ``reportDTCSnapshotRecordByDTCNumber`` and ``reportDTCSnapshotRecordByRecordNumber``
+
+   Possible configuration values are
+
+      - ``string`` : The string will be used as a pack/unpack string when processing the data
+      - ``DidCodec`` (class or instance) : The encode/decode method will be used to process the data
+
+---------
+
+.. attribute:: input_output
+   :annotation: (dict)
+
+   This configuration is a dictionary mapping an integer (the IO data identifier) with a :ref:`DidCodec<DidCodec>` specifically for the :ref:`InputOutputControlByIdentifier<InputOutputControlByIdentifier>` service. Just like config[data_identifers], these codec will be used to convert values to byte payload and vice-versa when sending/receiveing data.
+
+   Since :ref:`InputOutputControlByIdentifier<InputOutputControlByIdentifier>` supports composite codec, it is possible to provide a sub-dictionnary as a codec specifying the bitmasks.
+
+   Possible configuration values are
+
+      - ``string`` : The string will be used as a pack/unpack string when processing the data
+      - ``DidCodec`` (class or instance) : The encode/decode method will be used to process the data
+      - ``dict`` : The dictionnary entry indicates a composite DID. Three sub key must be defined:
+
+         - ``codec`` : The codec, a string or a DidCodec class/instance
+         - ``mask`` : A dict mapping the mask name with a bit
+         - ``mask_size`` : An integer indicating on how much byte must the mask be encoded.
+
+   See :ref:`this example<iocontrol_composite_did>` to see how IO codec are defined.
+
+---------
+
+.. attribute:: tolerate_zero_padding
+   :annotation: (bool)
+   
+   This value will be passed to the services interpret_response when the parameter is supported like for :ref:`ReadDataByIdentifier<ReadDataByIdentifier>`, :ref:`ReadDTCInformation<ReadDTCInformation>`. It has for effect to ignore trailing zeros in the response data avoiding falsely raising :ref:'InvalidResponseException<InvalidResponseException>` if the underlying protocol uses some zero-padding. 
+
+---------
+
+.. attribute:: ignore_all_zero_dtc
+   :annotation: (bool)
+   
+   This value is used with  the :ref:`ReadDTCInformation<ReadDTCInformation>` service when reading DTCs. It will skip any DTC that has an ID of 0x000000. If the underlying protocol uses zero-padding, it may generate a valid response data of all zeros. This parameters is different from ``config['tolerate_zero_padding']``. 
+
+   Consider a server response that contains a list of DTC and where all DTC must be 4 bytes long (ID and status). Say that the server returns a single DTC of value 0x123456, with status 0x78 over a transport protocol that does zero-padding. Let's study 5 different payloads.
+
+    1. ``1234567800``           (invalid)
+    2. ``123456780000``         (invalid)
+    3. ``12345678000000``       (invalid)
+    4. ``1234567800000000``     (valid)
+    5. ``123456780000000000``   (invalid)
+
+   In this situation, all case except case 4 would raise an :ref:`InvalidResponseException<InvalidResponseException>` because of their bad length (unless ``config['tolerate_zero_padding']`` is set to True). Case 4 would return 2 DTCs, the second DTC with an ID of 0x000000 and a status of 0x00. Setting ``config['ignore_all_zero_dtc']`` to True will make the functions return only the first valid DTC.
+
+---------
+
+.. attribute:: server_address_format
+   :annotation: (int)
+
+   The :ref:`MemoryLocation<MemoryLocation>` address_format value to use when no specified explicitly for methods expecting a parameter of type :ref:`MemoryLocation<MemoryLocation>`.
+
+   See :ref:`an example<example_default_memloc_format>`
+
+---------
+
+.. attribute:: server_memorysize_format
+   :annotation: (int)
+
+   The :ref:`MemoryLocation<MemoryLocation>` server_memorysize_format value to use when no specified explicitly for methods expecting a parameter of type :ref:`MemoryLocation<MemoryLocation>` 
+
+   See :ref:`an example<example_default_memloc_format>`
+
+---------
+
+.. attribute:: dtc_snapshot_did_size
+   :annotation: (int)
+   
+   The number of byte used to encode a data identifier specifically for :ref:`ReadDTCInformation<ReadDTCInformation>` subfunction ``reportDTCSnapshotRecordByDTCNumber`` and ``reportDTCSnapshotRecordByRecordNumber``. The UDS standard does not specify a DID size altough all other services expect a DID encoded over 2 bytes (16 bits). Default value of 2
+
+-------------
+
+Methods
+-------
+
+
+:ref:`AccessTimingParameter<AccessTimingParameter>`
+###################################################
+
+.. automethod:: udsoncan.client.Client.read_extended_timing_parameters
+.. automethod:: udsoncan.client.Client.read_active_timing_parameters
+.. automethod:: udsoncan.client.Client.set_timing_parameters
+.. automethod:: udsoncan.client.Client.reset_default_timing_parameters
+
+-------------
+
+:ref:`ClearDiagnosticInformation<ClearDiagnosticInformation>`
+#############################################################
+
+.. automethod:: udsoncan.client.Client.clear_dtc
+
+-------------
+
+:ref:`CommunicationControl<CommunicationControl>`
+#################################################
+
+.. automethod:: udsoncan.client.Client.communication_control
+
+-------------
+
+:ref:`ControlDTCSetting<ControlDTCSetting>`
+###########################################
+
+.. automethod:: udsoncan.client.Client.control_dtc_setting
+
+-------------
+
+
+:ref:`DiagnosticSessionControl<DiagnosticSessionControl>`
+#########################################################
+
+.. automethod:: udsoncan.client.Client.change_session
+
+-------------
+
+:ref:`ECUReset<ECUReset>`
+#########################
+
+.. automethod:: udsoncan.client.Client.ecu_reset
+
+-------------
+
+:ref:`InputOutputControlByIdentifier<InputOutputControlByIdentifier>`
+#####################################################################
+
+.. automethod:: udsoncan.client.Client.io_control
+
+-------------
+
+:ref:`LinkControl<LinkControl>`
+###############################
+
+.. automethod:: udsoncan.client.Client.link_control
+
+-------------
+
+:ref:`ReadDataByIdentifier<ReadDataByIdentifier>`
+#################################################
+
+.. automethod:: udsoncan.client.Client.read_data_by_identifier
+
+-------------
+
+:ref:`ReadDTCInformation<ReadDTCInformation>`
+#############################################
+
+
+.. automethod:: udsoncan.client.Client.get_dtc_by_status_mask
+.. automethod:: udsoncan.client.Client.get_emission_dtc_by_status_mask
+.. automethod:: udsoncan.client.Client.get_mirrormemory_dtc_by_status_mask
+.. automethod:: udsoncan.client.Client.get_dtc_by_status_severity_mask
+.. automethod:: udsoncan.client.Client.get_number_of_dtc_by_status_mask
+.. automethod:: udsoncan.client.Client.get_mirrormemory_number_of_dtc_by_status_mask
+.. automethod:: udsoncan.client.Client.get_number_of_emission_dtc_by_status_mask
+.. automethod:: udsoncan.client.Client.get_number_of_dtc_by_status_severity_mask
+.. automethod:: udsoncan.client.Client.get_dtc_severity
+.. automethod:: udsoncan.client.Client.get_supported_dtc
+.. automethod:: udsoncan.client.Client.get_first_test_failed_dtc
+.. automethod:: udsoncan.client.Client.get_first_confirmed_dtc
+.. automethod:: udsoncan.client.Client.get_most_recent_test_failed_dtc
+.. automethod:: udsoncan.client.Client.get_most_recent_confirmed_dtc
+.. automethod:: udsoncan.client.Client.get_dtc_with_permanent_status
+.. automethod:: udsoncan.client.Client.get_dtc_fault_counter
+.. automethod:: udsoncan.client.Client.get_dtc_snapshot_identification
+.. automethod:: udsoncan.client.Client.get_dtc_snapshot_by_dtc_number
+.. automethod:: udsoncan.client.Client.get_dtc_snapshot_by_record_number
+.. automethod:: udsoncan.client.Client.get_dtc_extended_data_by_dtc_number
+.. automethod:: udsoncan.client.Client.get_mirrormemory_dtc_extended_data_by_dtc_number
+
+
+-------------
+
+:ref:`ReadMemoryByAddress<ReadMemoryByAddress>`
+###############################################
+
+.. automethod:: udsoncan.client.Client.read_memory_by_address
+.. note:: See :ref:`an example<example_default_memloc_format>` showing how to use de fault format configuration.
+
+..note :: 
+
+-------------
+
+:ref:`RequestDownload<RequestDownload>`
+#######################################
+
+.. automethod:: udsoncan.client.Client.request_download
+.. note:: See :ref:`an example<example_default_memloc_format>` showing how to use de fault format configuration.
+
+-------------
+
+:ref:`RequestTransferExit<RequestTransferExit>`
+###############################################
+
+.. automethod:: udsoncan.client.Client.request_transfer_exit
+
+-------------
+
+:ref:`RequestUpload<RequestUpload>`
+###################################
+
+.. automethod:: udsoncan.client.Client.request_upload
+.. note:: See :ref:`an example<example_default_memloc_format>` showing how to use de fault format configuration.
+
+-------------
+
+:ref:`RoutineControl<RoutineControl>`
+#####################################
+
+.. automethod:: udsoncan.client.Client.start_routine
+.. automethod:: udsoncan.client.Client.stop_routine
+.. automethod:: udsoncan.client.Client.get_routine_result
+
+-------------
+
+:ref:`SecurityAccess<SecurityAccess>`
+#####################################
+
+.. automethod:: udsoncan.client.Client.request_seed
+.. automethod:: udsoncan.client.Client.send_key
+.. automethod:: udsoncan.client.Client.unlock_security_access
+
+.. note:: See :ref:`this example<example_security_algo>` to see how to define the security algorithm
+
+-------------
+
+:ref:`TesterPresent<TesterPresent>`
+###################################
+
+.. automethod:: udsoncan.client.Client.tester_present
+
+-------------
+
+:ref:`TransferData<TransferData>`
+#################################
+
+.. automethod:: udsoncan.client.Client.transfer_data
+
+-------------
+
+:ref:`WriteDataByIdentifier<WriteDataByIdentifier>`
+###################################################
+
+.. automethod:: udsoncan.client.Client.write_data_by_identifier
+
+-------------
+
+:ref:`WriteMemoryByAddress<WriteMemoryByAddress>`
+#################################################
+
+.. automethod:: udsoncan.client.Client.write_memory_by_address
+.. note:: See :ref:`an example<example_default_memloc_format>` showing how to use de fault format configuration.
+
+

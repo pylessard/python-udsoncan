@@ -18,7 +18,7 @@ class ReadMemoryByAddress(BaseService):
 		Generate a request for ReadMemoryByAddress
 
 		:param memory_location: The address and the size of the memory block to read.
-		:type memory_location: :ref:`MemoryLocation <HelperClass_MemoryLocation>`
+		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
 
 		:raises ValueError: If parameters are out of range or missing
 		"""		
@@ -38,7 +38,7 @@ class ReadMemoryByAddress(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response `service_data` property with an instance of `ReadMemoryByAddress.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``ReadMemoryByAddress.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response

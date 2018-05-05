@@ -7,7 +7,27 @@ import math
 import binascii
 import traceback
 
+try:
+	from decorator import decorator
+except ImportError:
+# No decorator package available. Create a no-op "decorator".
+	def decorator(f):
+		return f
+
 class Client:
+	"""
+	Object that interract with a UDS server. 
+	It builds service request, sends it to the server, receive and parse its response, detect communication anomalies and log what it is doing for further debugging.
+
+	:param conn: The underlying protocol  interface.
+	:type conn: :ref:`Connection<Connection>`
+
+	:param config: The :ref:`client configuration<client_config>`
+	:type config: dict
+
+	:param request_timeout: Maximum amount of time to wait for a response after sending a request (in seconds). After this time is expires, a TimeoutException will rise.
+	:type request_timeout: int
+	"""
 
 	def __init__(self, conn, config=default_client_config, request_timeout = 1):
 		self.conn = conn
@@ -47,19 +67,11 @@ class Client:
 	# Decorator to apply on functions that the user will call.
 	# Each functions raises exceptions. This decorator handle these exception, log them, 
 	# then suppress them or not depending on the client configuration.
-	# There is a security mechanism to avoid nesting try_catch by calling a decorated function from another decorated function.
 	# if func1 and func2 are decorated and func2 calls func1, it should be done this way : self.func1._func_no_error_management(self, ...)
+	
+	@decorator 	# required for Sphinx to properly auto-document decorated functions.
 	def standard_error_management(func):
-		def norecurse(f):	
-			def func(*args, **kwargs):
-				if len([l[2] for l in traceback.extract_stack() if l[2] == f.__name__]) > 0:
-					raise RuntimeError('Recursion within the error management system.')
-				return f(*args, **kwargs)
-			return func
-
-		@norecurse
-		# Long name to minimize chances of name collision
-		def client_standard_error_management_decorated_fn(self, *args, **kwargs):
+		def decorated(self, *args, **kwargs):
 			try:
 				return func(self, *args, **kwargs)
 			
@@ -95,12 +107,22 @@ class Client:
 				self.logger.error('[%s] : %s' % (e.__class__.__name__, str(e)))
 				raise
 
-		client_standard_error_management_decorated_fn._func_no_error_management = func
-		return client_standard_error_management_decorated_fn
+		decorated._func_no_error_management = func
+		return decorated
 
-	# Performs a DiagnosticSessionControl service request
 	@standard_error_management
 	def change_session(self, newsession):
+		""" 
+		Request the server to change the diagnostic session with a :ref:`DiagnosticSessionControl<DiagnosticSessionControl>` service request
+
+		:param newsession: The session to try to switch. Values from :ref:`DiagnosticSessionControl<DiagnosticSessionControl>`.Session can be used.
+		:type newsession: int 
+
+		:raises ValueError: If parameters are out of range or missing
+		:raises InvalidResponseException: If length of response.data is too small
+		:raises UnexpectedResponseException: If the session echo given by the server does not matched the requested session
+
+		"""
 		req = services.DiagnosticSessionControl.make_request(newsession)
 
 		named_newsession = '%s (0x%02x)' % (services.DiagnosticSessionControl.Session.get_name(newsession), newsession)
@@ -114,9 +136,19 @@ class Client:
 
 		return response
 
-	# Performs a SecurityAccess service request. Request Seed
 	@standard_error_management
 	def request_seed(self, level):
+		""" 
+		Request a seed to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service 
+
+		:param level: The security level to unlock. If value is even, it will be converted to the corresponding odd value
+		:type level: int 
+
+		:raises ValueError: If parameters are out of range or missing
+		:raises InvalidResponseException: If length of response.data is too small
+		:raises UnexpectedResponseException: If the security level echo given by the server does not match the requested security level.
+
+		"""		
 		req = services.SecurityAccess.make_request(level, mode=services.SecurityAccess.Mode.RequestSeed)
 
 		self.logger.info('Requesting seed to unlock security access level 0x%02x' % (req.subfunction))	# level may be corrected by service.
@@ -135,6 +167,19 @@ class Client:
 	# Performs a SecurityAccess service request. Send key
 	@standard_error_management
 	def send_key(self, level, key):
+		""" 
+		Sens a key to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service 
+
+		:param level: The security level to unlock. If value is odd, it will be converted to the corresponding even value
+		:type level: int 
+
+		:param key: The key to send to the server
+		:type key: bytes 
+
+		:raises ValueError: If parameters are out of range or missing
+		:raises InvalidResponseException: If length of response.data is too small
+		:raises UnexpectedResponseException: If the security level echo given by the server does not match the requested security level.
+		"""			
 		req = services.SecurityAccess.make_request(level, mode=services.SecurityAccess.Mode.SendKey, key=key)
 		self.logger.info('Sending key to unlock security access level 0x%02x' % (req.subfunction))
 		self.logger.debug('Key to send : [%s]' % (binascii.hexlify(key)))
@@ -149,9 +194,21 @@ class Client:
 
 		return response
 	
-	# # Performs 2 SecurityAccess service request. successively request a seed, compute the key and sends it.	
 	@standard_error_management
 	def unlock_security_access(self, level):
+		"""
+		Successively call request_seed and send_key to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service.
+		The key computation is done by calling config['security_algo']
+
+		:param level: The level to unlock. Can be the odd or even variant of it.
+		:type level: int
+
+		:raises ValueError: If parameters are out of range or missing
+		:raises InvalidResponseException: If length of response.data is too small
+		:raises UnexpectedResponseException: If the security level echo given by the server does not match the requested security level.		
+		:raises NotImplementedError: If no security algorithm is set in the client configuration
+		"""
+
 		if 'security_algo' not in self.config or not callable(self.config['security_algo']):
 			raise NotImplementedError("Client configuration does not provide a security algorithm")
 		
@@ -160,9 +217,14 @@ class Client:
 		key = self.config['security_algo'].__call__(seed, params)
 		return self.send_key._func_no_error_management(self, level, key)
 
-	# Sends a TesterPresent request to keep the session active.
+	
 	@standard_error_management
 	def tester_present(self):
+		"""
+		Sends a TesterPresent request to keep the session active.
+
+		:raises UnexpectedResponseException: If the subfunction echo given by the server does not match the requested subfunction (always zero).		
+		"""
 		req = services.TesterPresent.make_request()
 
 		self.logger.info('Sending TesterPresent request')
@@ -174,17 +236,28 @@ class Client:
 
 		return response
 
-	# Returns the first DID read if more than one is given.
 	@standard_error_management
 	def read_data_by_identifier_first(self, didlist):
+		"""
+		Shortcut to extract a single DID. 
+		Calls read_data_by_identifier then returns the first DID asked for. 
+
+		:param didlist: The list of DID to be read
+		:type didlist: list[int]
+		"""
 		values = self.read_data_by_identifier(didlist)
 		if len(values) > 0 and len(didlist) > 0:
 			return values[didlist[0]]
 
-	# Perform a ReadDataByIdentifier request.
 	@standard_error_management
-	def read_data_by_identifier(self, dids):
-		didlist = services.ReadDataByIdentifier.validate_didlist_input(dids)
+	def read_data_by_identifier(self, didlist):
+		"""
+		Request a value associated with a data identifier (DID) through the :ref:`ReadDataByIdentifier<ReadDataByIdentifier>` service.
+
+		:param didlist: The list of DID to be read
+		:type didlist: list[int]
+		"""
+		didlist = services.ReadDataByIdentifier.validate_didlist_input(didlist)
 		req = services.ReadDataByIdentifier.make_request(didlist=didlist, didconfig=self.config['data_identifiers'])
 
 		if len(didlist) == 1:
@@ -228,6 +301,16 @@ class Client:
 	# Performs a WriteDataByIdentifier request.
 	@standard_error_management
 	def write_data_by_identifier(self, did, value):
+		"""
+		Request to write a value associated with a data identifier (DID) through the :ref:`WriteDataByIdentifier<WriteDataByIdentifier>` service.
+
+		:param didlist: The DID to write its value
+		:type didlist: int
+		
+		:param value: Value given to the :ref:`DidCodec <DidCodec>`.encode method. The payload returned by the codec will be sent to the server.
+		:type value: int
+
+		"""
 		req = services.WriteDataByIdentifier.make_request(did, value, didconfig=self.config['data_identifiers'])
 		self.logger.info("Writing data identifier %s (%s)", did, DataIdentifier.name_from_id(did))
 		
@@ -239,9 +322,15 @@ class Client:
 		
 		return response
 
-	# Performs a ECUReset service request
 	@standard_error_management
 	def ecu_reset(self, reset_type):
+		"""
+		Request the server to execute a reset sequence through the :ref:`ECUReset<ECUReset>` service.
+
+		:param reset_type: The type of reset to perform. See ECUReset.ResetType
+		:type reset_type: int
+	
+		"""
 		req = services.ECUReset.make_request(reset_type)
 		self.logger.info("Requesting ECU reset of type 0x%02x (%s)" % (reset_type, services.ECUReset.ResetType.get_name(reset_type)))
 	
@@ -256,9 +345,19 @@ class Client:
 
 		return response
 
-	# Performs a ClearDTC service request.
 	@standard_error_management 
 	def clear_dtc(self, group=0xFFFFFF):
+		"""
+		Request the server to clear its active Diagnotic Trouble Codes with the :ref:`ClearDiagnosticInformation<ClearDiagnosticInformation>` service.
+
+		:param group: The group of DTC to clear. It may refer to Powertrain DTCs, Chassis DTCs, etc. Values are defined by the ECU manufacturer except for two specific values
+
+			- ``0x000000`` : Emissions-related systems
+			- ``0xFFFFFF`` : All DTCs
+		:type group: int
+	
+		"""
+
 		request = services.ClearDiagnosticInformation.make_request(group)
 		if group == 0xFFFFFF:
 			self.logger.info('Clearing all DTCs (group mask : 0xFFFFFF)')
@@ -272,14 +371,44 @@ class Client:
 
 	# Performs a RoutineControl Service request
 	def start_routine(self, routine_id, data=None):
+		"""
+		Request the server to start a routine through the :ref:`RoutineControl<RoutineControl>` service (subfunction = 0x01) .
+
+		:param routine_id: The 16 bits numerical ID of the routine to start
+		:type group: int
+
+		:param data: Optional additional data to give to the server
+		:type data: bytes
+	
+		"""
 		return self.routine_control(routine_id, services.RoutineControl.ControlType.startRoutine, data)
 
 	# Performs a RoutineControl Service request
 	def stop_routine(self, routine_id, data=None):
+		"""
+		Request the server to stop a routine through the :ref:`RoutineControl<RoutineControl>` service (subfunction = 0x02) .
+
+		:param routine_id: The 16 bits numerical ID of the routine to stop
+		:type group: int
+
+		:param data: Optional additional data to give to the server
+		:type data: bytes
+	
+		"""
 		return self.routine_control(routine_id, services.RoutineControl.ControlType.stopRoutine, data)
 
 	# Performs a RoutineControl Service request
 	def get_routine_result(self, routine_id, data=None):
+		"""
+		Request the server to send back the execution result of the specified routine through the :ref:`RoutineControl<RoutineControl>` service (subfunction = 0x03) .
+
+		:param routine_id: The 16 bits numerical ID of the routine
+		:type group: int
+
+		:param data: Optional additional data to give to the server
+		:type data: bytes
+	
+		"""
 		return self.routine_control(routine_id, services.RoutineControl.ControlType.requestRoutineResults, data)
 
 	# Performs a RoutineControl Service request
@@ -301,23 +430,50 @@ class Client:
 
 		return response
 
-	# Performs an AccessTimingParameter service request
 	def read_extended_timing_parameters(self):
+		"""
+		Read the timing parameters from the server with :ref:`AccessTimingParameter<AccessTimingParameter>` service with subfunction ``readExtendedTimingParameterSet`` (0x01) .
+		
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+	
+		"""
 		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.readExtendedTimingParameterSet)
 
-	# Performs an AccessTimingParameter service request
-	def read_active_timing_parameters(self):
-		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.readCurrentlyActiveTimingParameters)
-
-	# Performs an AccessTimingParameter service request
-	def set_timing_parameters(self, params):
-		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToGivenValues, request_record=params)
-	
-	# Performs an AccessTimingParameter service request
 	def reset_default_timing_parameters(self):
-		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToDefaultValues)
+		"""
+		Reset the server timing parameters to their default value with :ref:`AccessTimingParameter<AccessTimingParameter>` service with subfunction ``setTimingParametersToDefaultValues``  (0x02) .
+		
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
 	
-	# Performs an AccessTimingParameter service request
+		"""
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToDefaultValues)
+
+	def read_active_timing_parameters(self):
+		"""
+		Read the currently active timing parameters from the server with :ref:`AccessTimingParameter<AccessTimingParameter>` service with subfunction ``readCurrentlyActiveTimingParameters``  (0x03) .
+		
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+	
+		"""
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.readCurrentlyActiveTimingParameters)
+	
+	def set_timing_parameters(self, params):
+		"""
+		Set the timing parameters into the server with :ref:`AccessTimingParameter<AccessTimingParameter>` service with subfunction ``setTimingParametersToGivenValues``  (0x024) .
+		
+		:param params: The parameters data. Specific to each ECU.
+		:type params: bytes
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+	
+		"""
+		return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToGivenValues, request_record=params)
+
+	
 	@standard_error_management
 	def access_timing_parameter(self, access_type, timing_param_record=None):
 		request = services.AccessTimingParameter.make_request(access_type, timing_param_record)
@@ -337,13 +493,25 @@ class Client:
 		]
 
 		if len(response.service_data.timing_param_record) > 0 and access_type not in allowed_response_record_access_type:
-			self.logger.warning("Server returned data for AccessTimingParameter altough none were asked")
+			self.logger.warning("Server returned data in the AccessTimingParameter response altough none was asked")
 
 		return response
 
-	# Performs a CommunicationControl service request
 	@standard_error_management
 	def communication_control(self, control_type, communication_type):
+		"""
+		Switch on/off the transmission or reception of certain messages with :ref:`CommunicationControl<CommunicationControl>` service.
+		
+		:param control_type: The service subfunction. Control type can be enableRxAndTx, enableRxAndDisableTx, etc. See ``CommunicationControl.ControlType``. This value can also be ECU manufacturer specific
+		:type control_type: bytes
+
+		:param communication_type: Idicates what section of the network and the type of message that should be affected by the command. Refer to :ref:`CommunicationType<CommunicationType>` for more details
+		:type communication_type: :ref:`CommunicationType<CommunicationType>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
+
 		communication_type = services.CommunicationControl.normalize_communication_type(communication_type)
 
 		request = services.CommunicationControl.make_request(control_type, communication_type)
@@ -357,12 +525,36 @@ class Client:
 
 		return response
 
-	#Performs a RequestDownload service request
 	def request_download(self, memory_location, dfi=None):
+		"""
+		Informs the server that the client wants to initiate a download from the client to the server by sending a :ref:`RequestDownload<RequestDownload>` service request.
+		
+		:param memory_location: The address and the size of the memory block to be written.
+		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
+
+		:param dfi: Optional :ref:`DataFormatIdentifier <DataFormatIdentifier>` defining the compression and encryption scheme of the data. 
+			If not specified, the default value of 00 will be used, specifying no encryption and no compression
+		:type dfi: :ref:`DataFormatIdentifier <DataFormatIdentifier>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.request_upload_download(services.RequestDownload, memory_location, dfi)
 
-	#Performs a RequestUpload service request
 	def request_upload(self, memory_location, dfi=None):
+		"""
+		Informs the server that the client wants to initiate an upload from the server to the client by sending a :ref:`RequestUpload<RequestUpload>` service request.
+		
+		:param memory_location: The address and the size of the memory block to be written.
+		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
+
+		:param dfi: Optional :ref:`DataFormatIdentifier <DataFormatIdentifier>` defining the compression and encryption scheme of the data. 
+			If not specified, the default value of 00 will be used, specifying no encryption and no compression
+		:type dfi: :ref:`DataFormatIdentifier <DataFormatIdentifier>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.request_upload_download(services.RequestUpload, memory_location, dfi)
 
 	# Common code for both RequestDownload and RequestUpload services
@@ -393,6 +585,19 @@ class Client:
 
 	@standard_error_management
 	def transfer_data(self, sequence_number, data=None):
+		"""
+		Transfer a block of data from/to the client to/from the server by sending a :ref:`TransferData<TransferData>` service request and returning the server response.
+		
+		:param sequence_number: Service subfunction. Correspond to an 8bits counter that should increment for each new block transfered.
+			Allowed values are from 0 to 0xFF
+		:type sequence_number: int
+
+		:param data: Optional additional data to send to the server
+		:type data: bytes
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		request = services.TransferData.make_request(sequence_number, data)
 		
 		data_len = 0 if data is None else len(data)
@@ -410,6 +615,15 @@ class Client:
 
 	@standard_error_management
 	def request_transfer_exit(self, data=None):
+		"""
+		Informs the server that the client wants to stop the data transfer by sending a :ref:`RequestTransferExit<RequestTransferExit>` service request.
+
+		:param data: Optional additional data to send to the server
+		:type data: bytes
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		request = services.RequestTransferExit.make_request(data)
 		self.logger.info('Sending RequestTransferExit service request')
 
@@ -420,6 +634,18 @@ class Client:
 
 	@standard_error_management
 	def link_control(self, control_type, baudrate=None):
+		"""
+		Controls the communication baudrate by sending a :ref:`LinkControl<LinkControl>` service request.
+
+		:param control_type: Service subfunction. Allowed values are from 0 to 0xFF. See LinkControl.ControlType
+		:type control_type: int
+
+		:param baudrate: Required baudrate value when ``control_type`` is either ``verifyBaudrateTransitionWithFixedBaudrate`` (1) or ``verifyBaudrateTransitionWithSpecificBaudrate`` (2)
+		:type baudrate: :ref:`Baudrate <Baudrate>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		request = services.LinkControl.make_request(control_type, baudrate)
 		baudrate_str = 'No baudrate specified' if baudrate is None else 'Baudrate : ' + str(baudrate)
 		self.logger.info('Sending LinkControl service request with control type of 0x%02x (%s). %s' % (control_type, services.LinkControl.ControlType.get_name(control_type), baudrate_str))
@@ -432,9 +658,38 @@ class Client:
 
 		return response
 
-	#Perform InputOutputControlByIdentifier service request
 	@standard_error_management
-	def io_control(self,  did, control_param=None, values=None, masks=None):
+	def io_control(self, did, control_param=None, values=None, masks=None):
+		"""
+		Substitute the value of an input signal or override the state of an output by sending a :ref:`InputOutputControlByIdentifier<InputOutputControlByIdentifier>` service request.
+
+		:param did: Data identifier to representing the IO
+		:type did: int
+
+		:param control_param: Optional parameter that can be a value from ``InputOutputControlByIdentifier.ControlParam``
+		:type control_param: int
+
+		:param values: Optional values to send to the server. This parameter will be given to :ref:`DidCodec<DidCodec>`.encode() method. 
+			It can be:
+			
+				- A list for positional arguments
+				- A dict for named arguments
+				- An instance of :ref:`IOValues<IOValues>` for mixed arguments
+
+		:type values: list, dict, :ref:`IOValues<IOValues>`
+
+		:param masks: Optional mask record for composite values. The mask definition must be included in ``config['input_output']``
+			It can be:
+
+				- A list naming the bit mask to set
+				- A dict with the mask name as a key and a boolean setting or clearing the mask as the value
+				- An instance of :ref:`IOMask<IOMask>`
+				- A boolean value to set all mask to the same value.
+		:type masks: list, dict, :ref:`IOMask<IOMask>`, bool
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		if 'input_output' not in self.config:
 			raise ConfigError('input_output', msg='input_output must be defined in client configuration in order to use InputOutputControlByIdentifier service')
 
@@ -456,6 +711,19 @@ class Client:
 
 	@standard_error_management
 	def control_dtc_setting(self, setting_type, data=None):
+		"""
+		Controls some settings related to the Diagnostic Trouble Code by sending a :ref:`ControlDTCSetting<ControlDTCSetting>` service request. 
+			It can enable/disable some DTC or perform some ECU specific configuration.
+
+		:param setting_type: Service subfunction. Allowed values are from 0 to 0x7F. See :ref:`ControlDTCSetting<ControlDTCSetting>`.SettingType
+		:type setting_type: int
+
+		:param data: Optional additional data sent with the request called `DTCSettingControlOptionRecord`
+		:type data: bytes
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		request = services.ControlDTCSetting.make_request(setting_type, data)
 		data_len = 0 if data is None else len(data)
 		self.logger.info('Sending ControlDTCSetting service request with setting type 0x%02x (%s) and %d bytes of data' % (setting_type, services.ControlDTCSetting.SettingType.get_name(setting_type), data_len))
@@ -470,6 +738,16 @@ class Client:
 
 	@standard_error_management
 	def read_memory_by_address(self, memory_location):
+		"""
+		Read a block of memory from the server by sending a :ref:`ReadMemoryByAddress<ReadMemoryByAddress>` service request. 
+
+		:param memory_location: The address and the size of the memory block to read. Note that if ``config['server_address_format']`` and/or ``config['server_memorysize_format']`` are set, 
+			the memory_location ``address_format`` and ``memorysize_format`` will be set to the configuration value if they are not specified.
+		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		if not isinstance(memory_location, MemoryLocation):
 			raise ValueError('memory_location must be an instance of MemoryLocation')
 
@@ -500,6 +778,20 @@ class Client:
 
 	@standard_error_management
 	def write_memory_by_address(self, memory_location, data):
+		"""
+		Write a block of memory in the server by sending a :ref:`WriteMemoryByAddress<WriteMemoryByAddress>` service request. 
+
+		:param memory_location: The address and the size of the memory block to read. Note that if ``config['server_address_format']`` and/or ``config['server_memorysize_format']`` are set, 
+			the memory_location ``address_format`` and ``memorysize_format`` will be set to the configuration value if they are not specified.
+		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
+
+		:param data: The data to write into memory.
+		:type data: bytes
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
+
 		if not isinstance(memory_location, MemoryLocation):
 			raise ValueError('memory_location must be an instance of MemoryLocation')
 
@@ -536,66 +828,270 @@ class Client:
 
 # ====  ReadDTCInformation
 	def get_dtc_by_status_mask(self, status_mask):
+		"""
+		Read the all the Diagnostic Trouble Codes that have a status matching the given mask. 
+		The server will check all of its DTC and if (Dtc.status & status_mask) != 0, then the DTC matches the filter and is sent back to the client.
+
+		:param status_mask: The status mask against which the DTC are tested. 
+		:type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCByStatusMask, status_mask=status_mask)
 
 	def get_emission_dtc_by_status_mask(self, status_mask):
+		"""
+		Read the emission related the Diagnostic Trouble Codes that have a status matching the given mask.
+		The server will check its emission related DTC and if (Dtc.status & status_mask) != 0, then the DTC matches the filter and is sent back to the client.
+
+		:param status_mask: The status mask against which the DTC are tested. 
+		:type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
 
 	def get_mirrormemory_dtc_by_status_mask(self, status_mask):
+		"""
+		Read the all the Diagnostic Trouble Codes stored in mirror memory that have a status matching the given mask. 
+		The server will check all of its DTC and if (Dtc.status & status_mask) != 0, then the DTC matches the filter and is sent back to the client.
+
+		:param status_mask: The status mask against which the DTC are tested. 
+		:type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCByStatusMask, status_mask=status_mask)
 
 	def get_dtc_by_status_severity_mask(self, status_mask, severity_mask):
+		"""
+		Read the all the Diagnostic Trouble Codes that have a status and a severity matching the given masks. 
+		The server will check all of its DTC and if ( (Dtc.status & status_mask) != 0 && (Dtc.severity & severity) !=0), then the DTC matches the filter and is sent back to the client.
+
+		:param status_mask: The status mask against which the DTC are tested. 
+		:type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
+		
+		:param severity_mask: The severity mask against which the DTC are tested. 
+		:type severity_mask: int or :ref:`Dtc.Severity<DTC_Severity>`
+		
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 
 	def get_number_of_dtc_by_status_mask(self, status_mask):
+		"""
+		Get the number of DTC that matches the specified status mask.
+
+		:param status_mask: The status mask against which the DTC are tested. 
+		:type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfDTCByStatusMask, status_mask=status_mask)
 	
 	def get_mirrormemory_number_of_dtc_by_status_mask(self, status_mask):
+		"""
+		Get the number of emission related DTC that matches the specified status mask.
+
+		:param status_mask: The status mask against which the DTC are tested. 
+		:type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfMirrorMemoryDTCByStatusMask, status_mask=status_mask)
 	
 	def get_number_of_emission_dtc_by_status_mask(self, status_mask):
+		"""
+		Get the number of DTC that matches the specified status mask in mirror memory.
+
+		:param status_mask: The status mask against which the DTC are tested. 
+		:type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
 
 	def get_number_of_dtc_by_status_severity_mask(self, status_mask, severity_mask):
+		"""
+		Get the number of DTC that matches the specified status mask.
+
+		:param status_mask: The status mask against which the DTC are tested. 
+		:type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
+
+		:param severity_mask: The severity mask against which the DTC are tested. 
+		:type severity_mask: int or :ref:`Dtc.Severity<DTC_Severity>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 	
 	def get_dtc_severity(self, dtc):
+		"""
+		Request the server for a specific DTC severity level.
+
+		:param dtc: The DTC ID for which we request the severity. It can be a 3 bytes integer or a DTC instance with an ID set.
+		:type dtc: int or :ref:`Dtc<DTC>`
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC, dtc=dtc)
 
 	def get_supported_dtc(self):
+		"""
+		Request the list of supported DTC by the server.
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportSupportedDTCs)
 
 	def get_first_test_failed_dtc(self):
+		"""
+		Read a single DTC. Request the server for the first DTC that set its ``Dtc.Status.test_failed`` bit.
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportFirstTestFailedDTC)
 
 	def get_first_confirmed_dtc(self):
+		"""
+		Read a single DTC. Request the server for the first DTC that set its ``Dtc.Status.confirmed`` bit.
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportFirstConfirmedDTC)
 
 	def get_most_recent_test_failed_dtc(self):
+		"""
+		Read a single DTC. Request the server for the last DTC that set its ``Dtc.Status.test_failed`` bit.
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMostRecentTestFailedDTC)
 
 	def get_most_recent_confirmed_dtc(self):
+		"""
+		Read a single DTC. Request the server for the last DTC that set its ``Dtc.Status.confirmed`` bit.
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMostRecentConfirmedDTC)
 
 	def get_dtc_with_permanent_status(self):
+		"""
+		Returns all DTC that the server marked as `permanent`. 
+		
+		A permanent DTC is a DTC stored in Non-Volatile memory and that cannot be erased by a test equipement or by power-cycling the ECU.
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCWithPermanentStatus)
 
 	def get_dtc_fault_counter(self):
+		"""
+		Request the server for all DTCs that are `prefailed` along with their fault detection counter. 
+
+		A prefailed DTC is a DTC for which the detection condition is met, but has not been identified as `pending` or `confirmed` yet. 
+
+		If the ECU follows the UDS guidelines, it will wait to detect a fault many times before setting a status bit for this fault DTC. Each time the fault is detected, a fault counter is incremented, when it is not detected, the counter is decremented.
+		Once the fault counter reaches a threshold, a status bit is set and the DTC is not `prefailed` anymore. A `prefailed` DTC is any DTC that has fault detection counter greater than 0, but less than the detection threshold.
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCFaultDetectionCounter)
 
 	def get_dtc_snapshot_identification(self):
+		"""
+		Request the server to return an index of all the DTC snapshot available. The server will respond with a list of DTC and a list of snapshot record number for each DTC.
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotIdentification)
 
 	def get_dtc_snapshot_by_dtc_number(self, dtc, record_number=0xFF):
+		"""
+		Request the server for one or many specific DTC snapshots associated with a single DTC.
+		Each snapshot have a data identifier associated with them. The data will be decoded using the associated :ref:`DidCodec<DidCodec>` defined in ``config['data_identifiers']``.
+
+		:param dtc: The DTC ID for which we request the snapshot data. It can be a 3 bytes integer or a DTC instance with an ID set.
+		:type dtc: int or :ref:`Dtc<DTC>`
+
+		:param record_number: The record number of the snapshot data to read. If 0xFF is given, then all snapshot will be read, otherwise, a single snapshot will be read.
+		:type record_number: int
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber, dtc=dtc, snapshot_record_number=record_number)
 
-	def get_dtc_snapshot_by_record_number(self, record_number):
+	def get_dtc_snapshot_by_record_number(self, record_number=0xFF):
+		"""
+		Request the server for one or many DTC snapshots by specifying a record number. This functionaly can exist only if the server assign globally unique record_number to DTC snapshot, regardless of the DTC ID.
+
+		Each snapshot have a data identifier associated with them. The data will be decoded using the associated :ref:`DidCodec<DidCodec>` defined in ``config['data_identifiers']``.
+
+		:param record_number: The record number of the snapshot data to read. If 0xFF is given, then all snapshot will be read, otherwise, a single snapshot will be read.
+		:type record_number: int
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber, snapshot_record_number=record_number)
 
 	def get_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
+		"""
+		Request the server for one or many DTC **extended data** by specifying a record number.
+
+		The DTC extended data is a ECU specific set of data that is not associated with a data identifier. Gieven as ``bytes``
+
+		:param dtc: The DTC ID for which we request the extended data. It can be a 3 bytes integer or a DTC instance with an ID set.
+		:type dtc: int or :ref:`Dtc<DTC>`
+
+		:param record_number: The record number of the extended data to read. If 0xFF is given, then all extended data entry will be read, otherwise, a single entry will be read.
+		:type record_number: int
+
+		:param data_size: The record number of the snapshot data to read. If 0xFF is given, then all snapshot will be read, otherwise, a single snapshot will be read.
+		:type data_size: int or None
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number,extended_data_size=data_size)
 
 	def get_mirrormemory_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
+		"""
+		Request the server for one or many DTC **extended data** stored in mirror memory by specifying a record number.
+
+		The DTC extended data is a ECU specific set of data that is not associated with a data identifier. Gieven as ``bytes``
+
+		:param dtc: The DTC ID for which we request the extended data. It can be a 3 bytes integer or a DTC instance with an ID set.
+		:type dtc: int or :ref:`Dtc<DTC>`
+
+		:param record_number: The record number of the extended data to read. If 0xFF is given, then all extended data entry will be read, otherwise, a single entry will be read.
+		:type record_number: int
+
+		:param data_size: The record number of the snapshot data to read. If 0xFF is given, then all snapshot will be read, otherwise, a single snapshot will be read.
+		:type data_size: int or None
+
+		:return: The server response
+		:rtype: :ref:`Response<Response>`
+		"""
 		return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number, extended_data_size=data_size)
 
 	# Performs a ReadDiagnsticInformation service request.

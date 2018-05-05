@@ -19,7 +19,7 @@ class WriteMemoryByAddress(BaseService):
 		Generate a request for ReadMemoryByAddress
 
 		:param memory_location: The address and the size of the memory block to write.
-		:type memory_location: :ref:`MemoryLocation <HelperClass_MemoryLocation>`
+		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
 
 		:param data: The data to write into memory.
 		:type data: bytes
@@ -46,14 +46,14 @@ class WriteMemoryByAddress(BaseService):
 	@classmethod
 	def interpret_response(cls, response, memory_location):
 		"""
-		Populates the response `service_data` property with an instance of `WriteMemoryByAddress.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``WriteMemoryByAddress.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response
 
 		:param memory_location: The memory location used for the request. 
-			The field mapping in the response varies depending on the memory_location format
-		:type memory_location: :ref:`MemoryLocation <HelperClass_MemoryLocation>`
+			The field mapping in the response varies depending on the ``memory_location`` format
+		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
 
 		:raises InvalidResponseException: If length of response.data is too small
 		"""			
@@ -85,11 +85,11 @@ class WriteMemoryByAddress(BaseService):
 		"""
 		.. data:: alfid_echo
 
-			:ref:`AddressAndLengthIdentifier <HelperClass_AddressAndLengthIdentifier>` used in the request :ref:`MemoryLocation <HelperClass_MemoryLocation>` object echoed back by the server.
+			:ref:`AddressAndLengthIdentifier <AddressAndLengthIdentifier>` used in the request :ref:`MemoryLocation <MemoryLocation>` object echoed back by the server.
 		
 		.. data:: memory_location_echo
 
-			An instance of :ref:`MemoryLocation <HelperClass_MemoryLocation>` that includes the address, size and alfid that the server echoed back.		
+			An instance of :ref:`MemoryLocation <MemoryLocation>` that includes the address, size and alfid that the server echoed back.		
 		"""		
 		def __init__(self):
 			super().__init__(WriteMemoryByAddress)

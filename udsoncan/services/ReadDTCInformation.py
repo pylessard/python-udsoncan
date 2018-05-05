@@ -87,13 +87,13 @@ class ReadDTCInformation(BaseService):
 		:type subfunction: int
 
 		:param status_mask: A DTC status mask used to filter DTC
-		:type status_mask: int or :ref:`Dtc.Status <HelperClass_DTC_Status>`
+		:type status_mask: int or :ref:`Dtc.Status <DTC_Status>`
 
 		:param severity_mask: A severity mask used to filter DTC 
-		:type severity_mask: int or :ref:`Dtc.Severity <HelperClass_DTC_Severity>`
+		:type severity_mask: int or :ref:`Dtc.Severity <DTC_Severity>`
 
 		:param dtc: A DTC mask used to filter DTC
-		:type dtc: int or :ref:`Dtc <HelperClass_DTC>`
+		:type dtc: int or :ref:`Dtc <DTC>`
 
 		:param snapshot_record_number: Snapshot record number
 		:type snapshot_record_number: int
@@ -203,7 +203,7 @@ class ReadDTCInformation(BaseService):
 	@classmethod
 	def interpret_response(cls, response, subfunction,  extended_data_size=None, tolerate_zero_padding=True, ignore_all_zero_dtc=True, dtc_snapshot_did_size=2, didconfig=None):
 		"""
-		Populates the response `service_data` property with an instance of `ReadDTCInformation.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``ReadDTCInformation.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response
@@ -224,8 +224,8 @@ class ReadDTCInformation(BaseService):
 			UDS standard does not define the size of the snapshot DID, therefore, it must be supplied.
 		:type dtc_snapshot_did_size: int
 
-		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<HelperClass_DidCodec>` class or pack/unpack string 
-		:type didconfig: dict[int] = :ref:`DidCodec<HelperClass_DidCodec>`
+		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<DidCodec>` class or pack/unpack string 
+		:type didconfig: dict[int] = :ref:`DidCodec<DidCodec>`
 		
 		:raises InvalidResponseException: If response length is wrong or doe snot match DID configuration
 		:raises ValueError: If parameters are out of range or missing
@@ -590,7 +590,7 @@ class ReadDTCInformation(BaseService):
 
 		.. data:: dtcs
 			
-			:ref:`DTC<HelperClass_DTC>` instances and their status read from the server.
+			:ref:`DTC<DTC>` instances and their status read from the server.
 
 		.. data:: dtc_count
 			
@@ -598,11 +598,11 @@ class ReadDTCInformation(BaseService):
 
 		.. data:: dtc_format
 			
-			Integer indicating the format of the DTC. See :ref:`DTC.Format<HelperClass_DTC_Format>`
+			Integer indicating the format of the DTC. See :ref:`DTC.Format<DTC_Format>`
 
 		.. data:: status_availability
 			
-			:ref:`Dtc.Status<HelperClass_DTC_Status>` indicating which status the server supports
+			:ref:`Dtc.Status<DTC_Status>` indicating which status the server supports
 
 		.. data:: extended_data
 			

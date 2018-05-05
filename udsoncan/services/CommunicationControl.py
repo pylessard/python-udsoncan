@@ -43,7 +43,7 @@ class CommunicationControl(BaseService):
 		:type control_type: int
 
 		:param communication_type: The communication type requested.
-		:type communication_type: :ref:`CommunicationType <HelperClass_CommunicationType>`
+		:type communication_type: :ref:`CommunicationType <CommunicationType>`
 
 		:raises ValueError: If parameters are out of range or missing
 		"""		
@@ -60,7 +60,7 @@ class CommunicationControl(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response `service_data` property with an instance of `CommunicationControl.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``CommunicationControl.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response

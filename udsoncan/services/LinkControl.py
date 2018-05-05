@@ -29,8 +29,8 @@ class LinkControl(BaseService):
 		:param control_type: Service subfunction. Allowed values are from 0 to 0xFF
 		:type control_type: int
 
-		:param baudrate: Required baudrate value when control_type is either verifyBaudrateTransitionWithFixedBaudrate (1) or verifyBaudrateTransitionWithSpecificBaudrate (2)
-		:type baudrate: :ref:`Baudrate <HelperClass_Baudrate>`
+		:param baudrate: Required baudrate value when ``control_type`` is either ``verifyBaudrateTransitionWithFixedBaudrate`` (1) or ``verifyBaudrateTransitionWithSpecificBaudrate`` (2)
+		:type baudrate: :ref:`Baudrate <Baudrate>`
 
 		:raises ValueError: If parameters are out of range or missing
 		"""		
@@ -62,7 +62,7 @@ class LinkControl(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response `service_data` property with an instance of `LinkControl.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``LinkControl.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response

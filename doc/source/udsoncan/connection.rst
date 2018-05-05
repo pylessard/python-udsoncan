@@ -1,6 +1,8 @@
 Underlying protocol (Connections)
 =================================
 
+.. _Connection:
+
 Basics
 ------
 
@@ -15,7 +17,7 @@ This project does not implements any communication protocol below the UDS layer,
 How to
 ------
 
-Access to the underlying protocol is done through a **Connection** object. A user can defines its own Connection object by inheriting the BaseConnection object and implementing the abstract methods.
+Access to the underlying protocol is done through a ``Connection`` object. A user can defines its own Connection object by inheriting the ``BaseConnection`` object and implementing the abstract methods.
 
 The main interface to use with the Connection object are:
 
@@ -43,9 +45,10 @@ QueueConnection
 Defining a new Connection
 -------------------------
 
-In order to define a new connection, 4 methods must be implemented as they will be called by the Client object.
+In order to define a new connection, 5 methods must be implemented as they will be called by the ``Client`` object.
 
  .. automethod:: udsoncan.connections.BaseConnection.open
  .. automethod:: udsoncan.connections.BaseConnection.close
  .. automethod:: udsoncan.connections.BaseConnection.specific_send
  .. automethod:: udsoncan.connections.BaseConnection.specific_wait_frame
+ .. automethod:: udsoncan.connections.BaseConnection.empty_rxqueue

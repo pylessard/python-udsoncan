@@ -18,7 +18,7 @@ class TransferData(BaseService):
 	@classmethod
 	def make_request(cls, sequence_number, data=None):
 		"""
-		Generate a request for AccessTimingParameter
+		Generate a request for TransferData
 
 		:param sequence_number: Service subfunction. Correspond to an 8bits counter that should increment for each new block transfered.
 			Allowed values are from 0 to 0xFF
@@ -42,7 +42,7 @@ class TransferData(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response `service_data` property with an instance of `TransferData.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``TransferData.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response

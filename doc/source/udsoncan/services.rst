@@ -23,6 +23,7 @@ Each service is represented by a class that extend the ``BaseService`` class. Th
    SomeService.interpret_response(response, param1, param2) 
    print('Interpreted data : field1 : %s, field2 : %s' % (response.service_data.field1, response.service_data.field2))
 
+------------
 
 .. _AccessTimingParameter:
 
@@ -141,48 +142,7 @@ InputOutputControlByIdentifier (0x2F)
 
 .. note:: This service does not have subfunctions
 
-**Example**
-
-.. code-block:: python
-
-   # Example taken from UDS standard
-
-   class MyCompositeDidCodec(DidCodec):
-      def encode(self, IAC_pintle, rpm, pedalA, pedalB, EGR_duty):
-         pedal = (pedalA << 4) | pedalB
-         return struct.pack('>BHBB', IAC_pintle, rpm, pedal, EGR_duty)
-
-      def decode(self, payload):
-         vals = struct.unpack('>BHBB', payload)
-         return {
-            'IAC_pintle': vals[0],
-            'rpm'       : vals[1],
-            'pedalA'    : (vals[2] >> 4) & 0xF,
-            'pedalB'    : vals[2] & 0xF,
-            'EGR_duty'  : vals[3]
-         }
-
-      def __len__(self):
-         return 5    
-
-   ioconfig = {
-         0x132 : MyDidCodec,
-         0x456 : '<HH',
-         0x155 : {
-            'codec' : MyCompositeDidCodec,
-            'mask' : {
-               'IAC_pintle': 0x80,
-               'rpm'       : 0x40,
-               'pedalA'    : 0x20,
-               'pedalB'    : 0x10,
-               'EGR_duty'  : 0x08
-            },
-            'mask_size' : 2 # Mask encoded over 2 bytes
-         }
-      }
-
-      values = {'IAC_pintle': 0x07, 'rpm': 0x1234, 'pedalA': 0x4, 'pedalB' : 0x5,  'EGR_duty': 0x99}
-      req = InputOutputControlByIdentifier.make_request(0x155, values=values, masks=['IAC_pintle', 'pedalA'], ioconfig=ioconfig)
+.. note:: :ref:`Example available here<iocontrol_composite_did>`
 
 -------
 

@@ -8,9 +8,11 @@ Python implementation of UDS standard (ISO-14229)
    Home <self>
    udsoncan/intro
    udsoncan/connection
+   udsoncan/request_response
    udsoncan/services
    udsoncan/client
    udsoncan/helper_classes
+   udsoncan/exceptions
    udsoncan/examples
    udsoncan/questions_answers
 

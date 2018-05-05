@@ -63,7 +63,7 @@ class SecurityAccess(BaseService):
 	@classmethod
 	def interpret_response(cls, response, mode):
 		"""
-		Populates the response `service_data` property with an instance of `SecurityAccess.ResponseData`
+		Populates the response ``service_data`` property with an instance of ``SecurityAccess.ResponseData``
 
 		:param response: The received response to interpret
 		:type response: Response
