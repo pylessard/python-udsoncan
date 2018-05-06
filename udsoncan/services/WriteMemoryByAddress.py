@@ -46,7 +46,7 @@ class WriteMemoryByAddress(BaseService):
 	@classmethod
 	def interpret_response(cls, response, memory_location):
 		"""
-		Populates the response ``service_data`` property with an instance of ``WriteMemoryByAddress.ResponseData``
+		Populates the response ``service_data`` property with an instance of :class:`WriteMemoryByAddress.ResponseData<udsoncan.services.WriteMemoryByAddress.ResponseData>`
 
 		:param response: The received response to interpret
 		:type response: Response

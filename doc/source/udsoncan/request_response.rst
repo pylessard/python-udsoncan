@@ -6,8 +6,11 @@ Request and Response
 Request
 -------
 
+.. autoclass:: udsoncan.Request
+
 .. _Response:
 
 Response
 ---------
 
+.. autoclass:: udsoncan.Response

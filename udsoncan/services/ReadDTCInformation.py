@@ -203,7 +203,7 @@ class ReadDTCInformation(BaseService):
 	@classmethod
 	def interpret_response(cls, response, subfunction,  extended_data_size=None, tolerate_zero_padding=True, ignore_all_zero_dtc=True, dtc_snapshot_did_size=2, didconfig=None):
 		"""
-		Populates the response ``service_data`` property with an instance of ``ReadDTCInformation.ResponseData``
+		Populates the response ``service_data`` property with an instance of :class:`ReadDTCInformation.ResponseData<udsoncan.services.ReadDTCInformation.ResponseData>`
 
 		:param response: The received response to interpret
 		:type response: Response

@@ -60,7 +60,7 @@ class CommunicationControl(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response ``service_data`` property with an instance of ``CommunicationControl.ResponseData``
+		Populates the response ``service_data`` property with an instance of :class:`CommunicationControl.ResponseData<udsoncan.services.CommunicationControl.ResponseData>`
 
 		:param response: The received response to interpret
 		:type response: Response

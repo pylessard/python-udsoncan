@@ -140,7 +140,7 @@ class InputOutputControlByIdentifier(BaseService):
 	@classmethod
 	def interpret_response(cls, response, control_param=None, tolerate_zero_padding=True, ioconfig=None):
 		"""
-		Populates the response ``service_data`` property with an instance of ``InputOutputControlByIdentifier.ResponseData``
+		Populates the response ``service_data`` property with an instance of :class:`InputOutputControlByIdentifier.ResponseData<udsoncan.services.InputOutputControlByIdentifier.ResponseData>`
 
 		:param response: The received response to interpret
 		:type response: Response

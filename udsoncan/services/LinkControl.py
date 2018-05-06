@@ -62,7 +62,7 @@ class LinkControl(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response ``service_data`` property with an instance of ``LinkControl.ResponseData``
+		Populates the response ``service_data`` property with an instance of :class:`LinkControl.ResponseData<udsoncan.services.LinkControl.ResponseData>`
 
 		:param response: The received response to interpret
 		:type response: Response

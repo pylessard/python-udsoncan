@@ -47,7 +47,7 @@ class ControlDTCSetting(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response ``service_data`` property with an instance of ``ControlDTCSetting.ResponseData``
+		Populates the response ``service_data`` property with an instance of :class:`ControlDTCSetting.ResponseData<udsoncan.services.ControlDTCSetting.ResponseData>`
 
 		:param response: The received response to interpret
 		:type response: Response

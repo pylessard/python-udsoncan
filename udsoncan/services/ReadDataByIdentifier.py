@@ -56,7 +56,7 @@ class ReadDataByIdentifier(BaseService):
 	@classmethod
 	def interpret_response(cls, response, didlist, didconfig, tolerate_zero_padding=True):
 		"""
-		Populates the response ``service_data`` property with an instance of ``ReadDataByIdentifier.ResponseData``
+		Populates the response ``service_data`` property with an instance of :class:`ReadDataByIdentifier.ResponseData<udsoncan.services.ReadDataByIdentifier.ResponseData>`
 
 		:param response: The received response to interpret
 		:type response: Response

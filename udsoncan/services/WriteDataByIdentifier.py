@@ -45,7 +45,7 @@ class WriteDataByIdentifier(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response ``service_data`` property with an instance of ``WriteDataByIdentifier.ResponseData``
+		Populates the response ``service_data`` property with an instance of :class:`WriteDataByIdentifier.ResponseData<udsoncan.services.WriteDataByIdentifier.ResponseData>`
 
 		:param response: The received response to interpret
 		:type response: Response
