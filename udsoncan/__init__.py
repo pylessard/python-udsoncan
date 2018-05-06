@@ -193,11 +193,21 @@ class Dtc:
 		record_number = None
 		raw_data = b''
 		
-# This class define the size of an address and the size of the length. 
-# For example : 16 bits address and 8 bits length means only block of 256 bytes can be read in a range of 0 to 65535
-# Mainly used by ReadMemoryAddress and WriteMemoryAddress services
+
 class AddressAndLengthFormatIdentifier:
-	#As defined by ISO-14229:2006, Annex G
+	"""
+	This class defines on how many bytes does a memorylocation, composed of an address and a memorysize, should be encoded when sent over the underlying protocol.
+	Mainly used by :ref:`ReadMemoryByAddress<ReadMemoryByAddress>`, :ref:`WriteMemoryByAddress<WriteMemoryByAddress>`, :ref:`RequestDownload<RequestDownload>` and :ref:`RequestUpload<RequestUpload>` services
+	
+	Defined by ISO-14229:2006, Annex G
+
+	:param address_format: The number of bits on which an address should be encoded. Possible values are 8, 16, 24, 32, 40
+	:type address_format: int
+
+	:param memorysize_format: The number of bits on which an memory size should be encoded. Possible values are 8, 16, 24, 32
+	:type memorysize_format: int
+
+	"""
 	address_map = {
 		8 	: 1,
 		16 	: 2,
@@ -213,15 +223,16 @@ class AddressAndLengthFormatIdentifier:
 		32 : 4
 	}
 
-	def __init__(self, memorysize_format, address_format):
+	def __init__(self, address_format, memorysize_format):
+		if address_format not in self.address_map:
+			raise ValueError('address_format must ba an integer selected from : %s ' % (self.address_map.keys()))
+
 		if not isinstance(memorysize_format, int) or not isinstance(address_format, int):
 			raise ValueError('memorysize_format and address_format must be integers')
 
 		if memorysize_format not in self.memsize_map:
 			raise ValueError('memorysize_format must be an integer selected from : %s' % (self.memsize_map.keys()))
 		
-		if address_format not in self.address_map:
-			raise ValueError('address_format must ba an integer selected from : %s ' % (self.address_map.keys()))
 
 		self.memorysize_format = memorysize_format
 		self.address_format = address_format
@@ -233,8 +244,25 @@ class AddressAndLengthFormatIdentifier:
 	def get_byte(self):
 		return  struct.pack('B', self.get_byte_as_int())
 
-# This class defines a memory location including : address, size, AddressAndLengthFormatIdentifier
 class MemoryLocation:
+	"""
+	This class defines a memory block location including : address, size, AddressAndLengthFormatIdentifier (address format and memory size format)
+	
+	:param address: A memory address pointing the beginning of the memory block
+	:type address: int
+	
+	:param memorysize: The size of the memory block
+	:type memorysize: int or None
+	
+	:param address_format: The number of bits on which an address should be encoded. Possible values are 8, 16, 24, 32, 40.
+		If `None` is specified, the smallest size required to store the given address wil be used
+	:type address_format: int
+	
+	:param memorysize_format: The number of bits on which an memory size should be encoded. Possible values are 8, 16, 24, 32
+		If `None` is specified, the smallest size required to store the given memorysize wil be used
+	:type memorysize_format: int or None	
+
+	"""
 	def __init__(self, address, memorysize, address_format=None, memorysize_format=None):
 		self.address = address
 		self.memorysize = memorysize
@@ -331,9 +359,20 @@ class MemoryLocation:
 	def __repr__(self):
 		return '<%s: %s at 0x%08x>' % (self.__class__.__name__, str(self), id(self))
 
-# epresent a single byte values including compression and encryption method of a chunk of data.
-# Mainly used by TransferData Service
 class DataFormatIdentifier:
+	"""
+	Defines the compression and encryption method of a specific chunk of data. 
+	Mainly used by the :ref:`RequestUpload<RequestUpload>` and :ref:`RequestDownload<RequestDownload>` services
+
+	:param compression: Value between 0 and 0xF specifying the compression method. Only the value 0 has a meaning defined by UDS standard and is `No compression`. 
+		All other values are ECU manufacturer specific.
+	:type compression: int 
+	
+	:param encryption: Value between 0 and 0xF specifying the encryption method. Only the value 0 has a meaning defined by UDS standard and is `No encryption`. 
+		All other values are ECU manufacturer specific.
+	:type encryption: int
+
+	"""
 	def __init__(self, compression=0, encryption=0):
 		both = (compression, encryption)
 		for param in both:
@@ -485,6 +524,10 @@ class Units:
 # Routine class that containes few definition for usage with nice syntax.
 # myRoutine = Routine.EraseMemory    or    print(Routine.name_from_id(myRoutine))
 class Routine:
+	"""
+	Defines a list of constant that are routine identifiers defined by the UDS standard.
+	This class provides no functionality apart from defining these constants
+	"""
 	DeployLoopRoutineID	= 0xE200
 	EraseMemory	= 0xFF00
 	CheckProgrammingDependencies = 0xFF01
@@ -522,9 +565,11 @@ class Routine:
 		if routine_id >= 0xFF03 and routine_id <= 0xFFFF:
 			return 'ISOSAEReserved'
 
-# DataIdentifier class that containes few definition for usage with nice syntax.
-# myDid = DataIdentifier.VIN    or    print(DataIdentifier.name_from_id(myDid))
 class DataIdentifier:
+	"""
+	Defines a list of constant that are data identifiers defined by the UDS standard.
+	This class provides no functionality apart from defining these constants
+	"""
 	BootSoftwareIdentification					= 0xF180
 	ApplicationSoftwareIdentification			= 0xF181
 	ApplicationDataIdentification				= 0xF182
@@ -677,6 +722,19 @@ class DataIdentifier:
 # Communication type is a single byte value including message type and subnet.
 # Used by CommunicationControl service and defined by ISO-14229:2006 Annex B, table B.1
 class CommunicationType:
+	"""
+	This class represent a pair of subnet and message type. This value is mainly used by the :ref:`CommunicationControl<CommunicationControl>` service
+
+	:param subnet: Represent the subnet number. Value ranges from 0 to 0xF 
+	:type subnet: int
+
+	:param normal_msg: Bit indicating that the `normal messages` are involved
+	:type normal_msg: bool
+
+	:param network_management_msg: Bit indicating that the `network management messages` are involved
+	:type network_management_msg: bool
+
+	"""
 	class Subnet:
 		node = 0
 		network = 0xF
@@ -744,8 +802,31 @@ class CommunicationType:
 	def __repr__(self):
 		return '<%s: %s at 0x%08x>' % (self.__class__.__name__, str(self), id(self))
 
-# Buadrate is a variable length value used to define the transmission baudrate in LinkControl service.
 class Baudrate:
+	"""
+	Represents a link speed in bit per seconds (or symbol per seconds to be more accurate).
+	This class is used by the :ref:`LinkControl<LinkControl>` service that control the underlying protocol speeds.
+
+	The class can encode the baudrate in 2 different fashions : **Fixed** or **Specific**.
+	
+	Some standard baudrate values are defined within ISO-14229:2006 Annex B.3
+	
+	:param baudrate: The baudrate to be used. 
+	:type: int
+	
+	:param baudtype: Tells how the baudrate shall be encoded. 4 values are possibles:
+
+		- ``Baudrate.Type.Fixed`` (0) : Will encode the baudrate in a single byte Fixed fashion. `baudrate` should be a supported value such as 9600, 19200, 125000, 250000, etc.
+		- ``Baudrate.Type.Specific`` (1) : Will encode the baudrate in a three-byte Specific fashion. `baudrate` can be any value ranging from 0 to 0xFFFFFF
+		- ``Baudrate.Type.Identifier`` (2) : Will encode the baudrate in a single byte Fixed fashion. `baudrate` should be the byte value to encode if the users wants to use a custom type.
+		- ``Baudrate.Type.Auto`` (3) : Let the class guess the type. 
+			
+			- If ``baudrate`` is a known standard value (19200, 38400, etc), then Fixed shall be used
+			- If ``baudrate`` is an integer than fit in a single byte, then Identifier shall be used
+			- If ``baudrate`` is none of the above, then Specific will be used.
+	:type baudtype: int
+
+	"""
 	baudrate_map = {
 	9600 : 0x01,
 	19200 : 0x02,

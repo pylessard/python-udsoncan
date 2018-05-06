@@ -30,7 +30,7 @@ class TestWriteMemoryByAddress(ClientServerTest):
 		self.udsclient.config['server_address_format'] = 32
 		self.udsclient.config['server_memorysize_format'] = 16
 		response = self.udsclient.write_memory_by_address(MemoryLocation(address=0x1234, memorysize=4), b'\x66\x77\x88\x99')
-		alfid = AddressAndLengthFormatIdentifier(self.udsclient.config['server_memorysize_format'], self.udsclient.config['server_address_format'])
+		alfid = AddressAndLengthFormatIdentifier(address_format = self.udsclient.config['server_address_format'], memorysize_format=self.udsclient.config['server_memorysize_format'])
 		self.assertEqual(response.service_data.alfid_echo, alfid.get_byte_as_int())
 		self.assertEqual(response.service_data.memory_location_echo.address, 0x1234)
 		self.assertEqual(response.service_data.memory_location_echo.memorysize, 4)

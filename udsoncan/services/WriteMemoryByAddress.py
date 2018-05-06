@@ -85,7 +85,7 @@ class WriteMemoryByAddress(BaseService):
 		"""
 		.. data:: alfid_echo
 
-			:ref:`AddressAndLengthIdentifier <AddressAndLengthIdentifier>` used in the request :ref:`MemoryLocation <MemoryLocation>` object echoed back by the server.
+			:ref:`AddressAndLengthFormatIdentifier <AddressAndLengthFormatIdentifier>` used in the request :ref:`MemoryLocation <MemoryLocation>` object echoed back by the server.
 		
 		.. data:: memory_location_echo
 

@@ -2,25 +2,19 @@ Helper classes
 ==============
 
 
-asdasdasd
-asda
-
-
 .. _CommunicationType:
 
 CommunicationType
 -----------------
 
-sdsd
-
-
+.. autoclass:: udsoncan.CommunicationType
 
 .. _MemoryLocation:
 
 MemoryLocation
 --------------
 
-sdsd
+.. autoclass:: udsoncan.MemoryLocation
 
 
 .. _DidCodec:
@@ -28,8 +22,7 @@ sdsd
 DidCodec
 --------
 
-asdasd
-
+.. autoclass:: udsoncan.DidCodec
 
 
 .. _Baudrate:
@@ -37,7 +30,7 @@ asdasd
 Baudrate
 --------
 
-asdasd
+.. autoclass:: udsoncan.Baudrate
 
 
 .. _DataFormatIdentifier:
@@ -45,58 +38,80 @@ asdasd
 DataFormatIdentifier
 --------------------
 
-asdasd
+.. autoclass:: udsoncan.DataFormatIdentifier
 
 
-.. _AddressAndLengthIdentifier:
+.. _AddressAndLengthFormatIdentifier:
 
-AddressAndLengthIdentifier
---------------------------
+AddressAndLengthFormatIdentifier
+--------------------------------
 
-asdasd
+.. autoclass:: udsoncan.AddressAndLengthFormatIdentifier
 
 
 .. _DTC:
 
 DTC
---------------------------
+---
 
-asdasd
+.. autoclass:: udsoncan.Dtc
 
 
 .. _DTC_Status:
 
 DTC.Status
---------------------------
+----------
 
-asdasd
+.. autoclass:: udsoncan::Dtc.Status
 
 
 .. _DTC_Severity:
 
 DTC.Severity
---------------------------
+------------
 
-asdasd
+.. autoclass:: udsoncan::Dtc.Severity
 
 .. _DTC_Format:
 
 DTC.Format
---------------------------
+----------
 
-asdasd
+.. autoclass:: udsoncan::Dtc.Format
 
 .. _IOValues:
 
 IOValues
---------------------------
+--------
 
-asdasd
+.. autoclass:: udsoncan.IOValues
 
 .. _IOMask:
 
-IOMask
---------------------------
+IOMasks
+-------
 
-asdasd
+.. autoclass:: udsoncan.IOMasks
+
+.. _Routine:
+
+Routine
+-------
+
+.. autoclass:: udsoncan.Routine
+   :members: 
+   :undoc-members:
+   :member-order: bysource
+   :exclude-members: name_from_id
+
+.. _DataIdentifier:
+
+DataIdentifier
+--------------
+
+.. autoclass:: udsoncan.DataIdentifier
+   :members: 
+   :undoc-members:
+   :member-order: bysource
+   :exclude-members: name_from_id
 
