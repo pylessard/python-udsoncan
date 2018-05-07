@@ -152,7 +152,7 @@ html_context = {
   'github_repo': 'python-udsoncan',
   'github_version': 'master/doc',
   'css_files': [
-        '_static/theme_overrides.css', 
+ #       '_static/theme_overrides.css', 
         ]
 }
 
@@ -299,3 +299,6 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+def setup(app):
+  app.add_stylesheet('theme_overrides.css')

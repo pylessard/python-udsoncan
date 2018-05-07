@@ -52,7 +52,7 @@ I have a CAN transceiver, how do I use this project now?
 
    This project is not all you need, you need to create path for the data to reach your CAN box.
 
-   Under Linux, if your can box is supported by SocketCAN, you should have a new network interface after plugging the device. Compile and install `this module<https://github.com/hartkopp/can-isotp>`_, then find what are the CAN ID used for diagnostic and use the :class:`SocketConnection<udsoncan.connections.SocketConnection>` or :class:`IsoTPConnection<udsoncan.connections.IsoTPConnection>`
+   Under Linux, if your can box is supported by SocketCAN, you should have a new network interface after plugging the device. Compile and install `this module <https://github.com/hartkopp/can-isotp>`_, then find what are the CAN ID used for diagnostic and use the :class:`SocketConnection<udsoncan.connections.SocketConnection>` or :class:`IsoTPConnection<udsoncan.connections.IsoTPConnection>`
 
    If you don't have the above privilege, you will need to write you own Connection class that handles everything from the transport protocol (IsoTP) to the hardware which means interracting with the drivers. 
 
