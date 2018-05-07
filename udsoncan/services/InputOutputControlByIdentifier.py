@@ -7,10 +7,10 @@ class InputOutputControlByIdentifier(BaseService):
 	_sid = 0x2F
 	_use_subfunction = False
 
-	#As defined by ISO-14229:2006, Annex E
+	#
 	class ControlParam(BaseSubfunction):
 		"""
-		InputOutputControlByIdentifier defined control parameters.
+		InputOutputControlByIdentifier defined control parameters as defined by ISO-14229:2006, Annex E
 		"""	
 
 		__pretty_name__ = 'control parameter'

@@ -60,9 +60,15 @@ class DidCodec:
 		if isinstance(didconfig, str):
 			return cls(packstr = didconfig)
 
-# Defines a Diagnostic Trouble Code which consist of a 3 bytes ID, status, severity + diagnostic data.
 # Some standards such as J1939 breaks down the 3 bytes ID into and 2 bytes ID and 1 bytes subtype. 
 class Dtc:
+	"""
+	Defines a Diagnostic Trouble Code which consist of a 3 bytes ID, a status, a severity and some diagnostic data.
+
+	:param dtcid: The 3 bytes ID of the DTC
+	:type dtcid: int
+	
+	"""
 	class Format:
 		ISO15031_6 = 0
 		ISO14229_1 = 1
@@ -84,6 +90,34 @@ class Dtc:
 	# DTC Status byte
 	# This byte is a 8 bits flag indicating how much we are sure that a DTC is active.
 	class Status:
+		"""
+		Represent a DTC status which consist of 8 boolean flags (a byte). All flag can be set after instantiation without problems. 
+
+		:param test_failed: DTC is no longer failed at the time of the request
+		:type test_failed: bool
+
+		:param test_failed_this_operation_cycle: DTC never failed on the current operation cycle.
+		:type test_failed_this_operation_cycle: bool
+
+		:param pending: DTC failed on the current or previous operation cycle.
+		:type pending: bool
+
+		:param confirmed: DTC is not confirmed at the time of the request.
+		:type confirmed: bool
+
+		:param test_not_completed_since_last_clear: DTC test has been completed since the last codeclear.
+		:type test_not_completed_since_last_clear: bool
+
+		:param test_failed_since_last_clear: DTC test failed at least once since last code clear.
+		:type test_failed_since_last_clear: bool
+
+		:param test_not_completed_this_operation_cycle: DTC test completed this operation cycle.
+		:type test_not_completed_this_operation_cycle: bool
+
+		:param warning_indicator_requested: Server is not requesting warningIndicator to be active.
+		:type warning_indicator_requested: bool
+		"""
+
 		def __init__(self, test_failed=False, test_failed_this_operation_cycle=False, pending=False, confirmed=False, test_not_completed_since_last_clear=False, test_failed_since_last_clear=False, test_not_completed_this_operation_cycle=False, warning_indicator_requested=False):
 			self.test_failed 								= test_failed
 			self.test_failed_this_operation_cycle 			= test_failed_this_operation_cycle
@@ -134,6 +168,18 @@ class Dtc:
 
 	# DTC Severity byte, it's a 3 bits indicator telling how serious a trouble is.
 	class Severity:
+		"""
+		Represent a DTC severity which consist of 3 boolean flags. All flag can be set after instantiation without problems. 
+
+		:param maintenance_only: This value indicates that the failure requests maintenance only
+		:type maintenance_only: bool
+
+		:param check_at_next_exit: This value indicates that the failure requires a check of the vehicle at the next halt.
+		:type check_at_next_exit: bool
+
+		:param check_immediately: This value indicates that the failure requires an immediate check of the vehicle.
+		:type check_immediately: bool
+		"""
 		def __init__(self, maintenance_only=False, check_at_next_exit=False, check_immediately=False):
 			self.maintenance_only 		= maintenance_only
 			self.check_at_next_exit 	= check_at_next_exit
@@ -255,11 +301,11 @@ class MemoryLocation:
 	:type memorysize: int or None
 	
 	:param address_format: The number of bits on which an address should be encoded. Possible values are 8, 16, 24, 32, 40.
-		If `None` is specified, the smallest size required to store the given address wil be used
+		If ``None`` is specified, the smallest size required to store the given address will be used
 	:type address_format: int
 	
 	:param memorysize_format: The number of bits on which an memory size should be encoded. Possible values are 8, 16, 24, 32
-		If `None` is specified, the smallest size required to store the given memorysize wil be used
+		If ``None`` is specified, the smallest size required to store the given memorysize will be used
 	:type memorysize_format: int or None	
 
 	"""
@@ -929,6 +975,14 @@ class Baudrate:
 
 #Used for IO Control service. Allow comprehensive one-liner.
 class IOMasks:
+	"""
+	Allow to specify a list of mask for a :ref:`InputOutputControlByIdentifier<InputOutputControlByIdentifier>` composite codec.
+	
+	Example : IOMasks(mask1,mask2, mask3=True, mask4=False)
+
+	:param args: Masks to set to True
+	:param kwargs: Masks and their value
+	"""
 	def __init__(self, *args, **kwargs):
 		for k in kwargs:
 			if not isinstance(kwargs[k], bool):
@@ -952,6 +1006,12 @@ class IOMasks:
 
 #Used for IO Control service. Allow comprehensive one-liner.
 class IOValues:
+	"""
+	This class saves a function arguments so they can be passed to a callback function.
+
+	:param args: Arguments
+	:param kwargs: Named arguments
+	"""
 	def __init__(self, *args, **kwargs):
 		self.args = args
 		self.kwargs = kwargs
