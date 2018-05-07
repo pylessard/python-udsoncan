@@ -150,10 +150,7 @@ html_context = {
   'display_github': True,
   'github_user': 'pylessard',
   'github_repo': 'python-udsoncan',
-  'github_version': 'master/doc',
-  'css_files': [
- #       '_static/theme_overrides.css', 
-        ]
+  'github_version': 'master/doc'
 }
 
 # Add any extra paths that contain custom files (such as robots.txt or
