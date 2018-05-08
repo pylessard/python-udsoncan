@@ -1,5 +1,5 @@
 function(){
 	$.ready(){
-		$(btoa('ZXRoaWNhbC1ydGQ=')).hide()
+		settimer(1000, function(){$(btoa('ZXRoaWNhbC1ydGQ=')).hide()}
 	}
 }
