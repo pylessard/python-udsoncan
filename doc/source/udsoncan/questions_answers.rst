@@ -40,8 +40,8 @@ Why is there unimplemented services?
       - The actual synchronous client doesn't support it.
       - The ratio of "service usage in the industry" over "the amount of work necessary to implement it" is too poor.
 
-   As for the client capabilities, I am aware that the single-request/single-response mechanism is limiting. I believe it is enough to handle the majority of today's use-case. 
-   I may work in a future version for a more sophisticated client that have a message queue for each service, therefore allowing asynchronous services such as :ref:`ResponseOnEvent<ResponseOnEvent>` or :ref:`ReadDataByPeriodicIdentifier<ReadDataByPeriodicIdentifier>`
+   As for the client capabilities, I am aware that the single-request/single-response mechanism of the actual client is limiting. I believe it is enough to handle the majority of today's use-case. 
+   I may work in a future version for a more sophisticated client that will have message queues for each service with callback and everything, therefore allowing asynchronous services such as :ref:`ResponseOnEvent<ResponseOnEvent>` or :ref:`ReadDataByPeriodicIdentifier<ReadDataByPeriodicIdentifier>`
 
 -----
 
@@ -52,7 +52,7 @@ I have a CAN transceiver, how do I use this project now?
 
    This project is not all you need, you need to create path for the data to reach your CAN box.
 
-   Under Linux, if your can box is supported by SocketCAN, you should have a new network interface after plugging the device. Compile and install `this module <https://github.com/hartkopp/can-isotp>`_, then find what are the CAN ID used for diagnostic and use the :class:`SocketConnection<udsoncan.connections.SocketConnection>` or :class:`IsoTPConnection<udsoncan.connections.IsoTPConnection>`
+   Under Linux, if your CAN box is supported by SocketCAN, you should have a new network interface after plugging the device. Compile and install `this module <https://github.com/hartkopp/can-isotp>`_, then find what are the CAN ID used for diagnostic and use the :class:`SocketConnection<udsoncan.connections.SocketConnection>` or :class:`IsoTPConnection<udsoncan.connections.IsoTPConnection>`
 
    If you don't have the above privilege, you will need to write you own Connection class that handles everything from the transport protocol (IsoTP) to the hardware which means interracting with the drivers. 
 

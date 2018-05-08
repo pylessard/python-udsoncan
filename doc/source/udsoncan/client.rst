@@ -1,6 +1,8 @@
 Client
 ======
 
+.. _Client:
+
 The UDS client is a simple client that work synchronously and can handle a single request/response at the time. When requesting a service, the client execute these task:
 
  - Builds a payload
@@ -13,6 +15,13 @@ The UDS client is a simple client that work synchronously and can handle a singl
 
 The goal of this client is to simplify the usage of the **Services** object by exposing only the useful argument, hiding repetitive values, handling exceptions and logging. It can detect usage error as well as server malformed response. 
 
+The client will raised a :ref:`NegativeResponseException<NegativeResponseException>` when the server respond with a Negative response. 
+
+The client may raise :ref:`InvalidResponseException<InvalidResponseException>` if the payload is incomplete or if the underlying service raise this exception while parsing the response data.
+
+The client may raise :ref:`UnexpectedResponseException<UnexpectedResponseException>` if the response from the server does not match the last request sent. For example, if the service number in the response is different from the service number in the request. Another case would be if the echo of a parameter for a specific service does not match the request. For instance, ECUReset subfunction is the reset type, a valid server response include an echo of the reset type in its payload.
+
+
 .. autoclass:: udsoncan.client.Client
 
 .. _client_config:
@@ -24,8 +33,6 @@ Configuration
 
 The client configuration must be a dictionnary with the following keys defined.
 
----------
-
 .. _config_exception_on_negative_response:
 
 .. attribute:: exception_on_negative_response
@@ -33,8 +40,6 @@ The client configuration must be a dictionnary with the following keys defined.
 
    When set to `True`, the client will raise a :ref:`NegativeResponseException<NegativeResponseException>` when the server responsd with a negative response.
    When set to `False`, the returned `Response` will have a its property `positive` set to False
-
----------
 
 .. _config_exception_on_invalid_response:
 
@@ -44,8 +49,6 @@ The client configuration must be a dictionnary with the following keys defined.
    When set to `True`, the client will raise a :ref:`InvalidResponseException<InvalidResponseException>` when the underlying service `interpret_response` raises the same exception.
    When set to `False`, the returned `Response` will have a its property `valid` set to False 
 
----------
-
 .. _config_exception_on_unexpected_response:
 
 .. attribute:: exception_on_unexpected_response
@@ -53,8 +56,6 @@ The client configuration must be a dictionnary with the following keys defined.
 
    When set to `True`, the client will raise a :ref:`UnexpectedResponseException<UnexpectedResponseException>` when the server returns an response that is not expected. For instance a response for a different service or when the subfunction echo doesn't match the request.
    When set to `False`, the returned `Response` will have a its property `unexpected` set to True in the same case.
-
----------
 
 .. _config_security_algo:
 
@@ -73,16 +74,12 @@ The client configuration must be a dictionnary with the following keys defined.
 
    See :ref:`an example <example_security_algo>`
 
----------
-
 .. _config_security_algo_params:
 
 .. attribute:: security_algo_params
    :annotation: (...)
 
    This value will be given to the security algorithm defined in ``config['security_algo']``. This value can be any Python object, including a dictionary.
-
----------
 
 .. _config_data_identifiers:
 
@@ -99,8 +96,6 @@ The client configuration must be a dictionnary with the following keys defined.
 
       - ``string`` : The string will be used as a pack/unpack string when processing the data
       - ``DidCodec`` (class or instance) : The encode/decode method will be used to process the data
-
----------
 
 .. _config_input_output:
 
@@ -123,16 +118,12 @@ The client configuration must be a dictionnary with the following keys defined.
 
    See :ref:`this example<iocontrol_composite_did>` to see how IO codec are defined.
 
----------
-
 .. _config_tolerate_zero_padding:
 
 .. attribute:: tolerate_zero_padding
    :annotation: (bool)
    
    This value will be passed to the services interpret_response when the parameter is supported like for :ref:`ReadDataByIdentifier<ReadDataByIdentifier>`, :ref:`ReadDTCInformation<ReadDTCInformation>`. It has for effect to ignore trailing zeros in the response data avoiding falsely raising :ref:'InvalidResponseException<InvalidResponseException>` if the underlying protocol uses some zero-padding. 
-
----------
 
 .. _config_ignore_all_zero_dtc:
 
@@ -151,8 +142,6 @@ The client configuration must be a dictionnary with the following keys defined.
 
    In this situation, all case except case 4 would raise an :ref:`InvalidResponseException<InvalidResponseException>` because of their bad length (unless ``config['tolerate_zero_padding']`` is set to True). Case 4 would return 2 DTCs, the second DTC with an ID of 0x000000 and a status of 0x00. Setting ``config['ignore_all_zero_dtc']`` to True will make the functions return only the first valid DTC.
 
----------
-
 .. _config_server_address_format:
 
 .. attribute:: server_address_format
@@ -162,8 +151,6 @@ The client configuration must be a dictionnary with the following keys defined.
 
    See :ref:`an example<example_default_memloc_format>`
 
----------
-
 .. _config_server_memorysize_format:
 
 .. attribute:: server_memorysize_format
@@ -172,8 +159,6 @@ The client configuration must be a dictionnary with the following keys defined.
    The :ref:`MemoryLocation<MemoryLocation>` server_memorysize_format value to use when no specified explicitly for methods expecting a parameter of type :ref:`MemoryLocation<MemoryLocation>` 
 
    See :ref:`an example<example_default_memloc_format>`
-
----------
 
 .. _config_extended_data_size:
 
@@ -190,8 +175,6 @@ The client configuration must be a dictionnary with the following keys defined.
       0x123457 : 23 # Extended data for DTC 0x123457 is 23 bytes lond
    }
 
----------
-
 .. _config_dtc_snapshot_did_size:
 
 .. attribute:: dtc_snapshot_did_size
@@ -201,8 +184,8 @@ The client configuration must be a dictionnary with the following keys defined.
 
 -------------
 
-Methods
--------
+Methods by services
+-------------------
 
 
 :ref:`AccessTimingParameter<AccessTimingParameter>`
@@ -377,6 +360,3 @@ Methods
 #################################################
 
 .. automethod:: udsoncan.client.Client.write_memory_by_address
-
-
-

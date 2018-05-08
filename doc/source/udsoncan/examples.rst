@@ -1,10 +1,73 @@
 Examples
 ========
 
+.. _layer_of_intelligneces:
+
+Different layers of intelligence
+--------------------------------
+
+In the following examples, we will request an ECU reset in 4 different ways. We will start by crafting binary payload manually, then we will add a layer of interpretation making the code more comprehensive each time. 
+
+Raw Connection
+##############
+
+.. code-block:: python
+
+   my_connection.send(b'\x11\x01\x77\x88\x99') # Sends ECU Reset, with subfunction = 1
+   payload = my_connection.wait_frame(timeout=1)
+   if payload == b'\x51\x01':
+      print('Success!')
+   else:
+      print('Reset failed')
+
+Request and Responses
+#####################
+
+.. code-block:: python
+
+   req = Request(services.ECUReset, subfunction=1, data=b'\x77\x88\x99')
+   my_connection.send(req.get_payload()) 
+   payload = my_connection.wait_frame(timeout=1)
+   response = Response.from_payload(payload)
+   if response.service == service.ECUReset and response.code == Response.PositiveResponse and response.data == b'\x01':
+      print('Success!')
+   else:
+      print('Reset failed')
+
+Services
+########
+
+.. code-block:: python
+
+   req = services.ECUReset.make_request(reset_type=1, data=b'\x77\x88\x99')
+   my_connection.send(req.get_payload()) 
+   payload = my_connection.wait_frame(timeout=1)
+   response = Response.from_payload(payload)
+   services.ECUReset.interpret_response(response)
+   if response.service == service.ECUReset and response.code == Response.PositiveResponse and response.service_data.reset_type_echo == 1:
+      print('Success!')
+   else:
+      print('Reset failed')
+
+Client
+######
+
+.. code-block:: python
+
+   try:
+      client.ecu_reset(reset_type=1, data=b'\x77\x88\x99')
+      print('Success!')
+   except:
+      print('Reset failed')
+
+-----
+
 .. _example_default_memloc_format:
 
 Server default address and size format
-----------------------------------------------------
+--------------------------------------
+
+In this example, we show how the :ref:`Client<Client>` uses the memory location format configurations.
 
 .. code-block:: python
 
@@ -17,6 +80,7 @@ Server default address and size format
    response = client.read_memory_by_address(memloc1)
    response = client.read_memory_by_address(memloc2)
 
+-----
 
 .. _example_security_algo:
 
@@ -43,11 +107,14 @@ Security algorithm implementation
 
 .. warning:: This algorithm is not secure and is given as an example only because of its simple implementation. XOR encryption is weak on many levels; it is vulnerable to known-plaintext attacks, relatively weak against replay attacks and does not provide enough diffusion (pattern recognition is possible). If you are an ECU programmer, please **do not implement that**.
 
+-----
 
 .. _iocontrol_composite_did:
 
 InputOutputControlByIdentifier composite DID
 --------------------------------------------
+
+This example shows how the InputOutputControlByIdentifier can be used with a composite data identifier and how to build a proper `ioconfig` dict.
 
 .. code-block:: python
 
