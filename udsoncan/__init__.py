@@ -21,6 +21,21 @@ except Exception as e:
 
 #Define how to encode/decode a Data Identifier value to/from a binary payload
 class DidCodec:
+	"""
+	This class defines how to encode/decode a Data Identifier value to/from a binary payload.
+
+	One should extend this class and override the ``encode``, ``decode``, ``__len__`` methods as they will be used
+	to generate or parse binary payloads.
+
+		- ``encode`` Must receives any Python object and must return a bytes payload
+		- ``decode`` Must receives a bytes payload and may return any Python object
+		- ``__len__`` Must returns the length of the bytes payload
+
+	If a data can be processed by a pack string, then this class may be used as is, without being extended.
+
+	:param packstr: A pack string used with struct.pack / struct.unpack. 
+	:type packstr: string
+	"""
 
 	def __init__(self, packstr=None):
 		self.packstr = packstr
