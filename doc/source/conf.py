@@ -299,5 +299,3 @@ texinfo_documents = [
 
 def setup(app):
   app.add_stylesheet('theme_overrides.css')
-
-  app.add_javascript('myjs.js')
