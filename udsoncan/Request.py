@@ -3,6 +3,22 @@ import inspect
 import struct
 
 class Request:
+	"""
+	Represent a UDS Request.
+
+	:param service: The service for which to make the request. This parameter must be a class that extends :class:`udsoncan.services.BaseService`
+	:type service: class
+
+	:param subfunction: The service subfunction. This value may be ignored if the given service does not supports subfunctions
+	:type subfunction: int or None
+
+	:param suppress_positive_response: Indicates that the server should not send a response if the response code is positive. 
+		This parameter have effects only when the given service supports subfunctions
+	:type suppress_positive_response: bool
+
+	:param data: The service data appended after service ID and payload
+	:type data: bytes
+	"""
 	def __init__(self, service = None, subfunction = None, suppress_positive_response = False, data=None):
 		if service is None:
 			self.service = None
@@ -32,6 +48,13 @@ class Request:
 		self.data = data
 
 	def get_payload(self):
+		"""
+		Generate a payload to be given to the underlying protocol.
+		This method is meant to be used by a UDS client
+
+		:return: A payload to be sent through the underlying protocol
+		:rtype: bytes
+		"""
 		if not issubclass(self.service, services.BaseService):
 			raise ValueError("Cannot generate a payload. Given service is not a subclass of BaseService")
 
@@ -54,6 +77,16 @@ class Request:
 
 	@classmethod
 	def from_payload(cls, payload):
+		"""
+		Creates a ``Request`` object from a payload coming from the underlying protocols.
+		This method is meant to be used by a UDS server
+
+		:param payload: The payload of data to parse
+		:type payload: bytes
+
+		:return: A :ref:`Request<Request>` object with populated fields
+		:rtype: :ref:`Request<Request>`
+		"""
 		req = cls()
 
 		if len(payload) >= 1:

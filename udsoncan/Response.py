@@ -1,8 +1,19 @@
 import inspect
 import struct
 
-# Represent a response to a client Request
 class Response:
+	"""
+	Represent a server Response to a client Request
+
+	:param service: The service implied by this response.
+	:type service: class
+
+	:param code: The response code
+	:type code: int
+
+	:param data: The response data encoded after the service and response code
+	:type data: bytes
+	"""
 	class Code:
 		PositiveResponse = 0
 		GeneralReject = 0x10
@@ -127,6 +138,13 @@ class Response:
 
 	#Used by server
 	def get_payload(self):
+		"""
+		Generate a payload to be given to the underlying protocol.
+		This method is meant to be used by a UDS server
+
+		:return: A payload to be sent through the underlying protocol
+		:rtype: bytes
+		"""
 		from udsoncan import services
 		if not isinstance(self.service, services.BaseService) and not issubclass(self.service, services.BaseService):
 			raise ValueError("Cannot make payload from response object. Given service is not a valid service object")
@@ -150,6 +168,16 @@ class Response:
 	# Analyze a TP frame an build a Response object. Used by client
 	@classmethod
 	def from_payload(cls, payload):
+		"""
+		Creates a ``Response`` object from a payload coming from the underlying protocols.
+		This method is meant to be used by a UDS client
+
+		:param payload: The payload of data to parse
+		:type payload: bytes
+
+		:return: A :ref:`Response<Response>` object with populated fields
+		:rtype: :ref:`Response<Response>`
+		"""
 		from udsoncan import services
 		response = cls()
 		response.original_payload = payload # may be useful for debugging
