@@ -18,6 +18,17 @@ class TestAccessTimingParameter(ClientServerTest):
 		self.assertEqual(response.service_data.access_type_echo, 0x01)
 		self.assertEqual(response.service_data.timing_param_record, b"\x99\x88\x77\x66")
 
+	def test_read_extended_params_success_spr(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x83\x81")
+		self.conn.fromuserqueue.put('wait')
+
+	def _test_read_extended_params_success_spr(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.read_extended_timing_parameters()
+		self.assertEqual(response, None)
+		self.conn.fromuserqueue.get(timeout=0.2)	# Avoid closing the conenction prematurely
+
 	def test_read_active_params_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x83\x03")

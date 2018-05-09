@@ -288,7 +288,7 @@ Methods by services
 ###############################################
 
 .. automethod:: udsoncan.client.Client.read_memory_by_address
-.. note:: See :ref:`an example<example_default_memloc_format>` showing how to use de fault format configuration.
+.. note:: See :ref:`an example<example_default_memloc_format>` showing how to use default format configuration.
 
 -------------
 
@@ -296,7 +296,7 @@ Methods by services
 #######################################
 
 .. automethod:: udsoncan.client.Client.request_download
-.. note:: See :ref:`an example<example_default_memloc_format>` showing how to use de fault format configuration.
+.. note:: See :ref:`an example<example_default_memloc_format>` showing how to use default format configuration.
 
 -------------
 
@@ -311,7 +311,7 @@ Methods by services
 ###################################
 
 .. automethod:: udsoncan.client.Client.request_upload
-.. note:: See :ref:`an example<example_default_memloc_format>` showing how to use de fault format configuration.
+.. note:: See :ref:`an example<example_default_memloc_format>` showing how to use default format configuration.
 
 -------------
 

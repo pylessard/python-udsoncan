@@ -68,6 +68,18 @@ class TestIOControl(ClientServerTest):
 		self.assertEqual(response.service_data.did_echo, 0x132)	
 		self.assertEqual(response.service_data.decoded_data, 0x4A)	# 0x4B-1 as defined by codec decode method
 
+	def test_io_control_single_reset_spr_no_effect(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x2F\x01\x32\x01")
+		self.conn.fromuserqueue.put(b"\x6F\x01\x32\x01\x4B")	# Positive response
+
+	def _test_io_control_single_reset_spr_no_effect(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.io_control(control_param=1, did=0x132)	# Reset to default
+			self.assertEqual(response.service_data.control_param_echo, 1)	
+			self.assertEqual(response.service_data.did_echo, 0x132)	
+			self.assertEqual(response.service_data.decoded_data, 0x4A)	# 0x4B-1 as defined by codec decode method
+
 	def test_io_control_no_control_param(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x2F\x01\x32\x78")

@@ -40,6 +40,9 @@ class Request:
 		else:
 			self.subfunction = None
 
+		if self.service is not None:
+			if suppress_positive_response and self.service.use_subfunction() == False:
+				raise ValueError('Cannot suppress positive response for service %s. This service does not have a subfunction' % (self.service.get_name()))
 		self.suppress_positive_response = suppress_positive_response
 		
 		if data is not None and not isinstance(data, bytes):
@@ -47,7 +50,7 @@ class Request:
 
 		self.data = data
 
-	def get_payload(self):
+	def get_payload(self, suppress_positive_response=None):
 		"""
 		Generate a payload to be given to the underlying protocol.
 		This method is meant to be used by a UDS client
@@ -66,9 +69,18 @@ class Request:
 		payload = struct.pack("B", requestid)
 		if self.service.use_subfunction():
 			subfunction = self.subfunction
-			if self.suppress_positive_response:
-				subfunction |= 0x80
+			if suppress_positive_response is None:
+				if self.suppress_positive_response:
+					subfunction |= 0x80
+			else:
+				if suppress_positive_response == True:
+					subfunction |= 0x80
+				elif suppress_positive_response == False:
+					subfunction &= ~0x80
 			payload += struct.pack("B", subfunction)
+		else:
+			if suppress_positive_response == True or self.suppress_positive_response == True:
+				raise ValueError('Cannot suppress positive response for service %s. This service does not have a subfunction' % (self.service.get_name()))
 
 		if self.data is not None:
 			 payload += self.data

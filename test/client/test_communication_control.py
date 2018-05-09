@@ -20,6 +20,19 @@ class TestCommunicationControl(ClientServerTest):
 		self.assertTrue(response.positive)
 		self.assertEqual(response.service_data.control_type_echo, control_type)
 
+	def test_comcontrol_enable_node_spr(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x28\x80\x01")
+		self.conn.fromuserqueue.put('wait')	# Synchronize
+
+	def _test_comcontrol_enable_node_spr(self):
+		control_type = services.CommunicationControl.ControlType.enableRxAndTx
+		com_type = CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True)
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)
+			self.assertEqual(response, None)
+		self.conn.fromuserqueue.get(timeout=0.2)	#Avoid closing connection prematurely
+
 	def test_comcontrol_disable_subnet(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x28\x03\x33")

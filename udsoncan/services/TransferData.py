@@ -1,9 +1,11 @@
 from . import *
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
+import struct
 
 class TransferData(BaseService):
 	_sid = 0x36
+	_use_subfunction = False
 
 	supported_negative_response = [	 Response.Code.IncorrectMessageLegthOrInvalidFormat,
 							Response.Code.RequestSequenceError,
@@ -20,7 +22,7 @@ class TransferData(BaseService):
 		"""
 		Generate a request for TransferData
 
-		:param sequence_number: Service subfunction. Correspond to an 8bits counter that should increment for each new block transfered.
+		:param sequence_number:Correspond to an 8bits counter that should increment for each new block transfered.
 			Allowed values are from 0 to 0xFF
 		:type sequence_number: int
 
@@ -36,7 +38,11 @@ class TransferData(BaseService):
 		if data is not None and not isinstance(data, bytes):
 			raise ValueError('data must be a bytes object')
 
-		request = Request(service=cls, subfunction=sequence_number, data=data)
+		request = Request(service=cls)
+		request.data = struct.pack('B', sequence_number)
+
+		if data is not None:
+			request.data += data
 		return request
 
 	@classmethod

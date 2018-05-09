@@ -20,6 +20,17 @@ class TestRoutineControl(ClientServerTest):
 		self.assertEqual(response.service_data.routine_id_echo, 0x12)
 		self.assertEqual(response.service_data.routine_status_record, b'\x99\x88')
 
+	def test_start_routine_success_spr(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x31\x81\x00\x12\x45\x67\x89\xaa")
+		self.conn.fromuserqueue.put('wait')	# Synchronize
+
+	def _test_start_routine_success_spr(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.start_routine(routine_id=0x12, data = b'\x45\x67\x89\xaa')
+			self.assertEqual(response, None)
+		self.conn.fromuserqueue.get(timeout=0.2)	#Avoid closing connection prematurely
+
 	def test_stop_routine_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x31\x02\x12\x34\x45\x67\x89\xaa")

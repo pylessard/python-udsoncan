@@ -7,13 +7,26 @@ from test.ClientServerTest import ClientServerTest
 class TestTesterPresent(ClientServerTest):
 	def __init__(self, *args, **kwargs):
 		ClientServerTest.__init__(self, *args, **kwargs)
+	
 	def test_tester_present_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x3E\x00")
 		self.conn.fromuserqueue.put(b"\x7E\x00")	# Positive response
 
 	def _test_tester_present_success(self):
-		self.udsclient.tester_present()
+		response = self.udsclient.tester_present()
+		self.assertTrue(response.positive)
+
+	def test_tester_present_success_spr(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x3E\x80")
+		self.conn.fromuserqueue.put('wait')	# Syncronize
+
+	def _test_tester_present_success_spr(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.tester_present()
+			self.assertEqual(response, None)
+		self.conn.fromuserqueue.get(timeout=0.2)	#Avoid closing connection prematurely
 
 	def test_tester_present_denied_exception(self):
 		self.wait_request_and_respond(b"\x7F\x3E\x13") # IMLOIF

@@ -15,9 +15,19 @@ class TestRequestTransferExit(ClientServerTest):
 
 	def _test_request_transfer_exit_success(self):
 		response = self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
-		#print(response.data)
 		self.assertEqual(response.service, services.RequestTransferExit)
 		self.assertEqual(response.service_data.parameter_records, b'\x89\xab\xcd\xef')
+
+	def test_request_transfer_exit_success_spr_no_effect(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x37\x12\x34\x56")
+		self.conn.fromuserqueue.put(b"\x77\x89\xab\xcd\xef")	# Positive response
+
+	def _test_request_transfer_exit_success_spr_no_effect(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.request_transfer_exit(data=b'\x12\x34\x56')
+			self.assertEqual(response.service, services.RequestTransferExit)
+			self.assertEqual(response.service_data.parameter_records, b'\x89\xab\xcd\xef')
 
 	def test_request_transfer_exit_no_data_ok(self):
 		request = self.conn.touserqueue.get(timeout=0.2)

@@ -18,6 +18,17 @@ class TestECUReset(ClientServerTest):
 		self.assertTrue(response.positive)
 		self.assertEqual(response.service_data.reset_type_echo, 0x55)
 
+	def test_ecu_reset_success_spr(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x11\xD5")
+		self.conn.fromuserqueue.put("wait")	# Synchronize
+
+	def _test_ecu_reset_success_spr(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.ecu_reset(0x55)
+			self.assertEqual(response, None)
+		self.conn.fromuserqueue.get(timeout=0.2)	#Avoid closing connection prematurely
+
 	def test_ecu_reset_success_pdt(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x11\x04")

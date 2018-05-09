@@ -17,6 +17,16 @@ class TestReadMemoryByAddress(ClientServerTest):
 		response = self.udsclient.read_memory_by_address(MemoryLocation(address=0x1234, memorysize=4, address_format=16, memorysize_format=8))
 		self.assertEqual(response.service_data.memory_block, b'\x99\x88\x77\x66')
 
+	def test_4byte_block_spr_no_effect(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x23\x12\x12\x34\x04")
+		self.conn.fromuserqueue.put(b"\x63\x99\x88\x77\x66")
+
+	def _test_4byte_block_spr_no_effect(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.read_memory_by_address(MemoryLocation(address=0x1234, memorysize=4, address_format=16, memorysize_format=8))
+			self.assertEqual(response.service_data.memory_block, b'\x99\x88\x77\x66')		
+
 	def test_config_format(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x23\x24\x00\x00\x12\x34\x00\x04")

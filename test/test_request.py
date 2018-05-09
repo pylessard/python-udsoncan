@@ -41,6 +41,15 @@ class TestRequest(UdsTest):
 		payload = req.get_payload()
 		self.assertEqual(b"\x13\xC4", payload)	# Subfunction bit 7 is set
 
+	def test_suppress_positive_response_override(self):
+		req = Request(DummyServiceNormal, subfunction=0x44, suppress_positive_response=False)
+		payload = req.get_payload(suppress_positive_response=True)
+		self.assertEqual(b"\x13\xC4", payload)	# Subfunction bit 7 is set	
+
+		req = Request(DummyServiceNormal, subfunction=0x44, suppress_positive_response=True)
+		payload = req.get_payload(suppress_positive_response=False)
+		self.assertEqual(b"\x13\x44", payload)	# Subfunction bit 7 is cleared		
+
 	def test_from_payload_basic(self):
 		payload=b'\x3E\x01'	# 0x3e = TesterPresent
 		req = Request.from_payload(payload)
@@ -90,4 +99,8 @@ class TestRequest(UdsTest):
 
 		with self.assertRaises(ValueError):
 			req = Request(DummyServiceNormal(), data=123)	
+
+	def test_spr_with_no_subfunction(self):
+		with self.assertRaises(ValueError):
+			Request(service=DummyServiceNoSubunction, suppress_positive_response=True)
 

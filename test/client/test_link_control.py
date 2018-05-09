@@ -20,6 +20,18 @@ class TestLinkContorl(ClientServerTest):
 		self.assertTrue(response.positive)
 		self.assertEqual(response.service_data.control_type_echo, 1)
 
+	def test_linkcontrol_verify_fixed_spr(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x87\x81\x11")
+		self.conn.fromuserqueue.put("wait")	# Synchronize
+
+	def _test_linkcontrol_verify_fixed_spr(self):
+		baudrate = Baudrate(250000, baudtype=Baudrate.Type.Fixed)
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.link_control(control_type=1, baudrate=baudrate)
+			self.assertEqual(response, None)
+		self.conn.fromuserqueue.get(timeout=0.2)	#Avoid closing connection prematurely
+
 	def test_linkcontrol_verify_fixed_from_specific(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x87\x01\x11")

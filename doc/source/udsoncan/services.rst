@@ -677,7 +677,7 @@ TransferData (0x36)
 .. autoclass:: udsoncan.services::RoutineControl.ResponseData
    :members: 
 
-.. note:: TransferData subfunction is an incrementing counter, not a constant value.
+.. note:: This service does not have subfunctions
 
 -------
 

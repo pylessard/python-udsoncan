@@ -21,6 +21,20 @@ class TestWriteMemoryByAddress(ClientServerTest):
 		self.assertEqual(response.service_data.memory_location_echo.address, 0x1234)
 		self.assertEqual(response.service_data.memory_location_echo.memorysize, 4)
 
+	def test_4byte_block_spr_no_effect(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x3D\x12\x12\x34\x04\x66\x77\x88\x99")
+		self.conn.fromuserqueue.put(b"\x7D\x12\x12\x34\x04")
+
+	def _test_4byte_block_spr_no_effect(self):
+		memloc = MemoryLocation(address=0x1234, memorysize=4, address_format=16, memorysize_format=8)
+		
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.write_memory_by_address(memloc, b'\x66\x77\x88\x99')
+			self.assertEqual(response.service_data.alfid_echo, memloc.alfid.get_byte_as_int())
+			self.assertEqual(response.service_data.memory_location_echo.address, 0x1234)
+			self.assertEqual(response.service_data.memory_location_echo.memorysize, 4)
+
 	def test_config_format(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x3D\x24\x00\x00\x12\x34\x00\x04\x66\x77\x88\x99")

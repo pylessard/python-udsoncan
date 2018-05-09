@@ -18,6 +18,17 @@ class TestRequestUpload(ClientServerTest):
 		response = self.udsclient.request_upload(memory_location=memloc)
 		self.assertEqual(response.service_data.max_length,0xabcd)
 
+	def test_request_upload_success_spr_no_effect(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x35\x00\x12\x12\x34\xFF")
+		self.conn.fromuserqueue.put(b"\x75\x20\xab\xcd")	# Positive response
+
+	def _test_request_upload_success_spr_no_effect(self):
+		with self.udsclient.suppress_positive_response:
+			memloc = MemoryLocation(address=0x1234, memorysize=0xFF, address_format=16, memorysize_format=8)
+			response = self.udsclient.request_upload(memory_location=memloc)
+			self.assertEqual(response.service_data.max_length,0xabcd)
+
 	def test_request_upload_config_format(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x35\x00\x24\x00\x00\x12\x34\x00\xFF")	# dfi = 24 and 0 padding

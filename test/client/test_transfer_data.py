@@ -18,6 +18,17 @@ class TestTransferData(ClientServerTest):
 		self.assertEqual(response.service_data.sequence_number_echo, 0x22)
 		self.assertEqual(response.service_data.parameter_records, b'\x89\xab\xcd\xef')
 
+	def test_transfer_data_success_spr_no_effect(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x36\x22\x12\x34\x56")
+		self.conn.fromuserqueue.put(b"\x76\x22\x89\xab\xcd\xef")	# Positive response
+
+	def _test_transfer_data_success_spr_no_effect(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.transfer_data(sequence_number=0x22, data=b'\x12\x34\x56')
+			self.assertEqual(response.service_data.sequence_number_echo, 0x22)
+			self.assertEqual(response.service_data.parameter_records, b'\x89\xab\xcd\xef')
+
 	def test_transfer_data_no_data_ok(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x36\x22")

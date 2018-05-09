@@ -18,6 +18,17 @@ class TestDiagnosticSessionControl(ClientServerTest):
 		self.assertEqual(response.service_data.session_echo, 1)
 		self.assertEqual(response.service_data.session_param_records, b"\x99\x88")
 
+	def test_dsc_success_spr(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x10\x81")
+		self.conn.fromuserqueue.put("wait")	#Synchronize
+
+	def _test_dsc_success_spr(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.change_session(services.DiagnosticSessionControl.Session.defaultSession)
+			self.assertEqual(response, None)
+		self.conn.fromuserqueue.get(timeout=0.2)	#Avoid closing connection prematurely
+
 	def test_dsc_denied_exception(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x10\x08")

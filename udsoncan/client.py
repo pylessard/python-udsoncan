@@ -31,12 +31,24 @@ class Client:
 	:type request_timeout: int
 	"""
 
+	class SuppressPositiveResponse:
+		def __init__(self):
+			self.enabled = False
+		
+		def __enter__(self):
+			self.enabled = True
+			return self
+
+		def __exit__(self, type, value, traceback):
+			self.enabled = False
+
 	def __init__(self, conn, config=default_client_config, request_timeout = 1):
 		"""
 		"""
 		self.conn = conn
 		self.request_timeout = request_timeout
 		self.config = dict(config) # Makes a copy of given configuration
+		self.suppress_positive_response = Client.SuppressPositiveResponse()
 
 		self.refresh_config()
 
@@ -67,6 +79,8 @@ class Client:
 
 	def refresh_config(self):
 		self.configure_logger()
+
+
 	
 	# Decorator to apply on functions that the user will call.
 	# Each functions raises exceptions. This decorator handle these exception, log them, 
@@ -133,6 +147,9 @@ class Client:
 		self.logger.info('Switching session to : %s' % (named_newsession))
 		
 		response = self.send_request(req)
+		if response is None:
+			return 
+
 		services.DiagnosticSessionControl.interpret_response(response)
 
 		if newsession != response.service_data.session_echo:
@@ -158,6 +175,9 @@ class Client:
 		self.logger.info('Requesting seed to unlock security access level 0x%02x' % (req.subfunction))	# level may be corrected by service.
 		
 		response = self.send_request(req)
+		if response is None:
+			return
+
 		services.SecurityAccess.interpret_response(response, mode=services.SecurityAccess.Mode.RequestSeed)
 
 		expected_level = services.SecurityAccess.normalize_level(mode=services.SecurityAccess.Mode.RequestSeed, level=level)
@@ -190,6 +210,9 @@ class Client:
 		self.logger.debug('Key to send : [%s]' % (binascii.hexlify(key)))
 
 		response = self.send_request(req)
+		if response is None:
+			return
+
 		services.SecurityAccess.interpret_response(response, mode=services.SecurityAccess.Mode.SendKey)
 
 		expected_level = services.SecurityAccess.normalize_level(mode=services.SecurityAccess.Mode.SendKey, level=level)
@@ -237,6 +260,9 @@ class Client:
 
 		self.logger.info('Sending TesterPresent request')
 		response = self.send_request(req)
+		if response is None:
+			return
+
 		services.TesterPresent.interpret_response(response)
 
 		if req.subfunction != response.service_data.subfunction_echo:
@@ -287,6 +313,8 @@ class Client:
 			raise AttributeError('Configuration does not contains a valid data identifier description.')
 
 		response = self.send_request(req)
+		if response is None:
+			return
 		
 		params = {
 			'didlist' : didlist, 
@@ -338,6 +366,8 @@ class Client:
 		self.logger.info("Writing data identifier %s (%s)", did, DataIdentifier.name_from_id(did))
 		
 		response = self.send_request(req)
+		if response is None:
+			return
 		services.WriteDataByIdentifier.interpret_response(response)
 
 		if response.service_data.did_echo != did:
@@ -363,6 +393,8 @@ class Client:
 		self.logger.info("Requesting ECU reset of type 0x%02x (%s)" % (reset_type, services.ECUReset.ResetType.get_name(reset_type)))
 	
 		response = self.send_request(req)
+		if response is None:
+			return
 		services.ECUReset.interpret_response(response)
 		
 		if response.service_data.reset_type_echo != reset_type:
@@ -398,6 +430,8 @@ class Client:
 			self.logger.info('Clearing DTCs matching group mask : 0x%06x' % group)
 
 		response = self.send_request(request)
+		if response is None:
+			return
 		services.ClearDiagnosticInformation.interpret_response(response)
 
 		return response
@@ -484,6 +518,8 @@ class Client:
 		self.logger.info("Sending RoutineControl request with control type %s (0x%02x) for Routine ID : 0x%04x (%s) with a payload of %d bytes" % ( services.RoutineControl.ControlType.get_name(control_type), control_type, routine_id, Routine.name_from_id(routine_id), payload_length))
 
 		response = self.send_request(request)
+		if response is None:
+			return
 		services.RoutineControl.interpret_response(response)
 
 		if control_type != response.service_data.control_type_echo:
@@ -570,6 +606,9 @@ class Client:
 		self.logger.info('Sending AccessTimingParameter service request with access type 0x%02x (%s) and a request record payload of %d bytes' % (access_type, services.AccessTimingParameter.AccessType.get_name(access_type), payload_length))
 
 		response = self.send_request(request)
+		if response is None:
+			return
+
 		services.AccessTimingParameter.interpret_response(response)
 
 		if access_type != response.service_data.access_type_echo:
@@ -608,6 +647,9 @@ class Client:
 		self.logger.info('Sending CommunicationControl service request with control type 0x%02x (%s) and a communication type byte of 0x%02x (%s)' % (control_type, services.CommunicationControl.ControlType.get_name(control_type), communication_type.get_byte_as_int(), str(communication_type)))
 
 		response = self.send_request(request)
+		if response is None:
+			return
+
 		services.CommunicationControl.interpret_response(response)
 
 		if control_type != response.service_data.control_type_echo:
@@ -673,6 +715,8 @@ class Client:
 		self.logger.info('Sending %s service request for memory location [%s] and DataFormatIdentifier 0x%02x (%s)' % (service_cls.__name__, str(memory_location), dfi.get_byte_as_int(), str(dfi)))
 
 		response = self.send_request(request)
+		if response is None:
+			return
 		service_cls.interpret_response(response)
 		
 		return response
@@ -702,6 +746,8 @@ class Client:
 			self.logger.debug('Data to transfer : %s' % binascii.hexlify(data))
 		
 		response = self.send_request(request)
+		if response is None:
+			return
 		services.TransferData.interpret_response(response)
 
 		if sequence_number != response.service_data.sequence_number_echo:
@@ -726,6 +772,8 @@ class Client:
 		self.logger.info('Sending RequestTransferExit service request')
 
 		response = self.send_request(request)
+		if response is None:
+			return
 		services.RequestTransferExit.interpret_response(response)
 
 		return response
@@ -751,6 +799,8 @@ class Client:
 		self.logger.info('Sending LinkControl service request with control type of 0x%02x (%s). %s' % (control_type, services.LinkControl.ControlType.get_name(control_type), baudrate_str))
 		
 		response = self.send_request(request)
+		if response is None:
+			return
 		services.LinkControl.interpret_response(response)
 		
 		if control_type != response.service_data.control_type_echo:
@@ -801,6 +851,8 @@ class Client:
 		self.logger.info('Sending InputOutputControlByIdentifier service request for DID=0x%04x, %s.' % (did, control_param_str))
 
 		response = self.send_request(request)
+		if response is None:
+			return
 		services.InputOutputControlByIdentifier.interpret_response(response, control_param=control_param, tolerate_zero_padding=self.config['tolerate_zero_padding'], ioconfig=self.config['input_output'])
 
 		if response.service_data.did_echo != did:
@@ -833,6 +885,8 @@ class Client:
 		self.logger.info('Sending ControlDTCSetting service request with setting type 0x%02x (%s) and %d bytes of data' % (setting_type, services.ControlDTCSetting.SettingType.get_name(setting_type), data_len))
 
 		response = self.send_request(request)
+		if response is None:
+			return
 		services.ControlDTCSetting.interpret_response(response)
 
 		if response.service_data.setting_type_echo != setting_type:
@@ -866,6 +920,8 @@ class Client:
 		self.logger.info('Reading memory address (ReadMemoryByAddress) - %s' % str(memory_location))
 		
 		response = self.send_request(request)
+		if response is None:
+			return
 		services.ReadMemoryByAddress.interpret_response(response)
 		memdata = response.service_data.memory_block
 		
@@ -914,6 +970,8 @@ class Client:
 			self.logger.warning('WriteMemoryByAddress: data block length (%d bytes) does not match MemoryLocation size (%d bytes)' % (len(data, memory_location.memorysize)))
 
 		response = self.send_request(request)
+		if response is None:
+			return
 		services.WriteMemoryByAddress.interpret_response(response, memory_location)
 
 		alfid_byte 			= memory_location.alfid.get_byte_as_int()   # AddressAndLengthFormatIdentifier
@@ -1263,6 +1321,8 @@ class Client:
 		self.logger.info('Sending a ReadDtcInformation service request with subfunction "%s" (0x%02X).' % (services.ReadDTCInformation.Subfunction.get_name(subfunction), subfunction))
 		self.logger.debug('Params are : %s' % str(request_params))
 		response = self.send_request(request)
+		if response is None:
+			return
 
 		response_params = {
 			'subfunction' : subfunction,
@@ -1315,30 +1375,42 @@ class Client:
 			timeout = self.request_timeout
 		self.conn.empty_rxqueue()
 		self.logger.debug("Sending request to server")
-		self.conn.send(request)
+		override_suppress_positive_response = False
+		if self.suppress_positive_response.enabled == True and request.service.use_subfunction():
+			payload = request.get_payload(suppress_positive_response=True)
+			override_suppress_positive_response = True
+		else:
+			payload = request.get_payload()
 
-		if not request.suppress_positive_response:
-			self.logger.debug("Waiting for server response")
-			try:
-				payload = self.conn.wait_frame(timeout=timeout, exception=True)
-			except Exception as e:
-				raise e
+		if self.suppress_positive_response.enabled and not request.service.use_subfunction():
+			self.logger.warning('SuppressPositiveResponse cannot be used for service %s. Ignoring' % (request.service.get_name()))
 
-			response = Response.from_payload(payload)
-			self.last_response = response
-			self.logger.debug("Received response from server")
+		self.conn.send(payload)
 
-			if not response.valid:
-				raise InvalidResponseException(response, 'Received response is invalid.')
-					
-			if response.service.response_id() != request.service.response_id():
-				msg = "Response gotten from server has a service ID different than the one of the request. Received=0x%02x, Expected=0x%02x" % (response.service.response_id() , request.service.response_id() )
-				raise UnexpectedResponseException(response, msg)
-			
-			if not response.positive:
-				if not request.service.is_supported_negative_response(response.code):
-					self.logger.warning("Given response (%s) is not a supported negative response code according to UDS standard." % response.code_name)	
-				raise NegativeResponseException(response)
+		if request.suppress_positive_response  or override_suppress_positive_response:
+			return
+		
+		self.logger.debug("Waiting for server response")
+		try:
+			payload = self.conn.wait_frame(timeout=timeout, exception=True)
+		except Exception as e:
+			raise e
 
-			self.logger.info('Received positive response from server.')
-			return response
+		response = Response.from_payload(payload)
+		self.last_response = response
+		self.logger.debug("Received response from server")
+
+		if not response.valid:
+			raise InvalidResponseException(response, 'Received response is invalid.')
+				
+		if response.service.response_id() != request.service.response_id():
+			msg = "Response gotten from server has a service ID different than the one of the request. Received=0x%02x, Expected=0x%02x" % (response.service.response_id() , request.service.response_id() )
+			raise UnexpectedResponseException(response, msg)
+		
+		if not response.positive:
+			if not request.service.is_supported_negative_response(response.code):
+				self.logger.warning("Given response (%s) is not a supported negative response code according to UDS standard." % response.code_name)	
+			raise NegativeResponseException(response)
+
+		self.logger.info('Received positive response from server.')
+		return response

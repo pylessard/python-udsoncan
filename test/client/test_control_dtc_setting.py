@@ -17,6 +17,17 @@ class TestControlDTCSettings(ClientServerTest):
 		response = self.udsclient.control_dtc_setting(services.ControlDTCSetting.SettingType.on)
 		self.assertEqual(response.service_data.setting_type_echo, services.ControlDTCSetting.SettingType.on)
 
+	def test_set_on_spr(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x85\x81")
+		self.conn.fromuserqueue.put("wait")	# Synchronize
+
+	def _test_set_on_spr(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.control_dtc_setting(services.ControlDTCSetting.SettingType.on)
+			self.assertEqual(response, None)
+		self.conn.fromuserqueue.get(timeout=0.2)	#Avoid closing connection prematurely
+
 	def test_set_on_with_extra_data(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x85\x01\x11\x22\x33")

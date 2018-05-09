@@ -18,6 +18,17 @@ class TestClearDtc(ClientServerTest):
 		self.assertTrue(response.valid)
 		self.assertTrue(response.positive)
 
+	def test_clear_dtc_spr_no_effect(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x14\x12\x34\x56")
+		self.conn.fromuserqueue.put(b"\x54")	# Positive response
+
+	def _test_clear_dtc_spr_no_effect(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.clear_dtc(0x123456)
+			self.assertTrue(response.valid)
+			self.assertTrue(response.positive)
+
 	def test_clear_dtc_all(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
 		self.assertEqual(request, b"\x14\xFF\xFF\xFF")

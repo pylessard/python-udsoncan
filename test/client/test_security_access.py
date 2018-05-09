@@ -16,6 +16,17 @@ class TestRequestSeed(ClientServerTest):
 		response = self.udsclient.request_seed(0x05)
 		self.assertEqual(response.service_data.seed, b"\x99\x88\x77\x66")
 
+	def test_request_seed_success_spr(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x27\x85")
+		self.conn.fromuserqueue.put('wait')	# Synchronize 
+
+	def _test_request_seed_success_spr(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.request_seed(0x05)
+			self.assertEqual(response, None)
+		self.conn.fromuserqueue.get(timeout=0.2)	#Avoid closing connection prematurely
+
 	def test_request_seed_denied_exception(self):
 		self.wait_request_and_respond(b"\x7F\x27\x22")	# Conditions Not Correct
 

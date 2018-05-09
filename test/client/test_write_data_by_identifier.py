@@ -34,7 +34,18 @@ class TestReadDataByIdentifier(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x6E\x00\x01")	# Positive response
 
 	def _test_wdbi_single_success1(self):
-		self.udsclient.write_data_by_identifier(did = 1, value=0x1234)
+		response = self.udsclient.write_data_by_identifier(did = 1, value=0x1234)
+		self.assertTrue(response.positive)
+
+	def test_wdbi_single_success1_spr_no_effect(self):
+		request = self.conn.touserqueue.get(timeout=0.2)
+		self.assertEqual(request, b"\x2E\x00\x01\x12\x34")
+		self.conn.fromuserqueue.put(b"\x6E\x00\x01")	# Positive response
+
+	def _test_wdbi_single_success1_spr_no_effect(self):
+		with self.udsclient.suppress_positive_response:
+			response = self.udsclient.write_data_by_identifier(did = 1, value=0x1234)
+			self.assertTrue(response.positive)
 
 	def test_wdbi_single_success2(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
