@@ -184,6 +184,26 @@ The client configuration must be a dictionnary with the following keys defined.
 
 -------------
 
+Suppress positive response
+--------------------------
+
+UDS standard proposes a mechanism to avoid treating useless positive responses. For all services using a subfunction byte, 
+the client can set bit 7 of the subfunction byte to signal that no response is necessary if the response is positive. 
+This bit is called the ``suppressPosRspMsgIndicationBit``
+
+The ``Client`` object let you use that feature by using ``suppress_positive_response`` into a ``with`` statement. See following example.
+
+.. code-block:: python
+
+   with client.suppress_positive_response:
+      client.tester_present()
+
+When ``suppress_positive_response`` is asked for a service using a subfunction byte, the client will set suppressPosRspMsgIndicationBit before sending the request. The client will not wait for any response, discarding negative response if they happens. The response returned by the client function will always be ``None`` in that case.
+
+If ``suppress_positive_response`` is asked for a service with no subfunction byte, the directive will be ignored and a warning message will be logged.
+
+-----
+
 Methods by services
 -------------------
 
