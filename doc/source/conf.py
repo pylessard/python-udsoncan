@@ -281,7 +281,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'udsoncan', u'udsoncan Documentation',
-     author, 'udsoncan', 'One line description of project.',
+     author, 'udsoncan', 'Python implementation of UDS standard (ISO-14229).',
      'Miscellaneous'),
 ]
 
