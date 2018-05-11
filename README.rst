@@ -6,7 +6,7 @@ This project is an implementation of the Unified Diagnostic Services (UDS) proto
 Documentation
 -------------
 
-The documentation is available here :   `https://github.com/pylessard/python-udsoncan`_
+The documentation is available here :   http://udsoncan.readthedocs.io
 
 Requirements
 ------------
