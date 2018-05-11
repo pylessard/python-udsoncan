@@ -25,14 +25,14 @@ class DiagnosticSessionControl(BaseService):
 		"""
 		Generate a request for DiagnosticSessionControl service
 
-		:param session: Service subfunction. Allowed values are from 0 to 0xFF
+		:param session: Service subfunction. Allowed values are from 0 to 0x7F
 		:type session: int
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		"""
 
 		from udsoncan import Request
-		ServiceHelper.validate_int(session, min=0, max=0xFF, name='Session number')
+		ServiceHelper.validate_int(session, min=0, max=0x7F, name='Session number')
 		return Request(service=cls, subfunction=session)
 
 	@classmethod
@@ -41,9 +41,9 @@ class DiagnosticSessionControl(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`DiagnosticSessionControl.ResponseData<udsoncan.services.DiagnosticSessionControl.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of response.data is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too small
 		"""
 
 		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.

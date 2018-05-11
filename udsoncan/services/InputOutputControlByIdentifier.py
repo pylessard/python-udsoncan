@@ -34,7 +34,7 @@ class InputOutputControlByIdentifier(BaseService):
 		:param did: Data identifier to representing the IO
 		:type did: int
 
-		:param control_param: Optional parameter that can be a value from InputOutputControlByIdentifier.ControlParam
+		:param control_param: Optional parameter that can be a value defined in :class:`InputOutputControlByIdentifier.ControlParam<udsoncan.services.InputOutputControlByIdentifier.ControlParam>
 		:type control_param: int
 
 		:param values: Optional values to send to the server. This parameter will be given to :ref:`DidCodec<DidCodec>`.encode() method. 
@@ -46,11 +46,11 @@ class InputOutputControlByIdentifier(BaseService):
 
 		:type values: list, dict, :ref:`IOValues<IOValues>`
 
-		:param masks: Optional mask record for composite values. The mask definition must be included in ioconfig
+		:param masks: Optional mask record for composite values. The mask definition must be included in ``ioconfig``
 			It can be:
 
 				- A list naming the bit mask to set
-				- A dict with the mask name as a key and a boolean setting or clearing the mask as the value
+				- A dict with the mask name as a key and a boolean as the value (True to set the mask, False to clear it)
 				- An instance of :ref:`IOMask<IOMask>`
 				- A boolean value to set all mask to the same value.
 		:type masks: list, dict, :ref:`IOMask<IOMask>`, bool
@@ -59,7 +59,7 @@ class InputOutputControlByIdentifier(BaseService):
 			It is possible to use composite :ref:`DidCodec<DidCodec>` by specifying a dict with entries : codec, mask, mask_size.
 		:type ioconfig: dict[int] = :ref:`DidCodec<DidCodec>`, dict
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		:raises ConfigError: If given did is not defined within ioconfig
 		"""	
 
@@ -143,20 +143,20 @@ class InputOutputControlByIdentifier(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`InputOutputControlByIdentifier.ResponseData<udsoncan.services.InputOutputControlByIdentifier.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 		
 		:param control_param:  Same optional control parameter value given to make_request()
 		:type control_param: int
 		
-		:param tolerate_zero_padding: Ignore trailing zeros in the response data avoiding reading an extra did with value 0.
+		:param tolerate_zero_padding: Ignore trailing zeros in the response data avoiding raising false :class:`InvalidResponseException<udsoncan.exceptions.InvalidResponseException>`.
 		:type tolerate_zero_padding: bool
 
 		:param ioconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<DidCodec>` class or pack/unpack string. 
 			It is possible to use composite DidCodec by specifying a dict with entries : codec, mask, mask_size.
 		:type ioconfig: dict[int] = :ref:`DidCodec<DidCodec>`, dict
 
-		:raises ValueError: If parameters are out of range or missing
-		:raises ConfigError: If did echoed back by the server is not in the ioconfig definition
+		:raises ValueError: If parameters are out of range, missing or wrong type
+		:raises ConfigError: If did echoed back by the server is not in the ``ioconfig`` definition
 		:raises InvalidResponseException: If response data is incomplete or if DID data does not match codec length.
 		"""	
 

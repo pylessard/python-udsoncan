@@ -22,18 +22,18 @@ class TransferData(BaseService):
 		"""
 		Generate a request for TransferData
 
-		:param sequence_number:Correspond to an 8bits counter that should increment for each new block transfered.
+		:param sequence_number: Correspond to an 8bits counter that should increment for each new block transfered.
 			Allowed values are from 0 to 0xFF
 		:type sequence_number: int
 
 		:param data: Optional additional data to send to the server
 		:type data: bytes
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		"""		
 		from udsoncan import Request, MemoryLocation
 		
-		ServiceHelper.validate_int(sequence_number, min=0, max=0xFF, name='Block sequence counter')
+		ServiceHelper.validate_int(sequence_number, min=0, max=0xFF, name='Block sequence counter')	# Not a subfunction!
 
 		if data is not None and not isinstance(data, bytes):
 			raise ValueError('data must be a bytes object')
@@ -51,9 +51,9 @@ class TransferData(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`TransferData.ResponseData<udsoncan.services.TransferData.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of response.data is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too small
 		"""		
 		if len(response.data) < 1:
 			raise InvalidResponseException(response, "Response data must be at least 1 bytes")

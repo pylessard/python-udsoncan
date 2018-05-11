@@ -52,3 +52,4 @@ Response Codes
    :members: 
    :undoc-members:
    :member-order: bysource
+   :exclude-members: get_name, is_negative

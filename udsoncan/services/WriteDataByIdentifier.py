@@ -28,8 +28,8 @@ class WriteDataByIdentifier(BaseService):
 		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec <DidCodec>` class or pack/unpack string 
 		:type didconfig: dict[int] = :ref:`DidCodec <DidCodec>`
 
-		:raises ValueError: If parameters are out of range or missing
-		:raises ConfigError: If didlist contains a DID not defined in didconfig
+		:raises ValueError: If parameters are out of range, missing or wrong type
+		:raises ConfigError: If ``didlist`` contains a DID not defined in ``didconfig``
 		"""	
 
 		from udsoncan import Request, DidCodec
@@ -48,9 +48,9 @@ class WriteDataByIdentifier(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`WriteDataByIdentifier.ResponseData<udsoncan.services.WriteDataByIdentifier.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 		
-		:raises InvalidResponseException: If response data is incomplete.
+		:raises InvalidResponseException: If length of ``response.data`` is too small
 		"""			
 		if len(response.data) < 2:
 			raise InvalidResponseException(response, "Response must be at least 2 bytes long")

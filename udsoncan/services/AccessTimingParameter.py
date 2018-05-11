@@ -28,17 +28,17 @@ class AccessTimingParameter(BaseService):
 		"""
 		Generate a request for AccessTimingParameter
 
-		:param access_type: Service subfunction. Allowed values are from 0 to 0xFF
+		:param access_type: Service subfunction. Allowed values are from 0 to 0x7F
 		:type access_type: int
 
-		:param timing_param_record: Data associated with request. Must be present only when access_type=AccessType.setTimingParametersToGivenValues (4)
+		:param timing_param_record: Data associated with request. Must be present only when access_type=``AccessType.setTimingParametersToGivenValues`` (4)
 		:type timing_param_record: bytes
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		"""
 		from udsoncan import Request
 
-		ServiceHelper.validate_int(access_type, min=0, max=0xFF, name='Access type')
+		ServiceHelper.validate_int(access_type, min=0, max=0x7F, name='Access type')
 		
 		if timing_param_record is not None and access_type != cls.AccessType.setTimingParametersToGivenValues :
 			raise ValueError('timing_param_record can only be set when access_type is setTimingParametersToGivenValues"')
@@ -61,9 +61,9 @@ class AccessTimingParameter(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`AccessTimingParameter.ResponseData<udsoncan.services.AccessTimingParameter.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of response.data is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too small
 		"""
 		if len(response.data) < 1: 	
 			raise InvalidResponseException(response, "Response data must be at least 1 byte")

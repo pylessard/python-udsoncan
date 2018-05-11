@@ -1,3 +1,5 @@
+.. _Services:
+
 Services
 ========
 
@@ -671,10 +673,10 @@ TesterPresent (0x3E)
 TransferData (0x36)
 --------------------------------------
 
-.. automethod:: udsoncan.services.RoutineControl.make_request
-.. automethod:: udsoncan.services.RoutineControl.interpret_response
+.. automethod:: udsoncan.services.TransferData.make_request
+.. automethod:: udsoncan.services.TransferData.interpret_response
 
-.. autoclass:: udsoncan.services::RoutineControl.ResponseData
+.. autoclass:: udsoncan.services::TransferData.ResponseData
    :members: 
 
 .. note:: This service does not have subfunctions

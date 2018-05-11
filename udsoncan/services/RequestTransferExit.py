@@ -19,7 +19,7 @@ class RequestTransferExit(BaseService):
 		:param data: Additional optional data to send to the server
 		:type data: bytes
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		"""			
 		from udsoncan import Request, MemoryLocation
 		
@@ -35,7 +35,7 @@ class RequestTransferExit(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`RequestTransferExit.ResponseData<udsoncan.services.RequestTransferExit.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 		"""				
 		response.service_data = cls.ResponseData()
 		response.service_data.parameter_records = response.data

@@ -45,7 +45,7 @@ class CommunicationControl(BaseService):
 		:param communication_type: The communication type requested.
 		:type communication_type: :ref:`CommunicationType <CommunicationType>`
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		"""		
 		from udsoncan import Request
 
@@ -63,9 +63,9 @@ class CommunicationControl(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`CommunicationControl.ResponseData<udsoncan.services.CommunicationControl.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of response.data is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too small
 		"""		
 		if len(response.data) < 1: 	
 			raise InvalidResponseException(response, "Response data must be at least 1 byte")

@@ -43,8 +43,6 @@ class Client:
 			self.enabled = False
 
 	def __init__(self, conn, config=default_client_config, request_timeout = 1):
-		"""
-		"""
 		self.conn = conn
 		self.request_timeout = request_timeout
 		self.config = dict(config) # Makes a copy of given configuration
@@ -1070,7 +1068,7 @@ class Client:
 	
 	def get_mirrormemory_number_of_dtc_by_status_mask(self, status_mask):
 		"""
-		Get the number of emission related DTC that matches the specified status mask.
+		Get the number of DTC that matches the specified status mask in mirror memory.
 
 		:implied configuration: ``exception_on_<type>_response``
 
@@ -1084,7 +1082,7 @@ class Client:
 	
 	def get_number_of_emission_dtc_by_status_mask(self, status_mask):
 		"""
-		Get the number of DTC that matches the specified status mask in mirror memory.
+		Get the number of emission related DTC that matches the specified status mask.
 
 		:implied configuration: ``exception_on_<type>_response``
 
@@ -1098,7 +1096,7 @@ class Client:
 
 	def get_number_of_dtc_by_status_severity_mask(self, status_mask, severity_mask):
 		"""
-		Get the number of DTC that matches the specified status mask.
+		Get the number of DTC that matches the specified status mask and severity mask.
 
 		:implied configuration: ``exception_on_<type>_response``
 

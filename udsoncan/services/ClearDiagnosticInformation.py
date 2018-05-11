@@ -21,7 +21,7 @@ class ClearDiagnosticInformation(BaseService):
 		:param group: DTC mask ranging from 0 to 0xFFFFFF. 0xFFFFFF means all DTCs
 		:type group: int
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		"""		
 		from udsoncan import Request
 		ServiceHelper.validate_int(group, min=0, max=0xFFFFFF, name='Group of DTC')
@@ -38,7 +38,7 @@ class ClearDiagnosticInformation(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`ClearDiagnosticInformation.ResponseData<udsoncan.services.ClearDiagnosticInformation.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 		"""		
 		response.service_data = cls.ResponseData()
 

@@ -13,6 +13,50 @@ class Response:
 
 	:param data: The response data encoded after the service and response code
 	:type data: bytes
+
+	.. data:: valid 
+
+		(boolean) True if the response content is valid. Only ``invalid_reason`` is guarantee to have a meaningful value if this value is False
+
+	.. data:: invalid_reason 
+	
+		(string) String explaining why the response is invalid.
+	
+	.. data:: service 
+
+		(class) The response target :ref:`service<Services>` class
+
+	.. data:: positive 
+
+		(boolean) True if the response code is 0 (PositiveResponse), False otherwise
+
+	.. data:: code 
+
+		(int) The response code. 
+
+	.. data:: code_name 
+
+		(string) The response code name.
+	
+
+	.. data:: data
+		
+		(bytes) The response data. All the payload content, except the service number and the response code
+	
+
+	.. data:: service_data
+
+		(object) The content of ``data`` interpreted by a service. Can be any type of content.
+		
+
+	.. data:: original_payload 
+		
+		(bytes) When response is built with `Response.from_payload`, this property contains a copy of the payload used. None otherwise.
+
+	.. data:: unexpected 
+
+		(boolean) Indicates that the response was unexpected. Set by an external source such as the :ref:`Client<Client>` object
+
 	"""
 	class Code:
 		PositiveResponse = 0
@@ -169,7 +213,7 @@ class Response:
 	@classmethod
 	def from_payload(cls, payload):
 		"""
-		Creates a ``Response`` object from a payload coming from the underlying protocols.
+		Creates a ``Response`` object from a payload coming from the underlying protocol.
 		This method is meant to be used by a UDS client
 
 		:param payload: The payload of data to parse

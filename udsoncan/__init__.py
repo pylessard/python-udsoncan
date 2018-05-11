@@ -85,6 +85,10 @@ class Dtc:
 	
 	"""
 	class Format:
+		"""
+		Provide a list of DTC format and their index. These value are used by the :ref:`The ReadDTCInformation<ReadDtcInformation>` 
+			when requesting a number of DTC.		
+		"""
 		ISO15031_6 = 0
 		ISO14229_1 = 1
 		SAE_J1939_73 = 2

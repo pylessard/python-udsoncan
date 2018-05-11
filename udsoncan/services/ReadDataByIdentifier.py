@@ -41,7 +41,7 @@ class ReadDataByIdentifier(BaseService):
 		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<DidCodec>` class or pack/unpack string 
 		:type didconfig: dict[int] = :ref:`DidCodec<DidCodec>`
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		:raises ConfigError: If didlist contains a DID not defined in didconfig
 		"""		
 		from udsoncan import Request
@@ -59,7 +59,7 @@ class ReadDataByIdentifier(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`ReadDataByIdentifier.ResponseData<udsoncan.services.ReadDataByIdentifier.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 		
 		:param didlist:  List of data identifier used for the request.
 		:type didlist: list[int]
@@ -67,11 +67,11 @@ class ReadDataByIdentifier(BaseService):
 		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<DidCodec>` class or pack/unpack string 
 		:type didconfig: dict[int] = :ref:`DidCodec<DidCodec>`
 
-		:param tolerate_zero_padding: Ignore trailing zeros in the response data avoiding reading an extra did with value 0.
+		:param tolerate_zero_padding: Ignore trailing zeros in the response data avoiding raising false :class:`InvalidResponseException<udsoncan.exceptions.InvalidResponseException>`.
 		:type tolerate_zero_padding: bool
 
-		:raises ValueError: If parameters are out of range or missing
-		:raises ConfigError: If didlist parameter or response contain a DID not defined in didconfig.
+		:raises ValueError: If parameters are out of range, missing or wrong type
+		:raises ConfigError: If ``didlist`` parameter or response contain a DID not defined in ``didconfig``.
 		:raises InvalidResponseException: If response data is incomplete or if DID data does not match codec length.
 		"""	
 		from udsoncan import DidCodec

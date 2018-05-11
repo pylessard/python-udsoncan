@@ -34,18 +34,18 @@ class SecurityAccess(BaseService):
 		"""
 		Generate a request for SecurityAccess
 
-		:param level: Service subfunction. The security level to unlock. 
-			For mode=RequestSeed, level must be an even value. For mode=SendKey, level must be an odd value.
+		:param level: Service subfunction. The security level to unlock. Value ranging from 0 to 7F 
+			For mode=``RequestSeed`` (0), level must be an even value. For mode=``SendKey`` (1), level must be an odd value.
 			If the even/odd constraint is not respected, the level value will be corrected to properly set the LSB.
 		:type level: int
 
-		:param mode: Type of request to perform. RequestSeed or SendKey 
+		:param mode: Type of request to perform. ``SecurityAccess.Mode.RequestSeed`` or ``SecurityAccess.Mode.SendKey`` 
 		:type mode: SecurityAccess.Mode, int
 
-		:param key: When mode=SendKey, this value must be provided.
+		:param key: When mode=``SendKey``, this value must be provided.
 		:type key: bytes
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		"""		
 		from udsoncan import Request
 		cls.validate_mode(mode)
@@ -66,10 +66,10 @@ class SecurityAccess(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`SecurityAccess.ResponseData<udsoncan.services.SecurityAccess.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of response.data is too small
-		:raises ValueError: If mode is not RequetsSeed or SendKey
+		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises ValueError: If mode is not ``RequestSeed`` or ``SendKey``
 		"""
 
 		cls.validate_mode(mode)
@@ -98,7 +98,7 @@ class SecurityAccess(BaseService):
 
 		.. data:: seed
 
-			Seed value. Only present if request mode was RequestSeed (even subfunction)
+			Seed value. Only present if request mode was ``RequestSeed`` (even subfunction)
 		"""		
 		def __init__(self):
 			super().__init__(SecurityAccess)

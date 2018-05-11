@@ -24,7 +24,7 @@ class WriteMemoryByAddress(BaseService):
 		:param data: The data to write into memory.
 		:type data: bytes
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		"""				
 		from udsoncan import Request, MemoryLocation
 
@@ -49,13 +49,13 @@ class WriteMemoryByAddress(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`WriteMemoryByAddress.ResponseData<udsoncan.services.WriteMemoryByAddress.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 
 		:param memory_location: The memory location used for the request. 
-			The field mapping in the response varies depending on the ``memory_location`` format
+			The bytes position varies depending on the ``memory_location`` format
 		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
 
-		:raises InvalidResponseException: If length of response.data is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too small
 		"""			
 		from udsoncan import MemoryLocation
 
@@ -85,7 +85,7 @@ class WriteMemoryByAddress(BaseService):
 		"""
 		.. data:: alfid_echo
 
-			:ref:`AddressAndLengthFormatIdentifier <AddressAndLengthFormatIdentifier>` used in the request :ref:`MemoryLocation <MemoryLocation>` object echoed back by the server.
+			:ref:`AddressAndLengthFormatIdentifier <AddressAndLengthFormatIdentifier>` used in the :ref:`MemoryLocation <MemoryLocation>` object echoed back by the server.
 		
 		.. data:: memory_location_echo
 

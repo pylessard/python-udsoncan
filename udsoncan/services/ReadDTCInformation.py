@@ -83,7 +83,7 @@ class ReadDTCInformation(BaseService):
 		Generate a request for ReadDTCInformation. 
 		Each subfunction uses a subset of parameters. 
 
-		:param subfunction: The service subfunction. Values are defined in ReadDTCInformation.Subfunction
+		:param subfunction: The service subfunction. Values are defined in :class:`ReadDTCInformation.Subfunction<ReadDTCInformation.Subfunction>`
 		:type subfunction: int
 
 		:param status_mask: A DTC status mask used to filter DTC
@@ -206,18 +206,18 @@ class ReadDTCInformation(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`ReadDTCInformation.ResponseData<udsoncan.services.ReadDTCInformation.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 
-		:param subfunction: The service subfunction. Values are defined in ReadDTCInformation.Subfunction
+		:param subfunction: The service subfunction. Values are defined in :class:`ReadDTCInformation.Subfunction<udsoncan.services.ReadDTCInformation.Subfunction>`
 		:type subfunction: int
 
 		:param extended_data_size: Extended data size to expect. Extended data is implementation specific, therefore, size is not standardized
 		:type extended_data_size: int
 
-		:param tolerate_zero_padding: Ignore trailing zeros in the response data avoiding reading an extra DTC with ID 0 or raising InvalidResponseException because length is of data is wrong
+		:param tolerate_zero_padding: Ignore trailing zeros in the response data avoiding raising false :class:`InvalidResponseException<udsoncan.exceptions.InvalidResponseException>`.
 		:type tolerate_zero_padding:  bool
 
-		:param ignore_all_zero_dtc: Discard any DTC entry that have an ID of 0.
+		:param ignore_all_zero_dtc: Discard any DTC entry that have an ID of 0. Avoid reading extra DTC when using a transport protocol using zero padding.
 		:type ignore_all_zero_dtc: bool
 
 		:param dtc_snapshot_did_size: Number of bytes to encode the data identifier number. Other services such as :ref:`ReadDataByIdentifier<ReadDataByIdentifier>` encode DID over 2 bytes.
@@ -227,9 +227,9 @@ class ReadDTCInformation(BaseService):
 		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<DidCodec>` class or pack/unpack string 
 		:type didconfig: dict[int] = :ref:`DidCodec<DidCodec>`
 		
-		:raises InvalidResponseException: If response length is wrong or doe snot match DID configuration
-		:raises ValueError: If parameters are out of range or missing
-		:raises ConfigError: If the server return a snapshot DID not defined in didconfig
+		:raises InvalidResponseException: If response length is wrong or does not match DID configuration
+		:raises ValueError: If parameters are out of range, missing or wrong type
+		:raises ConfigError: If the server return a snapshot DID not defined in ``didconfig``
 		"""	
 
 		from udsoncan import Dtc, DidCodec

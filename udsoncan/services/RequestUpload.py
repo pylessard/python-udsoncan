@@ -36,7 +36,7 @@ class RequestUpload(BaseService):
 			If not specified, the default value of 00 will be used, specifying no encryption and no compression
 		:type dfi: :ref:`DataFormatIdentifier <DataFormatIdentifier>`		
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		"""			
 		from udsoncan import Request, MemoryLocation
 		
@@ -60,9 +60,9 @@ class RequestUpload(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`ReadMemoryByAddress.ResponseData<udsoncan.services.ReadMemoryByAddress.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of response.data is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too small
 		:raises NotImplementedError: If the maxNumberOfBlockLength value is encoded over more than 8 bytes.
 		"""	
 

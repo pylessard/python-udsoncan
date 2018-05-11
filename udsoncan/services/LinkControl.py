@@ -26,13 +26,13 @@ class LinkControl(BaseService):
 		"""
 		Generate a request for LinkControl
 
-		:param control_type: Service subfunction. Allowed values are from 0 to 0xFF
+		:param control_type: Service subfunction. Allowed values are from 0 to 0x7F
 		:type control_type: int
 
 		:param baudrate: Required baudrate value when ``control_type`` is either ``verifyBaudrateTransitionWithFixedBaudrate`` (1) or ``verifyBaudrateTransitionWithSpecificBaudrate`` (2)
 		:type baudrate: :ref:`Baudrate <Baudrate>`
 
-		:raises ValueError: If parameters are out of range or missing
+		:raises ValueError: If parameters are out of range, missing or wrong type
 		"""		
 		from udsoncan import Request, Baudrate
 		
@@ -65,9 +65,9 @@ class LinkControl(BaseService):
 		Populates the response ``service_data`` property with an instance of :class:`LinkControl.ResponseData<udsoncan.services.LinkControl.ResponseData>`
 
 		:param response: The received response to interpret
-		:type response: Response
+		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of response.data is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too small
 		"""		
 		if len(response.data) < 1:
 			raise InvalidResponseException(response, "Response data must be at least 1 bytes") 

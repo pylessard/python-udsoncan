@@ -91,6 +91,10 @@ DTC.Format
 ----------
 
 .. autoclass:: udsoncan::Dtc.Format
+   :members:
+   :undoc-members:
+   :member-order: bysource
+   :exclude-members:  get_name
 
 -----
 
