@@ -23,7 +23,7 @@ class DiagnosticSessionControl(BaseService):
 	@classmethod
 	def make_request(cls, session):
 		"""
-		Generate a request for DiagnosticSessionControl service
+		Generates a request for DiagnosticSessionControl service
 
 		:param session: Service subfunction. Allowed values are from 0 to 0x7F
 		:type session: int
@@ -43,7 +43,7 @@ class DiagnosticSessionControl(BaseService):
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too short
 		"""
 
 		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.

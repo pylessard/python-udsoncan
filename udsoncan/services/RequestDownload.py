@@ -27,7 +27,7 @@ class RequestDownload(BaseService):
 	@classmethod
 	def make_request(cls, memory_location, dfi=None):
 		"""
-		Generate a request for RequestDownload
+		Generates a request for RequestDownload
 
 		:param memory_location: The address and the size of the memory block to be written.
 		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
@@ -62,7 +62,7 @@ class RequestDownload(BaseService):
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too short
 		:raises NotImplementedError: If the ``maxNumberOfBlockLength`` value is encoded over more than 8 bytes.
 		"""		
 
@@ -88,7 +88,7 @@ class RequestDownload(BaseService):
 		"""
 		.. data:: max_length
 
-			(int) Maximum number of data block to write
+			(int) Maximum number of data blocks to write
 		"""		
 		def __init__(self):
 			super().__init__(RequestDownload)

@@ -7,7 +7,7 @@ def service_name(service):
 
 class TimeoutException(Exception):
 	"""
-	Simple extension of ``Exception`` witho no additional property. Raised when a timeout in the communication happens.
+	Simple extension of ``Exception`` with no additional property. Raised when a timeout in the communication happens.
 	"""
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -33,7 +33,7 @@ class NegativeResponseException(Exception):
 
 class InvalidResponseException(Exception):
 	"""
-	Raised a service fails to decode a server response data. A bad message length or a value that is out of range may both be a valid cause.
+	Raised when a service fails to decode a server response data. A bad message length or a value that is out of range may both be valid causes.
 	The response that triggered the exception is available in ``e.response``
 
 	:param response: The response that triggered the exception
@@ -53,7 +53,7 @@ class InvalidResponseException(Exception):
 
 class UnexpectedResponseException(Exception):
 	"""
-	Raised when the client receives a valid response but consider that the one received was not the expected response.
+	Raised when the client receives a valid response but considers the one received to not be the expected response.
 	The response that triggered the exception is available in ``e.response``
 
 	:param response: The response that triggered the exception

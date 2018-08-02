@@ -16,7 +16,7 @@ class WriteMemoryByAddress(BaseService):
 	@classmethod
 	def make_request(cls, memory_location, data):
 		"""
-		Generate a request for ReadMemoryByAddress
+		Generates a request for ReadMemoryByAddress
 
 		:param memory_location: The address and the size of the memory block to write.
 		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
@@ -55,7 +55,7 @@ class WriteMemoryByAddress(BaseService):
 			The bytes position varies depending on the ``memory_location`` format
 		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
 
-		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too short
 		"""			
 		from udsoncan import MemoryLocation
 

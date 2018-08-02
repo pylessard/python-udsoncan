@@ -64,11 +64,11 @@ class BaseService(ABC):
 				if obj.response_id() == int(given_id):
 					return obj
 
-	#Default subfunction ID for service that does not implements subfunction_id().
+	#Default subfunction ID for service that does not implement subfunction_id().
 	def subfunction_id(self):
 		return 0
 
-	@classmethod	# Tells if this service include a subfunction byte
+	@classmethod	# Tells if this service includes a subfunction byte
 	def use_subfunction(cls):
 		if hasattr(cls, '_use_subfunction'):
 			return cls._use_subfunction
@@ -116,7 +116,7 @@ class ServiceHelper:
 		if value < min or value > max:
 			raise ValueError("%s   must be an integer between 0x%X and 0x%X" % (name, min, max))
 
-	# Make sure that the actual client configuration contains valid definition for given Data Identifiers
+	# Make sure that the actual client configuration contains valid definitions for given Data Identifiers
 	@staticmethod
 	def check_did_config(didlist, didconfig):
 		didlist = [didlist] if not isinstance(didlist, list) else didlist
@@ -129,7 +129,7 @@ class ServiceHelper:
 	
 		return didconfig
 
-	# Make sure that the actual client configuration contains valid definition for given Input/Output Data Identifiers
+	# Make sure that the actual client configuration contains valid definitions for given Input/Output Data Identifiers
 	@staticmethod
 	def check_io_config(didlist, ioconfig):
 		didlist = [didlist] if not isinstance(didlist, list) else didlist

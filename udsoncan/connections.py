@@ -20,7 +20,7 @@ class BaseConnection(ABC):
 		self.logger = logging.getLogger(self.name)
 
 	def send(self, data):
-		"""Send data to the underlying transport protocol
+		"""Sends data to the underlying transport protocol
 
 		:param data: The data or object to send. If a Request or Response is given, the value returned by get_payload() will be sent.
 		:type data: bytes, Request, Response
@@ -37,13 +37,13 @@ class BaseConnection(ABC):
 		self.specific_send(payload)
 
 	def wait_frame(self, timeout=2, exception=False):
-		"""Wait for the reception of a frame of data from the underlying transport protocol
+		"""Waits for the reception of a frame of data from the underlying transport protocol
 
 		:param timeout: The maximum amount of time to wait before giving up in seconds
 		:type timeout: int
-		:param exception: Boolean value indicating if this function may return exception.
+		:param exception: Boolean value indicating if this function may return exceptions.
 			When ``True``, all exceptions may be raised, including ``TimeoutException``
-			When ``False``, all exception will be logged as ``DEBUG`` and ``None`` will be returned.
+			When ``False``, all exceptions will be logged as ``DEBUG`` and ``None`` will be returned.
 		:type exception: bool
 
 		:returns: Received data
@@ -81,7 +81,7 @@ class BaseConnection(ABC):
 	def specific_wait_frame(self, timeout=2):
 		"""The implementation of the ``wait_frame`` method. 
 
-		:param timeout: The maximum amount of time to wait before giving up waiting
+		:param timeout: The maximum amount of time to wait before giving up
 		:type timeout: int
 		
 		:returns: Received data
@@ -91,7 +91,7 @@ class BaseConnection(ABC):
 
 	@abstractmethod
 	def open(self):
-		""" Setup the connection object. 
+		""" Set up the connection object. 
 
 		:returns: None
 		"""
@@ -119,7 +119,7 @@ class BaseConnection(ABC):
 
 class SocketConnection(BaseConnection):
 	"""
-	Sends and receive data through a socket.
+	Sends and receives data through a socket.
 
 	:param sock: The socket to use. This socket must be bound and ready to use. Only ``send()`` and ``recv()`` will be called by this Connection
 	:type sock: socket.socket
@@ -201,7 +201,7 @@ class SocketConnection(BaseConnection):
 
 class IsoTPConnection(BaseConnection):
 	"""
-	Sends and receive data through an ISO-TP socket. Makes cleaner code than SocketConnection but offers no additional functionality.
+	Sends and receives data through an ISO-TP socket. Makes cleaner code than SocketConnection but offers no additional functionality.
 	The `isotp module <https://github.com/pylessard/python-can-isotp>`_ must be installed in order to use this connection
 
 	:param interface: The can interface to use (example: `can0`)
@@ -293,12 +293,12 @@ class IsoTPConnection(BaseConnection):
 
 class QueueConnection(BaseConnection):
 	"""
-	Sends and receive data using 2 Python native queues.
+	Sends and receives data using 2 Python native queues.
 
 	- ``MyConnection.fromuserqueue`` : Data read from this queue when ``wait_frame`` is called
 	- ``MyConnection.touserqueue`` : Data written to this queue when ``send`` is called
 
-	:param mtu: Optional mximum frame size. Messages will be truncated to this size
+	:param mtu: Optional maximum frame size. Messages will be truncated to this size
 	:type mtu: int
 	:param name: This name is included in the logger name so that its output can be redirected. The logger name will be ``Connection[<name>]``
 	:type name: string

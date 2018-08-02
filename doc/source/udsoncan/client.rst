@@ -3,23 +3,23 @@ Client
 
 .. _Client:
 
-The UDS client is a simple client that work synchronously and can handle a single request/response at the time. When requesting a service, the client execute these task:
+The UDS client is a simple client that works synchronously and can handle a single request/response at a time. When requesting a service, the client executes these tasks:
 
  - Builds a payload
- - Call the connection `empty_rxqueue` method.
+ - Calls the connection `empty_rxqueue` method.
  - Sends the request
- - Wait for a response, with timeout
- - Interpret the response data
- - Validate the response content
- - Return the response
+ - Waits for a response, with timeout
+ - Interprets the response data
+ - Validates the response content
+ - Returns the response
 
-The goal of this client is to simplify the usage of the **Services** object by exposing only the useful argument, hiding repetitive values, handling exceptions and logging. It can detect usage error as well as server malformed response. 
+The goal of this client is to simplify the usage of the **Services** object by exposing only useful arguments, hiding repetitive values, handling exceptions and logging. It can detect usage errors as well as malformed server responses. 
 
-The client will raised a :ref:`NegativeResponseException<NegativeResponseException>` when the server respond with a Negative response. 
+The client will raise a :ref:`NegativeResponseException<NegativeResponseException>` when the server responds with a negative response. 
 
-The client may raise :ref:`InvalidResponseException<InvalidResponseException>` if the payload is incomplete or if the underlying service raise this exception while parsing the response data.
+The client may raise :ref:`InvalidResponseException<InvalidResponseException>` if the payload is incomplete or if the underlying service raises this exception while parsing the response data.
 
-The client may raise :ref:`UnexpectedResponseException<UnexpectedResponseException>` if the response from the server does not match the last request sent. For example, if the service number in the response is different from the service number in the request. Another case would be if the echo of a parameter for a specific service does not match the request. For instance, ECUReset subfunction is the reset type, a valid server response include an echo of the reset type in its payload.
+The client may raise :ref:`UnexpectedResponseException<UnexpectedResponseException>` if the response from the server does not match the last request sent. For example, if the service number in the response is different from the service number in the request. Another case would be if the echo of a parameter for a specific service does not match the request. For instance, if an ECUReset subfunction is the reset type, a valid server response will include an echo of the reset type in its payload.
 
 
 .. autoclass:: udsoncan.client.Client
@@ -31,15 +31,15 @@ The client may raise :ref:`UnexpectedResponseException<UnexpectedResponseExcepti
 Configuration
 -------------
 
-The client configuration must be a dictionnary with the following keys defined.
+The client configuration must be a dictionary with the following keys defined:
 
 .. _config_exception_on_negative_response:
 
 .. attribute:: exception_on_negative_response
    :annotation: (bool)
 
-   When set to `True`, the client will raise a :ref:`NegativeResponseException<NegativeResponseException>` when the server responsd with a negative response.
-   When set to `False`, the returned `Response` will have a its property `positive` set to False
+   When set to `True`, the client will raise a :ref:`NegativeResponseException<NegativeResponseException>` when the server responds with a negative response.
+   When set to `False`, the returned `Response` will have its property `positive` set to False
 
 .. _config_exception_on_invalid_response:
 
@@ -47,22 +47,22 @@ The client configuration must be a dictionnary with the following keys defined.
    :annotation: (bool)
 
    When set to `True`, the client will raise a :ref:`InvalidResponseException<InvalidResponseException>` when the underlying service `interpret_response` raises the same exception.
-   When set to `False`, the returned `Response` will have a its property `valid` set to False 
+   When set to `False`, the returned `Response` will have its property `valid` set to False 
 
 .. _config_exception_on_unexpected_response:
 
 .. attribute:: exception_on_unexpected_response
    :annotation: (bool)
 
-   When set to `True`, the client will raise a :ref:`UnexpectedResponseException<UnexpectedResponseException>` when the server returns an response that is not expected. For instance a response for a different service or when the subfunction echo doesn't match the request.
-   When set to `False`, the returned `Response` will have a its property `unexpected` set to True in the same case.
+   When set to `True`, the client will raise a :ref:`UnexpectedResponseException<UnexpectedResponseException>` when the server returns a response that is not expected. For instance, a response for a different service or when the subfunction echo doesn't match the request.
+   When set to `False`, the returned `Response` will have its property `unexpected` set to True in the same case.
 
 .. _config_security_algo:
 
 .. attribute:: security_algo
    :annotation: (callable)
 
-   The implementation of the security algorithm necessary for the :ref:`SecurityAccess<SecurityAccess>` service. This function must have the following signature: 
+   The implementation of the security algorithm necessary for the :ref:`SecurityAccess<SecurityAccess>` service. This function must have the following signatures: 
       
       .. function:: SomeAlgorithm(seed, params=None)
 
@@ -86,7 +86,7 @@ The client configuration must be a dictionnary with the following keys defined.
 .. attribute:: data_identifiers
    :annotation: (dict)
 
-   This configuration is a dictionary mapping an integer (the data identifier) with a :ref:`DidCodec<DidCodec>`. These codec will be used to convert values to byte payload and vice-versa when sending/receiveing data for a service that needs a DID, i.e.:
+   This configuration is a dictionary that is mapping an integer (the data identifier) with a :ref:`DidCodec<DidCodec>`. These codecs will be used to convert values to byte payload and vice-versa when sending/receiving data for a service that needs a DID, i.e.:
    
       - :ref:`ReadDataByIdentifier<ReadDataByIdentifier>`
       - :ref:`WriteDataByIdentifier<WriteDataByIdentifier>`
@@ -102,37 +102,37 @@ The client configuration must be a dictionnary with the following keys defined.
 .. attribute:: input_output
    :annotation: (dict)
 
-   This configuration is a dictionary mapping an integer (the IO data identifier) with a :ref:`DidCodec<DidCodec>` specifically for the :ref:`InputOutputControlByIdentifier<InputOutputControlByIdentifier>` service. Just like config[data_identifers], these codec will be used to convert values to byte payload and vice-versa when sending/receiveing data.
+   This configuration is a dictionary that is mapping an integer (the IO data identifier) with a :ref:`DidCodec<DidCodec>` specifically for the :ref:`InputOutputControlByIdentifier<InputOutputControlByIdentifier>` service. Just like config[data_identifers], these codecs will be used to convert values to byte payload and vice-versa when sending/receiving data.
 
-   Since :ref:`InputOutputControlByIdentifier<InputOutputControlByIdentifier>` supports composite codec, it is possible to provide a sub-dictionnary as a codec specifying the bitmasks.
+   Since :ref:`InputOutputControlByIdentifier<InputOutputControlByIdentifier>` supports composite codecs, it is possible to provide a sub-dictionary as a codec specifying the bitmasks.
 
-   Possible configuration values are
+   Possible configuration values are:
 
       - ``string`` : The string will be used as a pack/unpack string when processing the data
       - ``DidCodec`` (class or instance) : The encode/decode method will be used to process the data
-      - ``dict`` : The dictionnary entry indicates a composite DID. Three sub key must be defined:
+      - ``dict`` : The dictionary entry indicates a composite DID. Three subkeys must be defined as:
 
          - ``codec`` : The codec, a string or a DidCodec class/instance
-         - ``mask`` : A dict mapping the mask name with a bit
-         - ``mask_size`` : An integer indicating on how much byte must the mask be encoded.
+         - ``mask`` : A dictionary mapping the mask name with a bit
+         - ``mask_size`` : An integer indicating on how many bytes must the mask be encoded
 
-   See :ref:`this example<iocontrol_composite_did>` to see how IO codec are defined.
+   See :ref:`this example<iocontrol_composite_did>` to see how IO codecs are defined.
 
 .. _config_tolerate_zero_padding:
 
 .. attribute:: tolerate_zero_padding
    :annotation: (bool)
    
-   This value will be passed to the services interpret_response when the parameter is supported like for :ref:`ReadDataByIdentifier<ReadDataByIdentifier>`, :ref:`ReadDTCInformation<ReadDTCInformation>`. It has for effect to ignore trailing zeros in the response data avoiding falsely raising :ref:'InvalidResponseException<InvalidResponseException>` if the underlying protocol uses some zero-padding. 
+   This value will be passed to the services 'interpret_response' when the parameter is supported as in :ref:`ReadDataByIdentifier<ReadDataByIdentifier>`, :ref:`ReadDTCInformation<ReadDTCInformation>`. It has to ignore trailing zeros in the response data to avoid falsely raising :ref:`InvalidResponseException<InvalidResponseException>` if the underlying protocol uses some zero-padding. 
 
 .. _config_ignore_all_zero_dtc:
 
 .. attribute:: ignore_all_zero_dtc
    :annotation: (bool)
    
-   This value is used with  the :ref:`ReadDTCInformation<ReadDTCInformation>` service when reading DTCs. It will skip any DTC that has an ID of 0x000000. If the underlying protocol uses zero-padding, it may generate a valid response data of all zeros. This parameters is different from ``config['tolerate_zero_padding']``. 
+   This value is used with the :ref:`ReadDTCInformation<ReadDTCInformation>` service when reading DTCs. It will skip any DTC that has an ID of 0x000000. If the underlying protocol uses zero-padding, it may generate a valid response data of all zeros. This parameter is different from ``config['tolerate_zero_padding']``. 
 
-   Consider a server response that contains a list of DTC and where all DTC must be 4 bytes long (ID and status). Say that the server returns a single DTC of value 0x123456, with status 0x78 over a transport protocol that does zero-padding. Let's study 5 different payloads.
+   Consider a server response that contains a list of DTCs where all DTCs must be 4 bytes long (ID and status). Say that the server returns a single DTC of value 0x123456, with status 0x78 over a transport protocol that uses zero-padding. Let's study 5 different payloads.
 
     1. ``1234567800``           (invalid)
     2. ``123456780000``         (invalid)
@@ -140,14 +140,14 @@ The client configuration must be a dictionnary with the following keys defined.
     4. ``1234567800000000``     (valid)
     5. ``123456780000000000``   (invalid)
 
-   In this situation, all case except case 4 would raise an :ref:`InvalidResponseException<InvalidResponseException>` because of their bad length (unless ``config['tolerate_zero_padding']`` is set to True). Case 4 would return 2 DTCs, the second DTC with an ID of 0x000000 and a status of 0x00. Setting ``config['ignore_all_zero_dtc']`` to True will make the functions return only the first valid DTC.
+   In this situation, all cases except case 4 would raise a :ref:`InvalidResponseException<InvalidResponseException>` because of their incorrect lengths (unless ``config['tolerate_zero_padding']`` is set to True). Case 4 would return 2 DTCs, the second DTC with an ID of 0x000000 and a status of 0x00. Setting ``config['ignore_all_zero_dtc']`` to True will make the functions return only the first valid DTC.
 
 .. _config_server_address_format:
 
 .. attribute:: server_address_format
    :annotation: (int)
 
-   The :ref:`MemoryLocation<MemoryLocation>` address_format value to use when no specified explicitly for methods expecting a parameter of type :ref:`MemoryLocation<MemoryLocation>`.
+   The :ref:`MemoryLocation<MemoryLocation>` server_address_format is the value to use when none is specified explicitly for methods expecting a parameter of type :ref:`MemoryLocation<MemoryLocation>`.
 
    See :ref:`an example<example_default_memloc_format>`
 
@@ -156,7 +156,7 @@ The client configuration must be a dictionnary with the following keys defined.
 .. attribute:: server_memorysize_format
    :annotation: (int)
 
-   The :ref:`MemoryLocation<MemoryLocation>` server_memorysize_format value to use when no specified explicitly for methods expecting a parameter of type :ref:`MemoryLocation<MemoryLocation>` 
+   The :ref:`MemoryLocation<MemoryLocation>` server_memorysize_format is the value to use when none is specified explicitly for methods expecting a parameter of type :ref:`MemoryLocation<MemoryLocation>` 
 
    See :ref:`an example<example_default_memloc_format>`
 
@@ -165,14 +165,14 @@ The client configuration must be a dictionnary with the following keys defined.
 .. attribute:: extended_data_size
    :annotation: (dict[int] = int)
    
-   The description of all the DTC extended data record size. This value is used to decode the server response when requesting a DTC extended data.
-   The value mus be specified as follow:
+   This is the description of all the DTC extended data record sizes. This value is used to decode the server response when requesting a DTC extended data.
+   The value must be specified as follows:
 
 .. code-block:: python
 
    config['extended_data_size'] = {
-      0x123456 : 45, # Extended data for DTC 0x123456 is 45 bytes lond
-      0x123457 : 23 # Extended data for DTC 0x123457 is 23 bytes lond
+      0x123456 : 45, # Extended data for DTC 0x123456 is 45 bytes long
+      0x123457 : 23 # Extended data for DTC 0x123457 is 23 bytes long
    }
 
 .. _config_dtc_snapshot_did_size:
@@ -180,27 +180,26 @@ The client configuration must be a dictionnary with the following keys defined.
 .. attribute:: dtc_snapshot_did_size
    :annotation: (int)
    
-   The number of byte used to encode a data identifier specifically for :ref:`ReadDTCInformation<ReadDTCInformation>` subfunction ``reportDTCSnapshotRecordByDTCNumber`` and ``reportDTCSnapshotRecordByRecordNumber``. The UDS standard does not specify a DID size altough all other services expect a DID encoded over 2 bytes (16 bits). Default value of 2
+   The number of bytes used to encode a data identifier specifically for :ref:`ReadDTCInformation<ReadDTCInformation>` subfunction ``reportDTCSnapshotRecordByDTCNumber`` and ``reportDTCSnapshotRecordByRecordNumber``. The UDS standard does not specify a DID size although all other services expect a DID encoded over 2 bytes (16 bits). Default value of 2
 
 -------------
 
 Suppress positive response
 --------------------------
 
-UDS standard proposes a mechanism to avoid treating useless positive responses. For all services using a subfunction byte, 
-the client can set bit 7 of the subfunction byte to signal that no response is necessary if the response is positive. 
+The UDS standard proposes a mechanism to avoid treating useless positive responses. For all services using a subfunction byte, the client can set bit 7 of the subfunction byte to signal that no response is necessary if the response is positive. 
 This bit is called the ``suppressPosRspMsgIndicationBit``
 
-The ``Client`` object let you use that feature by using ``suppress_positive_response`` into a ``with`` statement. See following example.
+The ``Client`` object lets you use that feature by using ``suppress_positive_response`` into a ``with`` statement. See following example:
 
 .. code-block:: python
 
    with client.suppress_positive_response:
       client.tester_present()
 
-When ``suppress_positive_response`` is asked for a service using a subfunction byte, the client will set suppressPosRspMsgIndicationBit before sending the request. The client will not wait for any response, discarding negative response if they happens. The response returned by the client function will always be ``None`` in that case.
+When ``suppress_positive_response`` is asking for a service using a subfunction byte, the client will set suppressPosRspMsgIndicationBit before sending the request. The client will not wait for any response and will disregard negative responses if they happen. The response returned by the client function will always be ``None`` in that case.
 
-If ``suppress_positive_response`` is asked for a service with no subfunction byte, the directive will be ignored and a warning message will be logged.
+If ``suppress_positive_response`` is asking for a service with no subfunction byte, the directive will be ignored and a warning message will be logged.
 
 -----
 

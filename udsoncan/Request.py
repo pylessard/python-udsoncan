@@ -4,7 +4,7 @@ import struct
 
 class Request:
 	"""
-	Represent a UDS Request.
+	Represents a UDS Request.
 
 	:param service: The service for which to make the request. This parameter must be a class that extends :class:`udsoncan.services.BaseService`
 	:type service: class
@@ -13,7 +13,7 @@ class Request:
 	:type subfunction: int or None
 
 	:param suppress_positive_response: Indicates that the server should not send a response if the response code is positive. 
-		This parameter have effects only when the given service supports subfunctions
+		This parameter has effect only when the given service supports subfunctions
 	:type suppress_positive_response: bool
 
 	:param data: The service data appended after service ID and payload
@@ -52,7 +52,7 @@ class Request:
 
 	def get_payload(self, suppress_positive_response=None):
 		"""
-		Generate a payload to be given to the underlying protocol.
+		Generates a payload to be given to the underlying protocol.
 		This method is meant to be used by a UDS client
 
 		:return: A payload to be sent through the underlying protocol
@@ -64,7 +64,7 @@ class Request:
 		if self.service.use_subfunction() and not isinstance(self.subfunction, int):
 			raise ValueError("Cannot generate a payload. Given subfunction is not a valid integer")
 
-		requestid = self.service.request_id()	# Return the service ID used to make a client request
+		requestid = self.service.request_id()	# Returns the service ID used to make a client request
 			
 		payload = struct.pack("B", requestid)
 		if self.service.use_subfunction():

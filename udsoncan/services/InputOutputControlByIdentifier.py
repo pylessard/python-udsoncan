@@ -29,9 +29,9 @@ class InputOutputControlByIdentifier(BaseService):
 	@classmethod
 	def make_request(cls, did, control_param=None, values=None, masks=None, ioconfig=None):
 		"""
-		Generate a request for InputOutputControlByIdentifier
+		Generates a request for InputOutputControlByIdentifier
 
-		:param did: Data identifier to representing the IO
+		:param did: Data identifier to represent the IO
 		:type did: int
 
 		:param control_param: Optional parameter that can be a value defined in :class:`InputOutputControlByIdentifier.ControlParam<udsoncan.services.InputOutputControlByIdentifier.ControlParam>
@@ -52,7 +52,7 @@ class InputOutputControlByIdentifier(BaseService):
 				- A list naming the bit mask to set
 				- A dict with the mask name as a key and a boolean as the value (True to set the mask, False to clear it)
 				- An instance of :ref:`IOMask<IOMask>`
-				- A boolean value to set all mask to the same value.
+				- A boolean value to set all masks to the same value.
 		:type masks: list, dict, :ref:`IOMask<IOMask>`, bool
 
 		:param ioconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<DidCodec>` class or pack/unpack string. 
@@ -60,7 +60,7 @@ class InputOutputControlByIdentifier(BaseService):
 		:type ioconfig: dict[int] = :ref:`DidCodec<DidCodec>`, dict
 
 		:raises ValueError: If parameters are out of range, missing or wrong type
-		:raises ConfigError: If given did is not defined within ioconfig
+		:raises ConfigError: If given DID is not defined within ioconfig
 		"""	
 
 		from udsoncan import Request, IOMasks, IOValues, DidCodec
@@ -100,7 +100,7 @@ class InputOutputControlByIdentifier(BaseService):
 		ioconfig = ServiceHelper.check_io_config(did, ioconfig)	# IO dids are defined in client config.
 		request.data += struct.pack('>H', did)
 
-		# This parameters is optional according to standard
+		# This parameter is optional according to standard
 		if control_param is not None:
 			request.data += struct.pack('B', control_param)
 		
@@ -156,12 +156,12 @@ class InputOutputControlByIdentifier(BaseService):
 		:type ioconfig: dict[int] = :ref:`DidCodec<DidCodec>`, dict
 
 		:raises ValueError: If parameters are out of range, missing or wrong type
-		:raises ConfigError: If did echoed back by the server is not in the ``ioconfig`` definition
+		:raises ConfigError: If DID echoed back by the server is not in the ``ioconfig`` definition
 		:raises InvalidResponseException: If response data is incomplete or if DID data does not match codec length.
 		"""	
 
 		from udsoncan import DidCodec
-		min_response_size = 2 if control_param is not None else 1	# Spec specifies that if first by is a ControlParameter, it must be echoed back by the server
+		min_response_size = 2 if control_param is not None else 1	# Spec specifies that if first byte is a ControlParameter, it must be echoed back by the server
 
 		if len(response.data) < min_response_size:
 			raise InvalidResponseException(response, "Response must be at least %d bytes long" % min_response_size)
@@ -170,7 +170,7 @@ class InputOutputControlByIdentifier(BaseService):
 		response.service_data.did_echo = struct.unpack(">H", response.data[0:2])[0]
 
 		did = response.service_data.did_echo
-		ioconfig = ServiceHelper.check_io_config(did, ioconfig)	# IO dids are defined in client config.
+		ioconfig = ServiceHelper.check_io_config(did, ioconfig)	# IO DIDs are defined in client config.
 		codec = DidCodec.from_config(ioconfig[did])	# Get IO codec from config
 
 		next_byte = 2

@@ -33,7 +33,7 @@ class ReadDataByIdentifier(BaseService):
 	@classmethod
 	def make_request(cls, didlist, didconfig):
 		"""
-		Generate a request for ReadDataByIdentifier
+		Generates a request for ReadDataByIdentifier
 
 		:param didlist: List of data identifier to read.
 		:type didlist: list[int]
@@ -61,7 +61,7 @@ class ReadDataByIdentifier(BaseService):
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
 		
-		:param didlist:  List of data identifier used for the request.
+		:param didlist:  List of data identifiers used for the request.
 		:type didlist: list[int]
 		
 		:param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<DidCodec>` class or pack/unpack string 
@@ -71,7 +71,7 @@ class ReadDataByIdentifier(BaseService):
 		:type tolerate_zero_padding: bool
 
 		:raises ValueError: If parameters are out of range, missing or wrong type
-		:raises ConfigError: If ``didlist`` parameter or response contain a DID not defined in ``didconfig``.
+		:raises ConfigError: If ``didlist`` parameter or response contains a DID not defined in ``didconfig``.
 		:raises InvalidResponseException: If response data is incomplete or if DID data does not match codec length.
 		"""	
 		from udsoncan import DidCodec
@@ -89,7 +89,7 @@ class ReadDataByIdentifier(BaseService):
 				break	# Done
 
 			if len(response.data) <= offset +1:
-				if tolerate_zero_padding and response.data[-1] == 0:	# One extra byte, but its a 0 and we accept that. So we're done
+				if tolerate_zero_padding and response.data[-1] == 0:	# One extra byte, but it's a 0 and we accept that. So we're done
 					break
 				raise InvalidResponseException(response, "Response given by server is incomplete.")
 
@@ -108,7 +108,7 @@ class ReadDataByIdentifier(BaseService):
 				raise InvalidResponseException(response, "Value fo data identifier 0x%04x was incomplete according to definition in configuration" % did)
 
 			subpayload = response.data[offset:offset+len(codec)]
-			offset += len(codec)	# Codec must define a __len__ function that metches the encoded payload length.
+			offset += len(codec)	# Codec must define a __len__ function that matches the encoded payload length.
 			val = codec.decode(subpayload)
 			response.service_data.values[did] = val
 

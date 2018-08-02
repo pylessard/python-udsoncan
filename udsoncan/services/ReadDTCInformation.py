@@ -80,7 +80,7 @@ class ReadDTCInformation(BaseService):
 	@classmethod
 	def make_request(cls, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None):
 		"""
-		Generate a request for ReadDTCInformation. 
+		Generates a request for ReadDTCInformation. 
 		Each subfunction uses a subset of parameters. 
 
 		:param subfunction: The service subfunction. Values are defined in :class:`ReadDTCInformation.Subfunction<ReadDTCInformation.Subfunction>`
@@ -106,7 +106,7 @@ class ReadDTCInformation(BaseService):
 
 		from udsoncan import Request, Dtc
 
-		# Request grouping for subfunction that have the same request format
+		# Request grouping for subfunctions that have the same request format
 		request_subfn_no_param = [
 			ReadDTCInformation.Subfunction.reportSupportedDTCs,
 			ReadDTCInformation.Subfunction.reportFirstTestFailedDTC,
@@ -217,7 +217,7 @@ class ReadDTCInformation(BaseService):
 		:param tolerate_zero_padding: Ignore trailing zeros in the response data avoiding raising false :class:`InvalidResponseException<udsoncan.exceptions.InvalidResponseException>`.
 		:type tolerate_zero_padding:  bool
 
-		:param ignore_all_zero_dtc: Discard any DTC entry that have an ID of 0. Avoid reading extra DTC when using a transport protocol using zero padding.
+		:param ignore_all_zero_dtc: Discard any DTC entries that have an ID of 0. Avoid reading extra DTCs when using a transport protocol using zero padding.
 		:type ignore_all_zero_dtc: bool
 
 		:param dtc_snapshot_did_size: Number of bytes to encode the data identifier number. Other services such as :ref:`ReadDataByIdentifier<ReadDataByIdentifier>` encode DID over 2 bytes.
@@ -228,8 +228,8 @@ class ReadDTCInformation(BaseService):
 		:type didconfig: dict[int] = :ref:`DidCodec<DidCodec>`
 		
 		:raises InvalidResponseException: If response length is wrong or does not match DID configuration
-		:raises ValueError: If parameters are out of range, missing or wrong type
-		:raises ConfigError: If the server return a snapshot DID not defined in ``didconfig``
+		:raises ValueError: If parameters are out of range, missing or wrong types
+		:raises ConfigError: If the server returns a snapshot DID not defined in ``didconfig``
 		"""	
 
 		from udsoncan import Dtc, DidCodec
@@ -303,7 +303,7 @@ class ReadDTCInformation(BaseService):
 			response.service_data.status_availability = Dtc.Status.from_byte(response.data[1])
 
 			actual_byte = 2	# Increasing index
-			while True:	# Loop until we have read all dtc
+			while True:	# Loop until we have read all dtcs
 				if len(response.data) <= actual_byte:
 					break	# done
 
@@ -312,7 +312,7 @@ class ReadDTCInformation(BaseService):
 					if tolerate_zero_padding and response.data[actual_byte:] == b'\x00'*partial_dtc_length:
 						break
 					else:
-						# We purposely ignore extra byte for subfunction reportSeverityInformationOfDTC as it is supposed to returns 0 or 1 DTC.
+						# We purposely ignore extra byte for subfunction reportSeverityInformationOfDTC as it is supposed to return 0 or 1 DTC.
 						if subfunction != ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC or actual_byte == 2: 
 							raise InvalidResponseException(response, 'Incomplete DTC record. Missing %d bytes to response to complete the record' % (dtc_size-partial_dtc_length))
 
@@ -334,7 +334,7 @@ class ReadDTCInformation(BaseService):
 				actual_byte += dtc_size
 			response.service_data.dtc_count = len(response.service_data.dtcs)
 
-		# The 2 following subfunctions response have different purpose but their construction is very similar.
+		# The 2 following subfunction responses have different purposes but their constructions are very similar.
 		elif subfunction in response_subfn_dtc_plus_fault_counter + response_subfn_dtc_plus_sapshot_record:
 			dtc_size = 4
 			if len(response.data) < 1:
@@ -343,7 +343,7 @@ class ReadDTCInformation(BaseService):
 			actual_byte = 1 	# Increasing index
 			dtc_map = dict()	# This map is used to append snapshot to existing DTC.
 
-			while True: 	# Loop until we have read all dtc
+			while True: 	# Loop until we have read all dtcs
 				if len(response.data) <= actual_byte:
 					break 	# done
 
@@ -388,7 +388,7 @@ class ReadDTCInformation(BaseService):
 
 			response.service_data.dtc_count = len(response.service_data.dtcs)
 
-		# This group of response returns a number of DTC available
+		# This group of responses returns a number of DTCs available
 		elif subfunction in response_subfn_number_of_dtc:
 			if len(response.data) < 5:
 				raise InvalidResponseException(response, 'Response must be exactly 5 bytes long ')
@@ -397,8 +397,8 @@ class ReadDTCInformation(BaseService):
 			response.service_data.dtc_format = response.data[2]
 			response.service_data.dtc_count = struct.unpack('>H', response.data[3:5])[0]
 		
-		# This group of response returns DTC snapshots
-		# Response include a DTC, many snapshots records. For each records, we find many Data Identifier.
+		# This group of responses returns DTC snapshots
+		# Responses include a DTC, many snapshot records. For each record, we find many Data Identifiers.
 		# We create one Dtc.Snapshot for each DID. That'll be easier to work with.
 		# <DTC,RecordNumber1,NumberOfDid_X,DID1,DID2,...DIDX, RecordNumber2,NumberOfDid_Y,DID1,DID2,...DIDY, etc>
 		elif subfunction in  response_sbfn_dtc_status_snapshots_records:
@@ -411,7 +411,7 @@ class ReadDTCInformation(BaseService):
 
 			ServiceHelper.validate_int(dtc_snapshot_did_size, min=1, max=8, name='dtc_snapshot_did_size')
 
-			while True:		# Loop until we have read all dtc
+			while True:		# Loop until we have read all dtcs
 				if len(response.data) <= actual_byte:
 					break	# done
 
@@ -461,8 +461,8 @@ class ReadDTCInformation(BaseService):
 			response.service_data.dtcs.append(dtc)
 			response.service_data.dtc_count = 1
 		
-		# This group of response returns DTC snapshots
-		# Response include a DTC, many snapshots records. For each records, we find many Data Identifier.
+		# This group of responses returns DTC snapshots
+		# Responses include a DTC, many snapshots records. For each record, we find many Data Identifiers.
 		# We create one Dtc.Snapshot for each DID. That'll be easier to work with.
 		# Similar to previous subfunction group, but order of information is changed.
 
@@ -544,7 +544,7 @@ class ReadDTCInformation(BaseService):
 				response.service_data.dtcs.append(dtc)
 			response.service_data.dtc_count = len(response.service_data.dtcs)
 
-		# These subfunction include DTC ExtraData. We give it raw to user.
+		# These subfunctions include DTC ExtraData. We give it raw to user.
 		elif subfunction in response_subfn_mask_record_plus_extdata:
 			cls.assert_extended_data_size(extended_data_size, subfunction)
 

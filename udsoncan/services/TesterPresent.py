@@ -12,7 +12,7 @@ class TesterPresent(BaseService):
 	@classmethod
 	def make_request(cls):
 		"""
-		Generate a request for TesterPresent
+		Generates a request for TesterPresent
 		"""		
 		from udsoncan import Request
 		return Request(service=cls, subfunction=0)
@@ -25,7 +25,7 @@ class TesterPresent(BaseService):
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too short
 		"""		
 		if  len(response.data) < 1:
 			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
@@ -37,7 +37,7 @@ class TesterPresent(BaseService):
 		"""
 		.. data:: subfunction_echo
 
-			Request subfunction echoed back by the server. This value should always be 0
+			Requests subfunction echoed back by the server. This value should always be 0
 		"""		
 		def __init__(self):
 			super().__init__(TesterPresent)
