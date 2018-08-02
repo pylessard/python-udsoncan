@@ -16,7 +16,7 @@ class ClearDiagnosticInformation(BaseService):
 	@classmethod
 	def make_request(cls, group=0xFFFFFF):
 		"""
-		Generate a request for ClearDiagnosticInformation
+		Generates a request for ClearDiagnosticInformation
 
 		:param group: DTC mask ranging from 0 to 0xFFFFFF. 0xFFFFFF means all DTCs
 		:type group: int

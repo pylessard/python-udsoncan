@@ -32,7 +32,7 @@ class SecurityAccess(BaseService):
 	@classmethod
 	def make_request(cls, level, mode, key=None):
 		"""
-		Generate a request for SecurityAccess
+		Generates a request for SecurityAccess
 
 		:param level: Service subfunction. The security level to unlock. Value ranging from 0 to 7F 
 			For mode=``RequestSeed`` (0), level must be an even value. For mode=``SendKey`` (1), level must be an odd value.
@@ -68,7 +68,7 @@ class SecurityAccess(BaseService):
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too short
 		:raises ValueError: If mode is not ``RequestSeed`` or ``SendKey``
 		"""
 
@@ -94,7 +94,7 @@ class SecurityAccess(BaseService):
 		"""
 		.. data:: security_level_echo
 
-			Request subfunction echoed back by the server
+			Requests subfunction echoed back by the server
 
 		.. data:: seed
 

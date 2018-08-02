@@ -26,7 +26,7 @@ class ECUReset(BaseService):
 	@classmethod
 	def make_request(cls, reset_type):
 		"""
-		Generate a request for ECUReset
+		Generates a request for ECUReset
 
 		:param reset_type: Service subfunction. Allowed values are from 0 to 0x7F
 		:type reset_type: int
@@ -46,7 +46,7 @@ class ECUReset(BaseService):
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too short
 		"""
 
 		if len(response.data) < 1: 	# Should not happen as response decoder will raise an exception.
@@ -69,7 +69,7 @@ class ECUReset(BaseService):
 
 		.. data:: powerdown_time
 
-			Amount of time, in second, before the power down sequence is executed. Should be provided only when reset type is enableRapidPowerShutDown
+			Amount of time, in seconds, before the power down sequence is executed. Should be provided only when reset type is enableRapidPowerShutDown
 		"""		
 		def __init__(self):
 			super().__init__(ECUReset)

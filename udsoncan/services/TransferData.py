@@ -20,9 +20,9 @@ class TransferData(BaseService):
 	@classmethod
 	def make_request(cls, sequence_number, data=None):
 		"""
-		Generate a request for TransferData
+		Generates a request for TransferData
 
-		:param sequence_number: Correspond to an 8bits counter that should increment for each new block transfered.
+		:param sequence_number: Corresponds to an 8bit counter that should increment for each new block transferred.
 			Allowed values are from 0 to 0xFF
 		:type sequence_number: int
 
@@ -53,7 +53,7 @@ class TransferData(BaseService):
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too short
 		"""		
 		if len(response.data) < 1:
 			raise InvalidResponseException(response, "Response data must be at least 1 bytes")
@@ -66,7 +66,7 @@ class TransferData(BaseService):
 		"""
 		.. data:: sequence_number_echo
 
-			Request subfunction echoed back by the server
+			Requests subfunction echoed back by the server
 
 		.. data:: parameter_records
 

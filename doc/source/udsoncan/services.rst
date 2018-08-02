@@ -3,10 +3,10 @@
 Services
 ========
 
-Each service is represented by a class that extend the ``BaseService`` class. They all implement 2 methods : ``make_request`` and ``interpret_response``.
+Each service is represented by a class that extends the ``BaseService`` class. They all implement 2 methods : ``make_request`` and ``interpret_response``.
 
    - ``make_request`` will return a ``Request`` instance ready to be sent to the ``Connection``
-   - ``interpret_response`` will parse the ``data`` property inside a ``Response`` instance and populates another property named ``service_data``. This ``service_data`` property will be an instance of the ``ResponseData`` class that is nested within the service class.
+   - ``interpret_response`` will parse the ``data`` property inside a ``Response`` instance and populate another property named ``service_data``. This ``service_data`` property will be an instance of the ``ResponseData`` class that is nested within the service class.
 
 **Crafting a request**
 
@@ -641,7 +641,7 @@ SecurityAccess (0x27)
    :undoc-members:
    :member-order: bysource
 
-.. note:: The ``level`` that act as the subfunction can range from 1 to 0x7E. The LSB is a flag indicating the type of request. 
+.. note:: The ``level`` that acts as the subfunction can range from 1 to 0x7E. The LSB is a flag indicating the type of request. 
    When the LSB is set to 1, the request is a RequestSeed message, when it is set to 0, the request is a SendKey message. 
    This leaves 6 effective bits allowing 63 security levels.
 

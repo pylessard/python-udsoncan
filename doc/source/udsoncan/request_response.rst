@@ -1,11 +1,11 @@
 Request and Response
 ====================
 
-Messages exchanged by the client and the server a represented by a ``Request`` and a ``Response``. 
+Messages exchanged by the client and the server are represented by a ``Request`` and a ``Response``. 
 
-The client sends ``Requests`` to the server that include a service number, an optional subfunction and some data. The server process the request and answer with a ``Response`` that contains an echo of the service number, a response code and some additional data.
+The client sends ``Requests`` to the server that include a service number, an optional subfunction and some data. The server processes the request and answers with a ``Response`` that contains an echo of the service number, a response code and some additional data.
 
-The following classes provides the encessary interface to manipulates UDS requests and responses.
+The following classes provides the necessary interface to manipulate UDS requests and responses.
 
 ------
 

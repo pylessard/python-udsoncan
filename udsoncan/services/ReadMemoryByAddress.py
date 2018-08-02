@@ -15,7 +15,7 @@ class ReadMemoryByAddress(BaseService):
 	@classmethod
 	def make_request(cls, memory_location):
 		"""
-		Generate a request for ReadMemoryByAddress
+		Generates a request for ReadMemoryByAddress
 
 		:param memory_location: The address and the size of the memory block to read.
 		:type memory_location: :ref:`MemoryLocation <MemoryLocation>`
@@ -43,7 +43,7 @@ class ReadMemoryByAddress(BaseService):
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too short
 		"""		
 		if len(response.data) < 1: 	
 			raise InvalidResponseException(response, "Response data must be at least 1 byte")

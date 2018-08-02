@@ -1,7 +1,7 @@
 Exceptions
 ===========
 
-This section explains the different exception used in the project.
+This section explains the different exceptions used in the project.
 
 .. _NegativeResponseException:
 

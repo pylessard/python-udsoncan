@@ -24,7 +24,7 @@ class LinkControl(BaseService):
 	@classmethod
 	def make_request(cls, control_type, baudrate=None):
 		"""
-		Generate a request for LinkControl
+		Generates a request for LinkControl
 
 		:param control_type: Service subfunction. Allowed values are from 0 to 0x7F
 		:type control_type: int
@@ -67,7 +67,7 @@ class LinkControl(BaseService):
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too short
 		"""		
 		if len(response.data) < 1:
 			raise InvalidResponseException(response, "Response data must be at least 1 bytes") 

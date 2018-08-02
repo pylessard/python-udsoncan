@@ -14,7 +14,7 @@ class RequestTransferExit(BaseService):
 	@classmethod
 	def make_request(cls, data=None):
 		"""
-		Generate a request for RequestTransferExit
+		Generates a request for RequestTransferExit
 
 		:param data: Additional optional data to send to the server
 		:type data: bytes

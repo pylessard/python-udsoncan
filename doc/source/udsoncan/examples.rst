@@ -6,7 +6,7 @@ Examples
 Different layers of intelligence
 --------------------------------
 
-In the following examples, we will request an ECU reset in 4 different ways. We will start by crafting binary payload manually, then we will add a layer of interpretation making the code more comprehensive each time. 
+In the following examples, we will request an ECU reset in 4 different ways. We will start by crafting a binary payload manually, then we will add a layer of interpretation making the code more comprehensive each time. 
 
 Raw Connection
 ##############
@@ -105,13 +105,13 @@ Security algorithm implementation
    client.config['security_algo'] = myalgo
    client.config['security_algo_params'] = dict(xorkey=b'\x12\x34\x56\x78')
 
-.. warning:: This algorithm is not secure and is given as an example only because of its simple implementation. XOR encryption is weak on many levels; it is vulnerable to known-plaintext attacks, relatively weak against replay attacks and does not provide enough diffusion (pattern recognition is possible). If you are an ECU programmer, please **do not implement that**.
+.. warning:: This algorithm is not secure and is given as an example only because of its simple implementation. XOR encryption is weak on many levels; it is vulnerable to known-plaintext attacks, relatively weak against replay attacks and does not provide enough diffusion (pattern recognition is possible). If you are an ECU programmer, please **do not implement this**.
 
 -----
 
 .. _iocontrol_composite_did:
 
-InputOutputControlByIdentifier composite DID
+InputOutputControlByIdentifier Composite DID
 --------------------------------------------
 
 This example shows how the InputOutputControlByIdentifier can be used with a composite data identifier and how to build a proper `ioconfig` dict.

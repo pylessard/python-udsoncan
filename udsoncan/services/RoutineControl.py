@@ -28,9 +28,9 @@ class RoutineControl(BaseService):
 	@classmethod
 	def make_request(cls, routine_id, control_type, data=None):
 		"""
-		Generate a request for RoutineControl
+		Generates a request for RoutineControl
 
-		:param routine_id: The routine ID. Value shoudl be between 0 and 0xFFFF
+		:param routine_id: The routine ID. Value should be between 0 and 0xFFFF
 		:type routine_id: int
 
 		:param control_type: Service subfunction. Allowed values are from 0 to 0x7F
@@ -65,7 +65,7 @@ class RoutineControl(BaseService):
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
 
-		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too short
 		"""
 
 		if len(response.data) < 3: 	
@@ -80,11 +80,11 @@ class RoutineControl(BaseService):
 		"""
 		.. data:: control_type_echo
 
-			Request subfunction echoed back by the server
+			Requests subfunction echoed back by the server
 
 		.. data:: routine_id_echo
 
-			Request routine ID echoed back by the server.
+			Requests routine ID echoed back by the server.
 
 		.. data:: routine_status_record
 

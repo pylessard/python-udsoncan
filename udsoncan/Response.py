@@ -3,7 +3,7 @@ import struct
 
 class Response:
 	"""
-	Represent a server Response to a client Request
+	Represents a server Response to a client Request
 
 	:param service: The service implied by this response.
 	:type service: class
@@ -16,7 +16,7 @@ class Response:
 
 	.. data:: valid 
 
-		(boolean) True if the response content is valid. Only ``invalid_reason`` is guarantee to have a meaningful value if this value is False
+		(boolean) True if the response content is valid. Only ``invalid_reason`` is guaranteed to have a meaningful value if this value is False
 
 	.. data:: invalid_reason 
 	
@@ -46,12 +46,12 @@ class Response:
 
 	.. data:: service_data
 
-		(object) The content of ``data`` interpreted by a service. Can be any type of content.
+		(object) The content of ``data`` interpreted by a service; can be any type of content.
 		
 
 	.. data:: original_payload 
 		
-		(bytes) When response is built with `Response.from_payload`, this property contains a copy of the payload used. None otherwise.
+		(bytes) When the response is built with `Response.from_payload`, this property contains a copy of the payload used. None otherwise.
 
 	.. data:: unexpected 
 
@@ -183,7 +183,7 @@ class Response:
 	#Used by server
 	def get_payload(self):
 		"""
-		Generate a payload to be given to the underlying protocol.
+		Generates a payload to be given to the underlying protocol.
 		This method is meant to be used by a UDS server
 
 		:return: A payload to be sent through the underlying protocol
@@ -209,7 +209,7 @@ class Response:
 		return payload
 
 
-	# Analyze a TP frame an build a Response object. Used by client
+	# Analyzes a TP frame and builds a Response object. Used by client
 	@classmethod
 	def from_payload(cls, payload):
 		"""

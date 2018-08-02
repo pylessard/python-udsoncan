@@ -17,7 +17,7 @@ class WriteDataByIdentifier(BaseService):
 	@classmethod
 	def make_request(cls, did, value, didconfig):
 		"""
-		Generate a request for WriteDataByIdentifier
+		Generates a request for WriteDataByIdentifier
 
 		:param did: The data identifier to write
 		:type did: int
@@ -35,7 +35,7 @@ class WriteDataByIdentifier(BaseService):
 		from udsoncan import Request, DidCodec
 		ServiceHelper.validate_int(did, min=0, max=0xFFFF, name='Data Identifier')
 		req = Request(cls)
-		didconfig = ServiceHelper.check_did_config(did, didconfig=didconfig)	# Make sure all DID are correctly defined in client config
+		didconfig = ServiceHelper.check_did_config(did, didconfig=didconfig)	# Make sure all DIDs are correctly defined in client config
 		req.data = struct.pack('>H', did)	# encode DID number
 		codec = DidCodec.from_config(didconfig[did])
 		req.data += codec.encode(value)
@@ -50,7 +50,7 @@ class WriteDataByIdentifier(BaseService):
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
 		
-		:raises InvalidResponseException: If length of ``response.data`` is too small
+		:raises InvalidResponseException: If length of ``response.data`` is too short
 		"""			
 		if len(response.data) < 2:
 			raise InvalidResponseException(response, "Response must be at least 2 bytes long")
