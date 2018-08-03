@@ -9,7 +9,10 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
   name = 'udsoncan',
-  packages = ['udsoncan'],
+  packages = find_packages(),
+  package_data={
+    '': ['*.conf'],
+  },
   version = '1.0',
   description = 'Implementation of the Unified Diagnostic Service (UDS) protocol (ISO-14229) used in the automotive industry.',
   long_description=long_description,
