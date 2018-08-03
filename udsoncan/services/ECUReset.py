@@ -41,7 +41,7 @@ class ECUReset(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response ``service_data`` property with an instance of :class:`AccessTimingParameter.ResponseData<udsoncan.services.AccessTimingParameter.ResponseData>`
+		Populates the response ``service_data`` property with an instance of :class:`ECUReset.ResponseData<udsoncan.services.ECUReset.ResponseData>`
 
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
