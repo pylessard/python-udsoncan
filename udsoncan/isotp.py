@@ -104,7 +104,7 @@ class ISOTPMixin:
             size = ((data[0] & 0xF) << 8) + data[1]
             self.logger.info('Receiving multi frame message of %d bytes', size)
 
-            buffer.extend(data[2:size + 2])
+            buffer.extend(data[2:])
 
             sequence_number = 1
             block_count = 0
@@ -120,20 +120,17 @@ class ISOTPMixin:
                 if seq_no != sequence_number & 0xF:
                     raise ISOTPError('Invalid sequence number')
 
-                bytes_remaining = size - len(buffer)
-                received_data = data[1:min(bytes_remaining, 7) + 1]
-                buffer.extend(received_data)
+                buffer.extend(data[1:])
 
                 sequence_number += 1
                 block_count += 1
                 if block_count == self.block_size:
                     self._send_flow_control()
                     block_count = 0
-            
-            return bytes(buffer)
+
+            return bytes(buffer[:size])
 
     def _send_flow_control(self):
-        # send a flow control frame
         self.logger.info('Sending flow control frame')
 
         data = bytearray(3)
