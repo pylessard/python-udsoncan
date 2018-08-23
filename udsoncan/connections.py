@@ -1,13 +1,20 @@
 import socket
 import queue
 import threading
+import time
 import logging
 import binascii
 from abc import ABC, abstractmethod
 
+try:
+    import can
+except ImportError:
+    pass
+
 from udsoncan.Request import Request
 from udsoncan.Response import Response
 from udsoncan.exceptions import TimeoutException
+from udsoncan.isotp import ISOTPMixin
 
 class BaseConnection(ABC):
 
@@ -289,6 +296,74 @@ class IsoTPConnection(BaseConnection):
 	def empty_rxqueue(self):
 		while not self.rxqueue.empty():
 			self.rxqueue.get()
+
+
+class PythonCanConnection(BaseConnection, ISOTPMixin):
+
+	def __init__(self, rxid, txid, channel=None, interface=None,
+				 block_size=32, st_min=0, name=None, **kwargs):
+		BaseConnection.__init__(self, name)
+		ISOTPMixin.__init__(self, block_size, st_min)
+
+		self.rxid = rxid
+		self.txid = txid
+		self._extended = rxid > 0x7FF
+		self.bus = None
+
+		self.config = {
+			'channel': channel,
+			'bustype': interface,
+			'single_handle': True,
+			'can_filter': {
+				'can_id': rxid,
+				'can_mask': 0x1FFFFFFF if self._extended else 0x7FF,
+				'extended': self._extended
+			}
+		}
+		self.config.update(kwargs)
+
+	def open(self):
+		self.bus = can.interface.Bus(**self.config)
+		return self
+
+	def close(self):
+		self.bus.shutdown()
+		self.logger.info('Connection closed')
+		self.bus = None
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, type, value, traceback):
+		self.close()
+
+	def is_open(self):
+		return self.bus is not None
+
+	def empty_rxqueue(self):
+		while self.bus.recv(0) is not None:
+			pass
+
+	def specific_send(self, payload):
+		self.isotp_send(payload)
+
+	def specific_wait_frame(self, timeout=2):
+		return self.isotp_recv(timeout)
+
+	def send_raw(self, data):
+		msg = can.Message(arbitration_id=self.txid,
+			extended_id=self._extended,
+			data=data)
+		self.bus.send(msg)
+
+	def recv_raw(self, timeout):
+		end_time = time.time() + timeout
+		while time.time() < end_time:
+			msg = self.bus.recv(timeout)
+			if msg is not None and msg.arbitration_id == self.rxid:
+				return msg.data
+
+		raise TimeoutException("Did not received frame in time (timeout=%s sec)" % timeout)
 
 
 class QueueConnection(BaseConnection):
