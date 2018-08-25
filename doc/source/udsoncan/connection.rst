@@ -37,6 +37,11 @@ IsoTPConnection
 
 .. autoclass:: udsoncan.connections.IsoTPConnection
 
+PythonCanConnection
+################
+
+.. autoclass:: udsoncan.connections.PythonCanConnection
+
 QueueConnection
 ################
 

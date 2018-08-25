@@ -299,8 +299,32 @@ class IsoTPConnection(BaseConnection):
 
 
 class PythonCanConnection(BaseConnection, ISOTPMixin):
+	"""Sends and receives messages using `python-can <https://github.com/hardbyte/python-can>`_ package.
 
-	def __init__(self, rxid, txid, channel=None, interface=None,
+	Since only raw CAN frames are supported by most interfaces,
+	the ISO-TP protocol is implemented in Python, making it very dependent on
+	OS timing capabilities. Especially Windows has poor real time performance
+	so the protocol timing requirements are likely to be violated which may
+	lead to dropped messages. This connection is provided for prototyping and
+	testing, but is not recommended to use in a production environment!
+
+	Any additional keyword arguments will be passed to the constructor of the Bus.
+
+	:param rxid: The reception CAN id
+	:type rxid: int 
+	:param txid: The transmission CAN id
+	:type txid: int
+	:param channel: The can channel to use (interface dependent)
+	:param bustype: The backend to use, e.g. 'kvaser', 'vector', 'ixxat', 'pcan'.
+	:param block_size: Block size to use for reception. May be tuned depending on chosen backend.
+	:type block_size: int
+	:param st_min: Basically minimum time between consecutive received frames.
+	:type st_min: int
+	:param name: This name is included in the logger name so that its output can be redirected. The logger name will be ``Connection[<name>]``
+	:type name: string
+	"""
+
+	def __init__(self, rxid, txid, channel=None, bustype=None,
 				 block_size=32, st_min=0, name=None, **kwargs):
 		BaseConnection.__init__(self, name)
 		ISOTPMixin.__init__(self, block_size, st_min)
@@ -314,7 +338,7 @@ class PythonCanConnection(BaseConnection, ISOTPMixin):
 
 		self.config = {
 			'channel': channel,
-			'bustype': interface,
+			'bustype': bustype,
 			'single_handle': True,
 			'can_filter': {
 				'can_id': rxid,

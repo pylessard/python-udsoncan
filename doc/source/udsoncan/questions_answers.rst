@@ -54,7 +54,7 @@ I have a CAN transceiver, how do I use this project now?
 
    Under Linux, if your CAN box is supported by SocketCAN, you should have a new network interface after plugging in the device. Compile and install `this module <https://github.com/hartkopp/can-isotp>`_, then find out what CAN IDs are used for diagnostics and use the :class:`SocketConnection<udsoncan.connections.SocketConnection>` or :class:`IsoTPConnection<udsoncan.connections.IsoTPConnection>`
 
-   If you don't have the above privilege, you will need to write your own Connection class that handles everything from the transport protocol (IsoTP) to the hardware which means interacting with the drivers. 
+   If you don't have the above privilege, there is the :class:`~udsoncan.connections.PythonCanConnection` which uses `python-can <https://github.com/hardbyte/python-can>`_ together with a basic ISO-TP implementation to enable the usage of this library for many different interfaces and OS'es at the expense of poor timing capabilities and missing protocol features.
 
    Note that for windows users, Peak-System Technik Gmbh provides a DLL to handle the IsoTP protocol.
 

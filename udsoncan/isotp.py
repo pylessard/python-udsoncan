@@ -1,3 +1,11 @@
+"""Basic Python implementation of the ISO-TP (ISO-15765) protocol.
+
+This module is only meant to be a last resort when there is no lower level
+implementation available. It is not complete with respect to the standard and
+the protocol timing requirements is likely to be violated on an OS like Windows.
+
+Do not use in a production environment!
+"""
 import time
 import struct
 
@@ -15,16 +23,26 @@ OVERFLOW = 2
 
 
 class ISOTPError(Exception):
+    """An error occurred related to the protocol."""
     pass
 
 
 class ISOTPMixin:
+    """Basic ISO-TP implementation.
+
+    Should be used in a :class:`~udsoncan.connections.BaseConnection` subclass
+    which must implement a send_raw and recv_raw method.
+    """
 
     def __init__(self, block_size=0, st_min=0):
         self.block_size = block_size
         self.st_min = st_min
 
     def send_isotp(self, payload):
+        """Transmit a message.
+
+        :param bytes payload: Data to be transmitted.
+        """
         size = len(payload)
 
         if size < 8:
@@ -55,7 +73,7 @@ class ISOTPMixin:
             block_count = 0
             block_size, st_min = self._wait_for_flow_control()
 
-            while sent < size:
+            while True:
                 frame_payload = payload[sent:sent + 7]
                 data = bytearray()
                 data.append((CONSECUTIVE_FRAME << 4) + (sequence_number & 0xF))
@@ -63,11 +81,13 @@ class ISOTPMixin:
                 self.send_raw(data)
 
                 sent += len(frame_payload)
-                self.logger.debug('%d of %s bytes sent', sent, size)
+                self.logger.debug('%d of %d bytes sent', sent, size)
                 sequence_number += 1
                 block_count += 1
 
-                if block_size and block_count >= block_size:
+                if sent >= size:
+                    break
+                elif block_size and block_count >= block_size:
                     block_size, st_min = self._wait_for_flow_control()
                     block_count = 0
                 else:
@@ -96,6 +116,11 @@ class ISOTPMixin:
                 raise ISOTPError('Invalid flow status')
 
     def recv_isotp(self, timeout=2):
+        """Receive a message.
+
+        :param float timeout:
+            Timeout waiting for start of message.
+        """
         data = self.recv_raw(timeout)
 
         byte1, = struct.unpack_from('B', data)
