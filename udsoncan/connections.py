@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 try:
     import can
 except ImportError:
-    pass
+    can = None
 
 from udsoncan.Request import Request
 from udsoncan.Response import Response
@@ -305,6 +305,8 @@ class PythonCanConnection(BaseConnection, ISOTPMixin):
 		BaseConnection.__init__(self, name)
 		ISOTPMixin.__init__(self, block_size, st_min)
 
+		assert can is not None, 'python-can package must be installed'
+
 		self.rxid = rxid
 		self.txid = txid
 		self._extended = rxid > 0x7FF
@@ -345,25 +347,29 @@ class PythonCanConnection(BaseConnection, ISOTPMixin):
 			pass
 
 	def specific_send(self, payload):
-		self.isotp_send(payload)
+		self.send_isotp(payload)
 
 	def specific_wait_frame(self, timeout=2):
-		return self.isotp_recv(timeout)
+		return self.recv_isotp(timeout)
 
 	def send_raw(self, data):
-		msg = can.Message(arbitration_id=self.txid,
+		msg = can.Message(
+			arbitration_id=self.txid,
 			extended_id=self._extended,
 			data=data)
-		self.bus.send(msg)
+		self.bus.send(msg, timeout=1)
 
 	def recv_raw(self, timeout):
 		end_time = time.time() + timeout
 		while time.time() < end_time:
 			msg = self.bus.recv(timeout)
-			if msg is not None and msg.arbitration_id == self.rxid:
+			if (msg is not None and
+				msg.arbitration_id == self.rxid and
+				not msg.is_error_frame and
+				not msg.is_remote_frame):
 				return msg.data
 
-		raise TimeoutException("Did not received frame in time (timeout=%s sec)" % timeout)
+		raise TimeoutException("Did not receive frame in time (timeout=%s sec)" % timeout)
 
 
 class QueueConnection(BaseConnection):
