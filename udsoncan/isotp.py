@@ -124,7 +124,7 @@ class ISOTPMixin:
         data = self.recv_raw(timeout)
 
         byte1, = struct.unpack_from('B', data)
-        pci_type = data[0] >> 4
+        pci_type = byte1 >> 4
 
         if pci_type == SINGLE_FRAME:
             buffer = data[1:]
@@ -148,7 +148,7 @@ class ISOTPMixin:
 
             self._send_flow_control()
 
-            while len(buffer) < size:
+            while True:
                 data = self.recv_raw(1.0)
                 if data[0] >> 4 != CONSECUTIVE_FRAME:
                     raise ISOTPError('Reception interrupted by new transfer')
@@ -158,6 +158,10 @@ class ISOTPMixin:
                     raise ISOTPError('Wrong sequence number')
 
                 buffer.extend(data[1:])
+
+                if len(buffer) >= size:
+                    # Last data received
+                    break
 
                 sequence_number += 1
                 block_count += 1

@@ -314,11 +314,11 @@ class PythonCanConnection(BaseConnection, ISOTPMixin):
 	:type rxid: int 
 	:param txid: The transmission CAN id
 	:type txid: int
-	:param channel: The can channel to use (interface dependent)
+	:param channel: The CAN channel to use (interface dependent)
 	:param bustype: The backend to use, e.g. 'kvaser', 'vector', 'ixxat', 'pcan'.
 	:param block_size: Block size to use for reception. May be tuned depending on chosen backend.
 	:type block_size: int
-	:param st_min: Basically minimum time between consecutive received frames.
+	:param st_min: Separation time between consecutive received frames in ms.
 	:type st_min: int
 	:param name: This name is included in the logger name so that its output can be redirected. The logger name will be ``Connection[<name>]``
 	:type name: string
