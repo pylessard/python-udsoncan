@@ -34,7 +34,7 @@ class InputOutputControlByIdentifier(BaseService):
 		:param did: Data identifier to represent the IO
 		:type did: int
 
-		:param control_param: Optional parameter that can be a value defined in :class:`InputOutputControlByIdentifier.ControlParam<udsoncan.services.InputOutputControlByIdentifier.ControlParam>
+		:param control_param: Optional parameter that can be a value defined in :class:`InputOutputControlByIdentifier.ControlParam<udsoncan.services.InputOutputControlByIdentifier.ControlParam>`
 		:type control_param: int
 
 		:param values: Optional values to send to the server. This parameter will be given to :ref:`DidCodec<DidCodec>`.encode() method. 

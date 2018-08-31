@@ -57,7 +57,7 @@ class RequestUpload(BaseService):
 	@classmethod
 	def interpret_response(cls, response):
 		"""
-		Populates the response ``service_data`` property with an instance of :class:`ReadMemoryByAddress.ResponseData<udsoncan.services.ReadMemoryByAddress.ResponseData>`
+		Populates the response ``service_data`` property with an instance of :class:`RequestUpload.ResponseData<udsoncan.services.RequestUpload.ResponseData>`
 
 		:param response: The received response to interpret
 		:type response: :ref:`Response<Response>`
