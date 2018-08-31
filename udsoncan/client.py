@@ -6,13 +6,7 @@ import logging
 import math
 import binascii
 import traceback
-
-try:
-	from decorator import decorator
-except ImportError:
-# No decorator package available. Create a no-op "decorator".
-	def decorator(f):
-		return f
+import functools
 
 class Client:
 	"""
@@ -85,8 +79,8 @@ class Client:
 	# then suppresses them or not depending on the client configuration.
 	# if func1 and func2 are decorated and func2 calls func1, it should be done this way : self.func1._func_no_error_management(self, ...)
 	
-	@decorator 	# required for Sphinx to properly auto-document decorated functions.
 	def standard_error_management(func):
+		@functools.wraps(func)
 		def decorated(self, *args, **kwargs):
 			try:
 				return func(self, *args, **kwargs)
