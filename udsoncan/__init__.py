@@ -86,8 +86,7 @@ class Dtc:
 	"""
 	class Format:
 		"""
-		Provide a list of DTC formats and their indices. These values are used by the :ref:`The ReadDTCInformation<ReadDtcInformation>` 
-			when requesting a number of DTCs.		
+		Provide a list of DTC formats and their indices. These values are used by the :ref:`The ReadDTCInformation<ReadDtcInformation>` when requesting a number of DTCs.		
 		"""
 		ISO15031_6 = 0
 		ISO14229_1 = 1
@@ -317,11 +316,11 @@ class MemoryLocation:
 	:type address: int
 	
 	:param memorysize: The size of the memory block
-	:type memorysize: int or None
+	:type memorysize: int
 	
 	:param address_format: The number of bits on which an address should be encoded. Possible values are 8, 16, 24, 32, 40.
 		If ``None`` is specified, the smallest size required to store the given address will be used
-	:type address_format: int
+	:type address_format: int or None
 	
 	:param memorysize_format: The number of bits on which a memory size should be encoded. Possible values are 8, 16, 24, 32
 		If ``None`` is specified, the smallest size required to store the given memorysize will be used
@@ -877,7 +876,7 @@ class Baudrate:
 	Some standard baudrate values are defined within ISO-14229:2006 Annex B.3
 	
 	:param baudrate: The baudrate to be used. 
-	:type: int
+	:type baudrate: int
 	
 	:param baudtype: Tells how the baudrate shall be encoded. 4 values are possible:
 
