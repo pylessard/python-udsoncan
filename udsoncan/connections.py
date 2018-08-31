@@ -217,7 +217,7 @@ class IsoTPConnection(BaseConnection):
 
 	"""
 	def __init__(self, interface, rxid, txid, name=None, tpsock=None):
-		import isotp
+		
 		BaseConnection.__init__(self, name)
 
 		self.interface=interface
@@ -228,7 +228,11 @@ class IsoTPConnection(BaseConnection):
 		self.opened = False
 
 		self.rxthread = threading.Thread(target=self.rxthread_task)
-		self.tpsock = isotp.socket(timeout=0.1) if tpsock is None else tpsock
+		if tpsock is None:
+			import isotp
+			self.tpsock = isotp.socket(timeout=0.1)
+		else:
+			self.tpsock = tpsock
 
 
 	def open(self):
