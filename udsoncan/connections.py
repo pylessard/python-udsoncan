@@ -1,3 +1,4 @@
+import asyncio
 import socket
 import queue
 import threading
@@ -6,15 +7,9 @@ import logging
 import binascii
 from abc import ABC, abstractmethod
 
-try:
-    import can
-except ImportError:
-    can = None
-
 from udsoncan.Request import Request
 from udsoncan.Response import Response
 from udsoncan.exceptions import TimeoutException
-from udsoncan.isotp import ISOTPMixin
 
 class BaseConnection(ABC):
 
@@ -298,8 +293,14 @@ class IsoTPConnection(BaseConnection):
 			self.rxqueue.get()
 
 
-class PythonCanConnection(BaseConnection, ISOTPMixin):
-	"""Sends and receives messages using `python-can <https://github.com/hardbyte/python-can>`_ package.
+class PythonCanConnection(BaseConnection):
+	"""Sends and receives messages using
+	`aioisotp <https://pypi.org/project/aioisotp/>`_ which in turn uses
+	`python-can <https://github.com/hardbyte/python-can>`_.
+
+	Install aioisotp::
+	
+		$ pip install aioisotp
 
 	Since only raw CAN frames are supported by most interfaces,
 	the ISO-TP protocol is implemented in Python, making it very dependent on
@@ -315,47 +316,44 @@ class PythonCanConnection(BaseConnection, ISOTPMixin):
 	:param txid: The transmission CAN id
 	:type txid: int
 	:param channel: The CAN channel to use (interface dependent)
-	:param bustype: The backend to use, e.g. 'kvaser', 'vector', 'ixxat', 'pcan'.
+	:param interface: The backend to use, e.g. 'kvaser', 'vector', 'ixxat', 'pcan'.
+	:type interface: str
 	:param block_size: Block size to use for reception. May be tuned depending on chosen backend.
 	:type block_size: int
 	:param st_min: Separation time between consecutive received frames in ms.
 	:type st_min: int
 	:param name: This name is included in the logger name so that its output can be redirected. The logger name will be ``Connection[<name>]``
-	:type name: string
+	:type name: str
 	"""
 
-	def __init__(self, rxid, txid, channel=None, bustype=None,
+	def __init__(self, rxid, txid, channel=None, interface=None,
 				 block_size=32, st_min=0, name=None, **kwargs):
 		BaseConnection.__init__(self, name)
-		ISOTPMixin.__init__(self, block_size, st_min)
+		self._open = False
 
-		assert can is not None, 'python-can package must be installed'
+		import aioisotp
 
-		self.rxid = rxid
-		self.txid = txid
-		self._extended = rxid > 0x7FF
-		self.bus = None
-
-		self.config = {
-			'channel': channel,
-			'bustype': bustype,
-			'single_handle': True,
-			'can_filter': {
+		extended = rxid > 0x7FF
+		self.network = aioisotp.SyncISOTPNetwork(
+			block_size=block_size, st_min=st_min,
+			channel=channel, interface=interface,
+			can_filter={
 				'can_id': rxid,
-				'can_mask': 0x1FFFFFFF if self._extended else 0x7FF,
-				'extended': self._extended
-			}
-		}
-		self.config.update(kwargs)
+				'can_mask': 0x1FFFFFFF if extended else 0x7FF,
+				'extended': extended
+			},
+			**kwargs)
+		self._connection = self.network.create_sync_connection(rxid, txid)
 
 	def open(self):
-		self.bus = can.interface.Bus(**self.config)
+		self.network.open()
+		self._open = True
 		return self
 
 	def close(self):
-		self.bus.shutdown()
+		self._open = False
+		self.network.close()
 		self.logger.info('Connection closed')
-		self.bus = None
 
 	def __enter__(self):
 		return self
@@ -364,36 +362,23 @@ class PythonCanConnection(BaseConnection, ISOTPMixin):
 		self.close()
 
 	def is_open(self):
-		return self.bus is not None
+		return self._open
 
 	def empty_rxqueue(self):
-		while self.bus.recv(0) is not None:
-			pass
+		self._connection.empty()
 
 	def specific_send(self, payload):
-		self.send_isotp(payload)
+		self._connection.send(payload)
 
 	def specific_wait_frame(self, timeout=2):
-		return self.recv_isotp(timeout)
+		if not self.is_open():
+			raise RuntimeError("Connection is not open")
 
-	def send_raw(self, data):
-		msg = can.Message(
-			arbitration_id=self.txid,
-			extended_id=self._extended,
-			data=data)
-		self.bus.send(msg, timeout=1)
+		frame = self._connection.recv(timeout=timeout)
+		if frame is None:
+			raise TimeoutException("Did not receive frame from user queue in time (timeout=%s sec)" % timeout)
 
-	def recv_raw(self, timeout):
-		end_time = time.time() + timeout
-		while time.time() < end_time:
-			msg = self.bus.recv(timeout)
-			if (msg is not None and
-				msg.arbitration_id == self.rxid and
-				not msg.is_error_frame and
-				not msg.is_remote_frame):
-				return msg.data
-
-		raise TimeoutException("Did not receive frame in time (timeout=%s sec)" % timeout)
+		return frame
 
 
 class QueueConnection(BaseConnection):
