@@ -4,6 +4,13 @@ from test.stub import StubbedIsoTPSocket
 import socket
 import threading
 import time
+import unittest
+
+try:
+	import aioisotp
+except ImportError:
+	aioisotp = None
+
 
 class TestIsoTPConnection(UdsTest):
 
@@ -141,3 +148,27 @@ class TestQueueConnection(UdsTest):
 			frame = self.conn.wait_frame(timeout=0.05, exception=True)
 
 		self.assertTrue(self.conn.touserqueue.empty())
+
+
+class TestPythonCanConnection(UdsTest):
+
+	@unittest.skipIf(aioisotp is None, 'aioisotp must be installed')
+	def test_open(self):
+		conn = PythonCanConnection(channel='vcan0', interface='virtual', rxid=0x001, txid=0x002, name='unittest')
+		self.assertFalse(conn.is_open())
+		conn.open()
+		self.assertTrue(conn.is_open())
+		conn.close()
+		self.assertFalse(conn.is_open())
+
+	@unittest.skipIf(aioisotp is None, 'aioisotp must be installed')
+	def test_transmit(self):
+		conn1 = PythonCanConnection(channel='vcan0', interface='virtual', rxid=0x100, txid=0x101, name='unittest')
+		conn2 = PythonCanConnection(channel='vcan0', interface='virtual', rxid=0x101, txid=0x100, name='unittest')
+
+		with conn1.open():
+			with conn2.open():
+				payload1 = bytes(range(0x20))
+				conn1.send(payload1)
+				payload2 = conn2.wait_frame(timeout=1, exception=True)
+				self.assertEqual(payload1, payload2)
