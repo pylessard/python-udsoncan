@@ -146,6 +146,9 @@ class TestCommunicationType(UdsTest):
 		comtype = CommunicationType.from_byte(b'\x33')
 		self.assertEqual(comtype.get_byte(), b'\x33')
 
+		comtype = CommunicationType.from_byte(0x01)
+		self.assertEqual(comtype.get_byte(), b'\x01')
+
 	def test_oob_values(self):
 		with self.assertRaises(ValueError):
 			CommunicationType(subnet=0, normal_msg=False, network_management_msg=False)

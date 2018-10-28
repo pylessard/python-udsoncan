@@ -624,10 +624,10 @@ class Client:
 		:dependent configuration: ``exception_on_<type>_response``
 		
 		:param control_type: The action to request such as enabling or disabling some messages. See :class:`CommunicationControl.ControlType<udsoncan.services.CommunicationControl.ControlType>`. This value can also be ECU manufacturer-specific
-		:type control_type: bytes
+		:type control_type: int
 
-		:param communication_type: Indicates what section of the network and the type of message that should be affected by the command. Refer to :ref:`CommunicationType<CommunicationType>` for more details
-		:type communication_type: :ref:`CommunicationType<CommunicationType>`
+		:param communication_type: Indicates what section of the network and the type of message that should be affected by the command. Refer to :ref:`CommunicationType<CommunicationType>` for more details. If an `integer` or a `bytes` is given, the value will be decoded to create the required :ref:`CommunicationType<CommunicationType>` object
+		:type communication_type: :ref:`CommunicationType<CommunicationType>`, bytes, int
 
 		:return: The server response parsed by :meth:`CommunicationControl.interpret_response<udsoncan.services.CommunicationControl.interpret_response>`
 		:rtype: :ref:`Response<Response>`

@@ -9,9 +9,10 @@ class TestCommunicationControl(ClientServerTest):
 		ClientServerTest.__init__(self, *args, **kwargs)
 
 	def test_comcontrol_enable_node(self):
-		request = self.conn.touserqueue.get(timeout=0.2)
-		self.assertEqual(request, b"\x28\x00\x01")
-		self.conn.fromuserqueue.put(b"\x68\x00")	# Positive response
+		for i in range(3):
+				request = self.conn.touserqueue.get(timeout=0.2)
+				self.assertEqual(request, b"\x28\x00\x01")
+				self.conn.fromuserqueue.put(b"\x68\x00")	# Positive response
 
 	def _test_comcontrol_enable_node(self):
 		control_type = services.CommunicationControl.ControlType.enableRxAndTx
@@ -19,6 +20,16 @@ class TestCommunicationControl(ClientServerTest):
 		response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type)
 		self.assertTrue(response.positive)
 		self.assertEqual(response.service_data.control_type_echo, control_type)
+
+		response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type.get_byte())
+		self.assertTrue(response.positive)
+		self.assertEqual(response.service_data.control_type_echo, control_type)
+
+		response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type.get_byte_as_int())
+		self.assertTrue(response.positive)
+		self.assertEqual(response.service_data.control_type_echo, control_type)
+
+
 
 	def test_comcontrol_enable_node_spr(self):
 		request = self.conn.touserqueue.get(timeout=0.2)

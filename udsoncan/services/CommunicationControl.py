@@ -26,10 +26,10 @@ class CommunicationControl(BaseService):
 	def normalize_communication_type(self, communication_type):
 		from udsoncan import CommunicationType
 
-		if not isinstance(communication_type, CommunicationType) and not isinstance(communication_type, int):
+		if not isinstance(communication_type, CommunicationType) and not isinstance(communication_type, int) and not isinstance(communication_type, bytes):
 			raise ValueError('communication_type must either be a CommunicationType object or an integer')
 
-		if isinstance(communication_type, int):
+		if isinstance(communication_type, int) or isinstance(communication_type, bytes):
 			communication_type = CommunicationType.from_byte(communication_type)
 
 		return communication_type
@@ -43,7 +43,7 @@ class CommunicationControl(BaseService):
 		:type control_type: int
 
 		:param communication_type: The communication type requested.
-		:type communication_type: :ref:`CommunicationType <CommunicationType>`
+		:type communication_type: :ref:`CommunicationType <CommunicationType>`, int, bytes
 
 		:raises ValueError: If parameters are out of range, missing or wrong type
 		"""		

@@ -844,9 +844,9 @@ class CommunicationType:
 		return struct.pack('B', self.get_byte_as_int())
 
 	@classmethod
-	def from_byte(cls, byte):
-		if isinstance(byte, bytes):
-			val = struct.unpack('B', byte)[0]
+	def from_byte(cls, val):
+		if isinstance(val, bytes):
+			val = struct.unpack('B', val)[0]
 		val = int(val)
 		subnet = (val & 0xF0) >> 4
 		normal_msg = True if val & 1 > 0 else False
