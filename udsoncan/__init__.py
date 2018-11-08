@@ -12,12 +12,17 @@ from udsoncan.Response import Response
 import logging, logging.config
 from os import path
 log_file_path = path.join(path.dirname(path.abspath(__file__)), 'logging.conf')
-logging.config.fileConfig(log_file_path)
+#logging.config.fileConfig(log_file_path)
 
-try:
-	logging.config.fileConfig(log_file_path)
-except Exception as e:
-	logging.warning('Cannot load logging configuration. %s:%s' % (e.__class__.__name__, str(e)))
+def setup_logging():
+	"""
+	This function setup the logger accordingly to the module provided cfg file
+
+	"""
+	try:
+		logging.config.fileConfig(log_file_path)
+	except Exception as e:
+		logging.warning('Cannot load logging configuration. %s:%s' % (e.__class__.__name__, str(e)))
 
 #Define how to encode/decode a Data Identifier value to/from a binary payload
 class DidCodec:
