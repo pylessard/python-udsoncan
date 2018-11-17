@@ -1,4 +1,4 @@
-from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc, DidCodec
+from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc, DidCodec, AsciiCodec
 from test.UdsTest import UdsTest
 import struct
 
@@ -424,3 +424,14 @@ class TestCodec(UdsTest):
 
 		with self.assertRaises(ValueError):
 			DidCodec.from_config("")
+
+	def test_ascii_codec(self):
+		codec = AsciiCodec(10)
+		self.assertEqual(codec.encode("abcdefghij"), b'abcdefghij');
+		self.assertEqual(codec.decode(b"abcdefghij"), 'abcdefghij');
+
+		with self.assertRaises(ValueError):
+			codec.encode("abc")
+
+		with self.assertRaises(ValueError):
+			codec.encode("abcdefghijklmnop")

@@ -80,6 +80,25 @@ class DidCodec:
 				raise ValueError("pack/unpack string given for Codec config should not be empty.")
 			return cls(packstr = didconfig)
 
+class AsciiCodec(DidCodec):
+	def __init__(self, string_len):
+		self.string_len = string_len
+
+	def encode(self, string_ascii):
+		if len(string_ascii) != self.string_len:
+			raise ValueError('String must be %d long' % self.string_len)
+		return string_ascii.encode('ascii')
+
+	def decode(self, string_bin):
+		string_ascii = string_bin.decode('ascii')
+		if len(string_ascii) != self.string_len:
+			raise ValueError('Trying to decode a string of %d bytes but codec expects %d bytes' % (len(string_ascii), self.string_len))
+		return string_ascii
+
+	def __len__(self):
+		return self.string_len
+
+
 # Some standards, such as J1939, break down the 3-byte ID into 2-byte ID and 1-byte subtypes. 
 class Dtc:
 	"""

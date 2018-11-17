@@ -1,7 +1,7 @@
 from udsoncan.client import Client
 from udsoncan import services
 from udsoncan.exceptions import *
-from udsoncan import DidCodec
+from udsoncan import DidCodec, AsciiCodec
 import struct
 
 from test.ClientServerTest import ClientServerTest
@@ -25,7 +25,8 @@ class TestReadDataByIdentifier(ClientServerTest):
 		self.udsclient.config["data_identifiers"] = {
 			1 : '>H',
 			2 : '<H',
-			3 : StubbedDidCodec
+			3 : StubbedDidCodec,
+			4 : AsciiCodec(5)
 		}
 
 	def test_rdbi_single_success(self):
@@ -53,16 +54,18 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def test_rdbi_multiple_success(self):
 		request = self.conn.touserqueue.get(timeout=0.2)
-		self.assertEqual(request, b"\x22\x00\x01\x00\x02\x00\x03")
-		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11")	# Positive response
+		self.assertEqual(request, b"\x22\x00\x01\x00\x02\x00\x04\x00\x03")
+		self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x04\x61\x62\x63\x64\x65\x00\x03\x11")	# Positive response
 
 	def _test_rdbi_multiple_success(self):
-		response = self.udsclient.read_data_by_identifier(didlist = [1,2,3])
+		response = self.udsclient.read_data_by_identifier(didlist = [1,2,4,3])
 		self.assertTrue(response.positive)
 		values = response.service_data.values
 		self.assertEqual(values[1], (0x1234,))		
 		self.assertEqual(values[2], (0x7856,))		
 		self.assertEqual(values[3], 0x10)	
+		self.assertEqual(values[4], 'abcde')	
+
 
 	def test_rdbi_multiple_zero_padding1_success(self):
 		data = b'\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11'
@@ -207,4 +210,4 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def _test_no_config(self):
 		with self.assertRaises(ConfigError):
-			self.udsclient.read_data_by_identifier(didlist=[1,2,3,4]) 
+			self.udsclient.read_data_by_identifier(didlist=[1,2,3,99]) 
