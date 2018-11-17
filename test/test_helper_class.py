@@ -435,3 +435,6 @@ class TestCodec(UdsTest):
 
 		with self.assertRaises(ValueError):
 			codec.encode("abcdefghijklmnop")
+
+		with self.assertRaises(ValueError):
+			AsciiCodec()

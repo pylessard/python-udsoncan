@@ -81,7 +81,9 @@ class DidCodec:
 			return cls(packstr = didconfig)
 
 class AsciiCodec(DidCodec):
-	def __init__(self, string_len):
+	def __init__(self, string_len=None):
+		if string_len is None:
+			raise ValueError("You must provide a string length to the AsciiCodec")
 		self.string_len = string_len
 
 	def encode(self, string_ascii):
