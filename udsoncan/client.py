@@ -287,6 +287,8 @@ class Client:
 		
 		:dependent configuration: ``exception_on_<type>_response`` ``data_identifiers`` ``tolerate_zero_padding``
 
+		See :ref:`an example<reading_a_did>` about how to read a DID
+
 		:param didlist: The list of DID to be read
 		:type didlist: list[int]
 

@@ -109,6 +109,49 @@ Security algorithm implementation
 
 -----
 
+
+
+.. _reading_a_did:
+
+Reading a DID with ReadDataByIdentifier
+---------------------------------------
+
+This example shows how to configure the client with a DID configuration and request the server with ReadDataByIdentifier
+
+.. code-block:: python
+
+   import udsoncan
+   from udsoncan.Connection import IsoTPConnection
+   from udsoncan.client import Client
+   import udsoncan.configs
+
+   class MyCustomCodecThatShiftBy4(udsoncan.DidCodec):
+      def encode(self, val):
+         val = (val << 4) & 0xFFFFFFFF # Do some stuff
+         return struct.pack('<L', val) # Little endian, 32 bit value
+
+      def decode(self, payload):
+         val = struct.unpack('<L', payload)[0]  # decode the 32 bits value
+         return val >> 4                        # Do some stuff (reversed)
+
+      def __len__(self):
+         return 4    # encoded paylaod is 4 byte long.
+
+
+   config = dict(udsoncan.configs.default_client_config)
+   config['data_identifiers'] = {
+      0x1234 : MyCustomCodecThatShiftBy4,    # Uses own custom defined codec. Giving the class is ok
+      0x1235 : MyCustomCodecThatShiftBy4(),  # Same as 0x1234, giving an instance is good also
+      0xF190 : udsoncan.AsciiCodec(15)       # Codec that read ASCII string. We must tell the length of the string
+      }
+
+   conn = IsoTPConnection('vcan0', rxid=0x123, txid=0x456)
+   with Client(conn,  request_timeout=2, config=config) as client:
+      vin = client.read_data_by_identifier(0xF190)     
+      print(vin)  # 'ABCDE0123456789' (15 chars)
+
+
+
 .. _iocontrol_composite_did:
 
 InputOutputControlByIdentifier Composite DID
