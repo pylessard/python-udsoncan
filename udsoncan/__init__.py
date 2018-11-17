@@ -76,6 +76,8 @@ class DidCodec:
 
 		# The codec can be defined by a struct pack/unpack string
 		if isinstance(didconfig, str):
+			if len(didconfig) == 0:
+				raise ValueError("pack/unpack string given for Codec config should not be empty.")
 			return cls(packstr = didconfig)
 
 # Some standards, such as J1939, break down the 3-byte ID into 2-byte ID and 1-byte subtypes. 

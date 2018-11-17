@@ -82,8 +82,11 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def test_rdbi_multiple_zero_padding_not_tolerated_exception(self):
 		data = b'\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11'
-		for i in range(8):
-			self.wait_request_and_respond(data + b"\x00"*(i+1))		
+
+		self.wait_request_and_respond(data + b"\x00")	# One extra byte is incomplete DID = invalid response
+
+		for i in range(1,7):
+			self.wait_request_and_respond(data + b"\x00"*(i+2))	# 2 extra bytes = valid DID. Make sure to have data in payload as library do not allow empty pack string	
 
 	def _test_rdbi_multiple_zero_padding_not_tolerated_exception(self):
 		self.udsclient.config['tolerate_zero_padding'] = False
@@ -91,7 +94,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 			with self.assertRaises(InvalidResponseException):
 				self.udsclient.read_data_by_identifier(didlist = [1,2,3])
 
-		for i in range(7):
+		for i in range(1,7):
 			with self.assertRaises(UnexpectedResponseException):	# Not requested DID 0x0000
 				self.udsclient.config['data_identifiers'][0] = 'B'*i
 				self.udsclient.read_data_by_identifier(didlist = [1,2,3])
@@ -99,21 +102,23 @@ class TestReadDataByIdentifier(ClientServerTest):
 
 	def test_rdbi_multiple_zero_padding_not_tolerated_no_exception(self):
 		data = b'\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11'
-		for i in range(8):
-			self.wait_request_and_respond(data + b"\x00"*(i+1))		
+		self.wait_request_and_respond(data + b"\x00")	# One extra byte is incomplete DID = invalid response
+
+		for i in range(1,7):
+			self.wait_request_and_respond(data + b"\x00"*(i+2))	# 2 extra bytes = valid DID. Make sure to have data in payload as library do not allow empty pack string		
 
 	def _test_rdbi_multiple_zero_padding_not_tolerated_no_exception(self):
 		self.udsclient.config['tolerate_zero_padding'] = False
 
 		self.udsclient.config['exception_on_invalid_response'] = False
 		self.udsclient.config['exception_on_unexpected_response'] = True
-		for i in range(1):
-			response = self.udsclient.read_data_by_identifier(didlist = [1,2,3])
-			self.assertFalse(response.valid)
+
+		response = self.udsclient.read_data_by_identifier(didlist = [1,2,3])
+		self.assertFalse(response.valid)
 
 		self.udsclient.config['exception_on_invalid_response'] = True
 		self.udsclient.config['exception_on_unexpected_response'] = False
-		for i in range(7):
+		for i in range(1,7):
 			self.udsclient.config['data_identifiers'][0] = 'B'*i
 			response = self.udsclient.read_data_by_identifier(didlist = [1,2,3])
 			self.assertTrue(response.valid)

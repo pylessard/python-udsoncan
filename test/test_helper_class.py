@@ -1,4 +1,4 @@
-from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc
+from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc, DidCodec
 from test.UdsTest import UdsTest
 import struct
 
@@ -412,3 +412,15 @@ class TestDtc(UdsTest):
 		self.assertEqual(dtc.severity.check_at_next_exit, True)
 		self.assertEqual(dtc.severity.check_immediately, True)
 		
+class TestCodec(UdsTest):
+	def test_DIDCodec_bad_values(self):
+		with self.assertRaises(NotImplementedError):
+			codec = DidCodec();
+			codec.encode("asd")
+
+		with self.assertRaises(NotImplementedError):
+			codec = DidCodec();
+			codec.decode(b"asd")
+
+		with self.assertRaises(ValueError):
+			DidCodec.from_config("")
