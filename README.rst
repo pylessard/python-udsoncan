@@ -40,7 +40,7 @@ Example
       try:
          client.change_session(DiagnosticSessionControl.Session.extendedDiagnosticSession)  # integer with value of 3
          client.unlock_security_access(MyCar.debug_level)   # Fictive security level. Integer coming from fictive lib, let's say its value is 5
-         vin = client.write_data_by_identifier(udsoncan.DataIdentifier.VIN, 'ABC123456789')       # Standard ID for VIN is 0xF190. Codec is set in the client configuration
+         client.write_data_by_identifier(udsoncan.DataIdentifier.VIN, 'ABC123456789')       # Standard ID for VIN is 0xF190. Codec is set in the client configuration
          print('Vehicle Identification Number successfully changed.')
          client.ecu_reset(ECUReset.ResetType.hardReset)  # HardReset = 0x01
       except NegativeResponseException as e:
