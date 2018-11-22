@@ -377,7 +377,7 @@ class MemoryLocation:
 					self.address_format = address_format
 
 			if memorysize_format is not None:
-				if address_format is None:
+				if self.memorysize_format is None:
 					self.memorysize_format=memorysize_format
 
 			address_format = self.address_format if self.address_format is not None else self.autosize_address(self.address) 
