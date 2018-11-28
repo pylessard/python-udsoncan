@@ -97,6 +97,12 @@ class TestMemoryLocation(UdsTest):
 		self.assertEqual(memloc.get_address_bytes(), b'\x00\x00\x12\x34')
 		self.assertEqual(memloc.get_memorysize_bytes(), b'\x00\x00\x78')
 
+		memloc = MemoryLocation(address=0x1234, memorysize=0x78)
+		memloc.set_format_if_none(address_format=32, memorysize_format=24)	# Both at same time.
+		self.assertEqual(memloc.get_address_bytes(), b'\x00\x00\x12\x34')
+		self.assertEqual(memloc.get_memorysize_bytes(), b'\x00\x00\x78')
+
+
 	def test_memloc_from_bytes(self):
 		memloc = MemoryLocation.from_bytes(address_bytes=b'\x12\x34', memorysize_bytes=b'\xFF')
 		self.assertEqual(memloc.address, 0x1234)
