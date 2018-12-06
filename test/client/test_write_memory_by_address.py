@@ -49,9 +49,15 @@ class TestWriteMemoryByAddress(ClientServerTest):
 		self.assertEqual(response.service_data.memory_location_echo.address, 0x1234)
 		self.assertEqual(response.service_data.memory_location_echo.memorysize, 4)
 
+	def test_4byte_block_client_extra_bytes(self):
+		self.wait_request_and_respond(b'\x7D\x12\x12\x34\x04\x01\x02\x03\x04')
+
+	def _test_4byte_block_client_extra_bytes(self):
+		memloc = MemoryLocation(address=0x1234, memorysize=4, address_format=16, memorysize_format=8)
+		self.udsclient.write_memory_by_address(memloc, b'\x66\x77\x88\x99\xAA\xBB')
+
 	def test_4byte_block_harmless_extra_bytes(self):
 		self.wait_request_and_respond(b'\x7D\x12\x12\x34\x04\x01\x02\x03\x04\x05')
-
 
 	def _test_4byte_block_harmless_extra_bytes(self):
 		memloc = MemoryLocation(address=0x1234, memorysize=4, address_format=16, memorysize_format=8)

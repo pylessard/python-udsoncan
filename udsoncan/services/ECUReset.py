@@ -57,7 +57,7 @@ class ECUReset(BaseService):
 
 		if response.service_data.reset_type_echo == cls.ResetType.enableRapidPowerShutDown:
 			if len(response.data) < 2:
-				raise InvalidResponseException(response, 'Response data is missing a second byte for rest type "enableRapidPowerShutDown"')
+				raise InvalidResponseException(response, 'Response data is missing a second byte for reset type "enableRapidPowerShutDown"')
 
 			response.service_data.powerdown_time = response.data[1]
 

@@ -274,6 +274,7 @@ class Response:
 			response.code_name = Response.Code.get_name(response.code)
 
 		response.valid = True
+		response.invalid_reason = ""
 		if len(payload) > data_start:
 			response.data = payload[data_start:]
 		return response

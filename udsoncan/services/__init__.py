@@ -25,7 +25,7 @@ class BaseSubfunction:
 				if subfn_id >= subfn[1][0] or subfn_id <= subfn[1][1]:
 					return subfn[0] 
 		name = cls.__name__ if not hasattr(cls, '__pretty_name__') else cls.__pretty_name__
-		return 'custom %s' % name
+		return 'Custom %s' % name
 
 class BaseService(ABC):
 
@@ -114,7 +114,7 @@ class ServiceHelper:
 		if not isinstance(value, int):
 			raise ValueError("%s must be a valid integer" % (name))
 		if value < min or value > max:
-			raise ValueError("%s   must be an integer between 0x%X and 0x%X" % (name, min, max))
+			raise ValueError("%s must be an integer between 0x%X and 0x%X" % (name, min, max))
 
 	# Make sure that the actual client configuration contains valid definitions for given Data Identifiers
 	@staticmethod

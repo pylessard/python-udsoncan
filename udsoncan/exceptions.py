@@ -24,12 +24,13 @@ class NegativeResponseException(Exception):
 		self.response = response
 		msg = self.make_msg(response)
 		if len(args) > 0 :
-			msg += "\n"+args[0]
+			msg += " "+str(args[0])
+			args = tuple(list(args)[1:])
 		super().__init__(msg, *args, **kwargs)
 
 	def make_msg(self, response):
-		
-		return "%s service execution returned a negative response %s (0x%x)" % (response.service.get_name(), response.code_name, response.code)
+		servicename = response.service.get_name()+" " if response.service is not None else ""
+		return "%sservice execution returned a negative response %s (0x%x)" % (servicename, response.code_name, response.code)
 
 class InvalidResponseException(Exception):
 	"""
@@ -44,12 +45,14 @@ class InvalidResponseException(Exception):
 		self.response = response
 		msg = self.make_msg(response)
 		if len(args) > 0 :
-			msg += "\n"+args[0]
+			msg += " "+str(args[0])
+			args = tuple(list(args)[1:])
 		super().__init__(msg, *args, **kwargs)
 
 	def make_msg(self, response):
-		servicename = response.service.get_name() if response.service is not None else ""
-		return "%s service execution returned an invalid response. Reason : %s" % (servicename, response.invalid_reason)
+		servicename = response.service.get_name()+" " if response.service is not None else ""
+		reason = "" if response.valid else " Reason : %s" % (response.invalid_reason)
+		return "%sservice execution returned an invalid response.%s" % (servicename,reason)
 
 class UnexpectedResponseException(Exception):
 	"""
@@ -66,12 +69,13 @@ class UnexpectedResponseException(Exception):
 		self.response = response
 		msg = self.make_msg(response, details)
 		if len(args) > 0 :
-			msg += "\n"+args[0]
+			msg += " "+str(args[0])
+			args = tuple(list(args)[1:])
 		super().__init__(msg, *args, **kwargs)
 
 	def make_msg(self, response, details):
-		servicename = response.service.get_name() if response.service is not None else ""
-		return "service execution returned a valid response for service %s, but unexpected. Details : %s " % (servicename, details)
+		servicename = response.service.get_name()+" " if response.service is not None else ""
+		return "%sservice execution returned a valid response but unexpected. Details : %s " % (servicename, details)
 
 class ConfigError(Exception):
 	"""
