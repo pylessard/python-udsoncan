@@ -30,6 +30,30 @@ class TestIsoTPConnection(UdsTest):
 				payload2 = conn2.wait_frame(timeout=0.3)
 				self.assertEqual(payload1, payload2)
 
+
+class TestIcsNeoVIConnection(UdsTest):
+
+	def setUp(self):
+		self.tpsock1 = StubbedIsoTPSocket(timeout=0.1)
+		self.tpsock2 = StubbedIsoTPSocket(timeout=0.1)
+
+	def test_open(self):
+		conn = IcsNeoVIConnection(serial='vcan0', rxid=0x7E9, txid=0x7E1, name='unittest')
+		self.assertFalse(conn.is_open())
+		conn.open()
+		self.assertTrue(conn.is_open())
+		conn.close()
+		self.assertFalse(conn.is_open())
+
+	def test_transmit(self):
+		conn = IcsNeoVIConnection(serial='vcan0', rxid=0x7E9, txid=0x7E1, name='unittest')
+		
+		with conn.open():
+			payload1 = b"\x3e\x00"
+			conn.send(payload1)
+			payload2 = conn.wait_frame(timeout=0.3)
+			self.assertEqual(payload2, b"\x02\x7E\x00\x00\x00\x00\x00\x00")
+
 class TestSocketConnection(UdsTest):
 	def server_sock_thread_task(self):
 		self.thread_started=True

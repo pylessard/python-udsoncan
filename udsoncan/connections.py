@@ -1,3 +1,4 @@
+import ics
 import socket
 import queue
 import threading
@@ -197,7 +198,7 @@ class SocketConnection(BaseConnection):
 	def empty_rxqueue(self):
 		while not self.rxqueue.empty():
 			self.rxqueue.get()
-
+            
 
 class IsoTPConnection(BaseConnection):
 	"""
@@ -272,6 +273,144 @@ class IsoTPConnection(BaseConnection):
 
 	def specific_send(self, payload):
 		self.tpsock.send(payload)
+
+	def specific_wait_frame(self, timeout=2):
+		if not self.opened:
+			raise RuntimeError("Connection is not open")
+
+		timedout = False
+		frame = None
+		try:
+			frame = self.rxqueue.get(block=True, timeout=timeout)
+
+		except queue.Empty:
+			timedout = True
+			
+		if timedout:
+			raise TimeoutException("Did not received ISOTP frame in time (timeout=%s sec)" % timeout)
+
+		return frame
+
+	def empty_rxqueue(self):
+		while not self.rxqueue.empty():
+			self.rxqueue.get()
+
+
+class IcsNeoVIConnection(BaseConnection):
+	"""
+	Sends and receives data through an Intrepid control systems interface.
+	The `python-ics module <https://github.com/intrepidcs/python-ics>`_ must be installed in order to use this connection
+
+	:param serial: The can interface serial number to connect to (example: `171423`)
+	:type serial: string
+	:param rxid: The reception CAN id
+	:type rxid: int 
+	:param txid: The transmission CAN id
+	:type txid: int
+	:param name: This name is included in the logger name so that its output can be redirected. The logger name will be ``Connection[<name>]``
+	:type name: string
+	:param is_fd: True if this connection will be using CANFD (high data rate)
+	:type is_fd: bool
+
+	"""
+	def __init__(self, serial, rxid, txid, name=None, is_canfd=False):		
+		BaseConnection.__init__(self, name)
+
+		self.serial=serial
+		self.rxid=rxid
+		self.txid=txid
+		self.is_canfd = is_canfd
+		self.rxqueue = queue.Queue()
+		self.exit_requested = False
+		self.opened = False
+		self.device = None
+
+		self.rxthread = threading.Thread(target=self.rxthread_task)
+
+
+	def open(self):
+		device_list = ics.find_devices()
+		self.device = next( (dev for dev in device_list if dev.SerialNumber == self.serial), device_list[0])
+
+		ics.open_device(self.device)
+		ics.iso15765_enable_networks(self.device, ics.NETID_HSCAN)
+		self.exit_requested = False
+		self.rxthread.start()
+		self.opened = True
+		self.logger.info('Connection opened')
+		return self
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, type, value, traceback):
+		self.close()
+
+	def is_open(self):
+		return self.opened
+
+	def rxthread_task(self):
+		# First, configure rx flow control
+		msg = ics.CmISO157652RxMessage()
+		msg.vs_netid = ics.NETID_HSCAN
+		msg.id = self.rxid
+		msg.id_mask = 0xFFF
+		msg.padding = 0xAA
+		msg.fc_id = self.txid
+		msg.stMin = 100
+		msg.cf_timeout = 1000
+		msg.blockSize = 100
+		msg.flags = 0
+		# enableFlowControlTransmission = 1
+		msg.flags |= (1 << 4)
+		# paddingEnable
+		msg.flags |= (1 << 5)
+		# CANFD: Enable + BRS
+		if self.is_canfd:
+			msg.flags |= (1 << 6) | (1 << 7)
+		# This is not a real RX, it just sets up the ISO stack
+		ret = ics.iso15765_receive_message(self.device, msg.vs_netid, msg)
+		while not self.exit_requested:
+			try:
+				msgs, errors = ics.get_messages(self.device)
+				filtered_msgs = [msg for msg in msgs if msg.ArbIDOrHeader == self.rxid]
+				self.logger.debug("Got {} messages, {} matched filter of {}".format(len(msgs), len(filtered_msgs), self.rxid))
+				for msg in filtered_msgs:
+					data_as_bytes = bytes(msg.Data)
+					self.rxqueue.put(data_as_bytes)
+			except Exception as e:
+				self.logger.exception("Error while processing rx data")
+				self.exit_requested = True
+		ics.iso15765_disable_networks(self.device)
+
+
+	def close(self):
+		self.exit_requested = True
+		ics.close_device(self.device)
+		self.opened = False
+		self.logger.info('Connection closed')
+
+	def specific_send(self, payload):
+		msg = ics.CmISO157652TxMessage()
+		msg.vs_netid = ics.NETID_HSCAN
+		msg.id = self.txid
+		# This is a hack. We should also paramaterize these timeouts and paddings
+		msg.fc_id = self.rxid
+		msg.fs_timeout = 100
+		msg.fs_wait = 2000
+		msg.flags = 0
+		# paddingEnable
+		msg.flags |= (1 << 5)
+		# CANFD: Enable + BRS
+		if self.is_canfd:
+			msg.flags |= (1 << 6) | (1 << 7)
+		# tx_dl
+		msg.flags |= (8 << 23)
+
+		msg.data = list(payload)
+		msg.num_bytes = len(payload)
+		msg.padding = 0xAA
+		ics.iso15765_transmit_message(self.device, msg.vs_netid, msg, 1000)
 
 	def specific_wait_frame(self, timeout=2):
 		if not self.opened:
