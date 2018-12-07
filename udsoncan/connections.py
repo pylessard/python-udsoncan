@@ -355,7 +355,7 @@ class IcsNeoVIConnection(BaseConnection):
 		msg.vs_netid = ics.NETID_HSCAN
 		msg.id = self.rxid
 		msg.id_mask = 0xFFF
-		msg.padding = 0xAA
+		msg.padding = 0x00
 		msg.fc_id = self.txid
 		msg.stMin = 100
 		msg.cf_timeout = 1000
@@ -370,14 +370,41 @@ class IcsNeoVIConnection(BaseConnection):
 			msg.flags |= (1 << 6) | (1 << 7)
 		# This is not a real RX, it just sets up the ISO stack
 		ret = ics.iso15765_receive_message(self.device, msg.vs_netid, msg)
+		deframing_state = 'idle'
+		deframing_bytes_to_go = 0
+		reconstructed_message = []
 		while not self.exit_requested:
 			try:
 				msgs, errors = ics.get_messages(self.device)
 				filtered_msgs = [msg for msg in msgs if msg.ArbIDOrHeader == self.rxid]
 				self.logger.debug("Got {} messages, {} matched filter of {}".format(len(msgs), len(filtered_msgs), self.rxid))
 				for msg in filtered_msgs:
-					data_as_bytes = bytes(msg.Data)
-					self.rxqueue.put(data_as_bytes)
+					if deframing_state == 'idle':
+						if msg.Data[0] & 0xF0 == 0x10:
+							deframing_state = 'ff_rcvd'
+							data_as_bytes = bytearray(msg.Data)
+							deframing_bytes_to_go = data_as_bytes[1]
+							payload_data = data_as_bytes[2:]
+							reconstructed_message = payload_data
+							deframing_bytes_to_go -= len(payload_data)
+						else:
+							data_as_bytes = bytearray(msg.Data)
+							msg_len = data_as_bytes[0]
+							payload_data = data_as_bytes[1:msg_len+1]
+							self.rxqueue.put(payload_data)
+
+
+					if deframing_state == 'ff_rcvd':
+						if msg.Data[0] & 0xF0 == 0x20:
+							data_as_bytes = bytearray(msg.Data)
+							sequence_number = data_as_bytes[0] & 0x0F
+							payload_data = data_as_bytes[1:min(deframing_bytes_to_go, 7)+1]
+							reconstructed_message.extend(payload_data)
+							deframing_bytes_to_go -= len(payload_data)
+							if deframing_bytes_to_go <= 0:
+								self.rxqueue.put(reconstructed_message)
+								deframing_state = 'idle'
+
 			except Exception as e:
 				self.logger.exception("Error while processing rx data")
 				self.exit_requested = True
