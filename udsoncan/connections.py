@@ -1,10 +1,18 @@
-import ics
 import socket
 import queue
 import threading
 import logging
 import binascii
 from abc import ABC, abstractmethod
+
+try:
+	import ics
+except ImportError as ie:
+	logging.getLogger(__name__).warning(
+		"You won't be able to use the ICS NeoVi can backend without the "
+		"python-ics module installed!: %s", ie
+	)
+	ics = None
 
 from udsoncan.Request import Request
 from udsoncan.Response import Response
@@ -198,7 +206,7 @@ class SocketConnection(BaseConnection):
 	def empty_rxqueue(self):
 		while not self.rxqueue.empty():
 			self.rxqueue.get()
-            
+
 
 class IsoTPConnection(BaseConnection):
 	"""
@@ -315,6 +323,9 @@ class IcsNeoVIConnection(BaseConnection):
 	"""
 	def __init__(self, serial, rxid, txid, name=None,
 				 padding=0x00, st_min=100, block_size=100, is_canfd=False):
+		if ics is None:
+			raise ImportError('Please install python-ics')
+
 		BaseConnection.__init__(self, name)
 
 		self.serial=serial
