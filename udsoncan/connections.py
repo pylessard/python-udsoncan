@@ -313,12 +313,16 @@ class IcsNeoVIConnection(BaseConnection):
 	:type is_fd: bool
 
 	"""
-	def __init__(self, serial, rxid, txid, name=None, is_canfd=False):		
+	def __init__(self, serial, rxid, txid, name=None,
+				 padding=0x00, st_min=100, block_size=100, is_canfd=False):
 		BaseConnection.__init__(self, name)
 
 		self.serial=serial
 		self.rxid=rxid
 		self.txid=txid
+		self.padding = padding
+		self.st_min = st_min
+		self.block_size = block_size
 		self.is_canfd = is_canfd
 		self.rxqueue = queue.Queue()
 		self.exit_requested = False
@@ -355,11 +359,11 @@ class IcsNeoVIConnection(BaseConnection):
 		msg.vs_netid = ics.NETID_HSCAN
 		msg.id = self.rxid
 		msg.id_mask = 0xFFF
-		msg.padding = 0x00
+		msg.padding = self.padding
 		msg.fc_id = self.txid
-		msg.stMin = 100
+		msg.stMin = self.st_min
 		msg.cf_timeout = 1000
-		msg.blockSize = 100
+		msg.blockSize = self.block_size
 		msg.flags = 0
 		# enableFlowControlTransmission = 1
 		msg.flags |= (1 << 4)
@@ -405,8 +409,8 @@ class IcsNeoVIConnection(BaseConnection):
 								self.rxqueue.put(reconstructed_message)
 								deframing_state = 'idle'
 
-			except Exception as e:
-				self.logger.exception("Error while processing rx data")
+			except ics.RuntimeError as e:
+				self.logger.debug("ics.RuntimeError while processing rx data")
 				self.exit_requested = True
 		ics.iso15765_disable_networks(self.device)
 
@@ -436,7 +440,7 @@ class IcsNeoVIConnection(BaseConnection):
 
 		msg.data = list(payload)
 		msg.num_bytes = len(payload)
-		msg.padding = 0xAA
+		msg.padding = self.padding
 		ics.iso15765_transmit_message(self.device, msg.vs_netid, msg, 1000)
 
 	def specific_wait_frame(self, timeout=2):
