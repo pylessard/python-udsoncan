@@ -1435,9 +1435,9 @@ class Client:
 				if timeout is not None:
 					timeout =timeout - rx_time
 					if timeout < 0:
-						raise TimeoutException('Did not receive a response in in time (timeout=%.3f sec)' % original_timeout)
+						raise TimeoutException('Did not receive response in time (timeout=%.3f sec)' % original_timeout)
 			except TimeoutException as e:
-				raise TimeoutException('Did not receive a response in in time (timeout=%.3f sec)' % original_timeout)
+				raise TimeoutException('Did not receive response in time (timeout=%.3f sec)' % original_timeout)
 			except Exception as e:
 				raise e
 
