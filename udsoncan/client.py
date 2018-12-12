@@ -7,6 +7,7 @@ import math
 import binascii
 import traceback
 import functools
+import time
 
 class Client:
 	"""
@@ -1404,6 +1405,7 @@ class Client:
 	def send_request(self, request, timeout=-1):
 		if timeout is not None and timeout < 0:
 			timeout = self.request_timeout
+		original_timeout = timeout
 		self.conn.empty_rxqueue()
 		self.logger.debug("Sending request to server")
 		override_suppress_positive_response = False
@@ -1421,27 +1423,44 @@ class Client:
 		if request.suppress_positive_response  or override_suppress_positive_response:
 			return
 		
-		self.logger.debug("Waiting for server response")
-		try:
-			payload = self.conn.wait_frame(timeout=timeout, exception=True)
-		except Exception as e:
-			raise e
+		done_receiving = False
+		wait_start_time = time.time()
+		while not done_receiving:
+			done_receiving = True
+			self.logger.debug("Waiting for server response")
+			try:
+				rx_time = time.time()
+				payload = self.conn.wait_frame(timeout=timeout, exception=True)
+				rx_time = time.time()-rx_time
+				if timeout is not None:
+					timeout =timeout - rx_time
+					if timeout < 0:
+						raise TimeoutException('Did not receive a response in in time (timeout=%.3f sec)' % original_timeout)
+			except TimeoutException as e:
+				raise TimeoutException('Did not receive a response in in time (timeout=%.3f sec)' % original_timeout)
+			except Exception as e:
+				raise e
 
-		response = Response.from_payload(payload)
-		self.last_response = response
-		self.logger.debug("Received response from server")
+			response = Response.from_payload(payload)
+			self.last_response = response
+			self.logger.debug("Received response from server")
 
-		if not response.valid:
-			raise InvalidResponseException(response)
-				
-		if response.service.response_id() != request.service.response_id():
-			msg = "Response gotten from server has a service ID different than the request service ID. Received=0x%02x, Expected=0x%02x" % (response.service.response_id() , request.service.response_id() )
-			raise UnexpectedResponseException(response, msg)
-		
-		if not response.positive:
-			if not request.service.is_supported_negative_response(response.code):
-				self.logger.warning('Given response code "%s" (0x%02x) is not a supported negative response code according to UDS standard.' % (response.code_name, response.code))
-			raise NegativeResponseException(response)
+			if not response.valid:
+				raise InvalidResponseException(response)
+
+			if response.service.response_id() != request.service.response_id():
+				msg = "Response gotten from server has a service ID different than the request service ID. Received=0x%02x, Expected=0x%02x" % (response.service.response_id() , request.service.response_id() )
+				raise UnexpectedResponseException(response, msg)
+
+			if not response.positive:
+				if not request.service.is_supported_negative_response(response.code):
+					self.logger.warning('Given response code "%s" (0x%02x) is not a supported negative response code according to UDS standard.' % (response.code_name, response.code))
+
+				if response.code == Response.Code.RequestCorrectlyReceived_ResponsePending:
+					done_receiving = False
+					self.logger.debug("Server requested to wait with response code %s (0x%02x)" % (response.code_name, response.code))
+				else:
+					raise NegativeResponseException(response)
 
 		self.logger.info('Received positive response for service %s (0x%02x) from server.' % (response.service.get_name(), response.service.request_id()))
 		return response
