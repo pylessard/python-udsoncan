@@ -42,6 +42,7 @@ class Client:
 		self.request_timeout = request_timeout
 		self.config = dict(config) # Makes a copy of given configuration
 		self.suppress_positive_response = Client.SuppressPositiveResponse()
+		self.last_response = None
 
 		self.refresh_config()
 
@@ -1424,7 +1425,6 @@ class Client:
 			return
 		
 		done_receiving = False
-		wait_start_time = time.time()
 		while not done_receiving:
 			done_receiving = True
 			self.logger.debug("Waiting for server response")

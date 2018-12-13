@@ -24,7 +24,7 @@ class TestClient(ClientServerTest):
 			self.assertGreater(diff, timeout, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
 			self.assertLess(diff, timeout+0.5, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
 
-	def test_timeout_pending_response(self):
+	def test_param_timeout(self):
 		pass
 
 	def _test_param_timeout(self):
@@ -40,13 +40,16 @@ class TestClient(ClientServerTest):
 			self.assertGreater(diff, timeout, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
 			self.assertLess(diff, timeout+0.5, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
 
-	def test_param_timeout(self):
+	def test_timeout_pending_response(self):
+
+		if not hasattr(self, 'completed'):
+			self.completed = False
 		self.conn.touserqueue.get(timeout=0.2)
 		response = Response(service=services.TesterPresent, code=Response.Code.RequestCorrectlyReceived_ResponsePending)
 		t1 = time.time()
-		while time.time() - t1 < 1:
-			time.sleep(0.1)
+		while time.time() - t1 < 1 and not self.completed:
 			self.conn.fromuserqueue.put(response.get_payload())
+			time.sleep(0.1)
 
 	def _test_timeout_pending_response(self):
 		req = Request(service = services.TesterPresent, subfunction=0) 
@@ -56,6 +59,9 @@ class TestClient(ClientServerTest):
 			response = self.udsclient.send_request(req, timeout=timeout)
 			raise Exception('Request did not raise a TimeoutException')
 		except TimeoutException as e:
+			self.assertIsNotNone(self.udsclient.last_response, 'Client never received the PendingResponse message')
+
+			self.completed = True
 			diff = time.time() - t1
 			self.assertGreater(diff, timeout, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
 			self.assertLess(diff, timeout+0.5, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
