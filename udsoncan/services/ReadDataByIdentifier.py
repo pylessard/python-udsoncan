@@ -105,7 +105,7 @@ class ReadDataByIdentifier(BaseService):
 			offset+=2
 
 			if len(response.data) < offset+len(codec):
-				raise InvalidResponseException(response, "Value fo data identifier 0x%04x was incomplete according to definition in configuration" % did)
+				raise InvalidResponseException(response, "Value for data identifier 0x%04x was incomplete according to definition in configuration" % did)
 
 			subpayload = response.data[offset:offset+len(codec)]
 			offset += len(codec)	# Codec must define a __len__ function that matches the encoded payload length.
