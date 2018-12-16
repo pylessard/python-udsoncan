@@ -3,7 +3,22 @@ import queue
 import threading
 import logging
 import binascii
+import sys
 from abc import ABC, abstractmethod
+import functools
+import time
+
+try:
+	import can
+	_import_can_err = None
+except Exception as e:
+	_import_can_err = e
+
+try:
+	import isotp
+	_import_isotp_err = None
+except Exception as e:
+	_import_isotp_err = e
 
 from udsoncan.Request import Request
 from udsoncan.Response import Response
@@ -199,7 +214,8 @@ class SocketConnection(BaseConnection):
 			self.rxqueue.get()
 
 
-class IsoTPConnection(BaseConnection):
+
+class IsoTPSocketConnection(BaseConnection):
 	"""
 	Sends and receives data through an ISO-TP socket. Makes cleaner code than SocketConnection but offers no additional functionality.
 	The `isotp module <https://github.com/pylessard/python-can-isotp>`_ must be installed in order to use this connection
@@ -229,7 +245,11 @@ class IsoTPConnection(BaseConnection):
 
 		self.rxthread = threading.Thread(target=self.rxthread_task)
 		if tpsock is None:
-			import isotp
+			if 'isotp' not in sys.modules:
+				if _import_isotp_err is None:
+					raise ImportError('isotp module is not loaded')
+				else:
+					raise _import_isotp_err
 			self.tpsock = isotp.socket(timeout=0.1)
 		else:
 			self.tpsock = tpsock
@@ -294,6 +314,12 @@ class IsoTPConnection(BaseConnection):
 		while not self.rxqueue.empty():
 			self.rxqueue.get()
 
+
+class IsoTPConnection(IsoTPSocketConnection):
+	"""
+	Same as :class:`IsoTPSocketConnection <udsoncan.connections.IsoTPSocketConnection.Session>`. Exists only for backward compatibility. 
+	"""
+	pass
 
 class QueueConnection(BaseConnection):
 	"""
@@ -373,3 +399,121 @@ class QueueConnection(BaseConnection):
 		while not self.touserqueue.empty():
 			self.touserqueue.get()
 
+
+class PythonIsoTpConnection(BaseConnection):
+	mtu = 4095
+
+	def __init__(self, bus, txid, rxid, extended_id=False, params={}, name=None):
+		if 'isotp' not in sys.modules:
+			if _import_isotp_err is None:
+				raise ImportError('isotp module is not loaded')
+			else:
+				raise _import_isotp_err
+
+		if 'can' not in sys.modules:
+			if _import_can_err is None:
+				raise ImportError('can module is not loaded')
+			else:
+				raise _import_can_err
+
+		BaseConnection.__init__(self, name)
+		self.toIsoTPQueue = queue.Queue()
+		self.fromIsoTPQueue = queue.Queue()	
+		self.rxthread = threading.Thread(target=self.rxthread_task)
+		self.exit_requested = False
+		self.bus = bus
+		self.opened = False
+		self.txid = txid
+		self.rxid = rxid
+		self.stack = isotp.stack(rxid=rxid, txid=txid, rxfn=self.rxfn, txfn=self.txfn, extended_id=extended_id, params=params)
+
+		assert isinstance(bus, can.BusABC), 'bus must be a pythhon-can Bus object'
+		assert isinstance(txid, int), 'txid must be an integer'
+		assert isinstance(rxid, int), 'txid must be an integer'
+		assert txid > 0 and rxid>0, 'txid and rxid must be positives integers'
+
+	def txfn(self, msg):
+		self.bus.send(can.Message(arbitration_id=msg.arbitration_id, data = msg.data, extended_id=msg.is_extended_id))
+
+	def rxfn(self):
+		msg = self.bus.recv(0)
+		if msg is not None:
+			return isotp.stack.CanMessage(arbitration_id=msg.arbitration_id, data=msg.data, extended_id=msg.is_extended_id)
+
+	def open(self):
+		self.exit_requested = False
+		self.rxthread.start()
+		self.opened = True
+		self.logger.info('Connection opened')
+		return self
+
+	def __enter__(self):
+		return self
+
+	def __exit__(self, type, value, traceback):
+		self.close()
+
+	def is_open(self):
+		return self.opened 
+
+	def close(self):
+		self.empty_rxqueue()
+		self.empty_txqueue()
+		self.exit_requested=True
+		self.opened = False
+		self.logger.info('Connection closed')	
+
+
+	def specific_send(self, payload):
+		if self.mtu is not None:
+			if len(payload) > self.mtu:
+				self.logger.warning("Truncating payload to be set to a length of %d" % (self.mtu))
+				payload = payload[0:self.mtu]
+
+		self.toIsoTPQueue.put(payload)
+
+	def specific_wait_frame(self, timeout=2):
+		if not self.opened:
+			raise RuntimeException("Connection is not open")
+
+		timedout = False
+		frame = None
+		try:
+			frame = self.fromIsoTPQueue.get(block=True, timeout=timeout)
+		except queue.Empty:
+			timedout = True
+			
+		if timedout:
+			raise TimeoutException("Did not receive frame from user queue in time (timeout=%s sec)" % timeout)
+		
+		if self.mtu is not None:
+			if frame is not None and len(frame) > self.mtu:
+				self.logger.warning("Truncating received payload to a length of %d" % (self.mtu))
+				frame = frame[0:self.mtu]
+
+		return frame
+
+	def empty_rxqueue(self):
+		while not self.fromIsoTPQueue.empty():
+			self.fromIsoTPQueue.get()
+
+	def empty_txqueue(self):
+		while not self.toIsoTPQueue.empty():
+			self.toIsoTPQueue.get()			
+
+	def rxthread_task(self):
+		while not self.exit_requested:
+			try:
+				while not self.toIsoTPQueue.empty():
+					self.stack.send(self.toIsoTPQueue.get())
+
+				self.stack.process()
+				
+				while self.stack.available():
+					self.fromIsoTPQueue.put(self.stack.recv())
+
+				time.sleep(self.stack.sleep_time())
+
+			except Exception as e:
+				self.exit_requested = True
+				self.logger.error(str(e))
