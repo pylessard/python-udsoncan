@@ -73,6 +73,9 @@ class Client:
 
 	def refresh_config(self):
 		self.configure_logger()
+		for k in default_client_config:
+			if k not in self.config:
+				self.config[k] = default_client_config[k]
 
 
 	

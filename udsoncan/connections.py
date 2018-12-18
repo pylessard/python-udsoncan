@@ -433,11 +433,13 @@ class PythonIsoTpConnection(BaseConnection):
 		assert txid > 0 and rxid>0, 'txid and rxid must be positives integers'
 
 	def txfn(self, msg):
+		# Maps a isotp.stack.CanMessage to a python-can Message
 		self.bus.send(can.Message(arbitration_id=msg.arbitration_id, data = msg.data, extended_id=msg.is_extended_id))
 
 	def rxfn(self):
 		msg = self.bus.recv(0)
 		if msg is not None:
+			#Maps a python-can Message to a isotp.stack.CanMessage
 			return isotp.stack.CanMessage(arbitration_id=msg.arbitration_id, data=msg.data, extended_id=msg.is_extended_id)
 
 	def open(self):
@@ -470,7 +472,7 @@ class PythonIsoTpConnection(BaseConnection):
 				self.logger.warning("Truncating payload to be set to a length of %d" % (self.mtu))
 				payload = payload[0:self.mtu]
 
-		self.toIsoTPQueue.put(payload)
+		self.toIsoTPQueue.put(bytearray(payload)) # isotp.stack uses byte array. udsoncan is strict on bytes format
 
 	def specific_wait_frame(self, timeout=2):
 		if not self.opened:
@@ -491,7 +493,7 @@ class PythonIsoTpConnection(BaseConnection):
 				self.logger.warning("Truncating received payload to a length of %d" % (self.mtu))
 				frame = frame[0:self.mtu]
 
-		return frame
+		return bytes(frame)	# isotp.stack uses bytearray. udsoncan is strict on bytes format
 
 	def empty_rxqueue(self):
 		while not self.fromIsoTPQueue.empty():

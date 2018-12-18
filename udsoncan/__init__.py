@@ -80,6 +80,8 @@ class DidCodec:
 				raise ValueError("pack/unpack string given for Codec config should not be empty.")
 			return cls(packstr = didconfig)
 
+		raise ValueError('Given codec of type %s is not a valid DidCodec' % (type(didconfig)))
+
 class AsciiCodec(DidCodec):
 	def __init__(self, string_len=None):
 		if string_len is None:
