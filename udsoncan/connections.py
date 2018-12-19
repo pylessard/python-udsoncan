@@ -150,7 +150,7 @@ class SocketConnection(BaseConnection):
 		self.rxqueue = queue.Queue()
 		self.exit_requested = False
 		self.opened = False
-		self.rxthread = threading.Thread(target=self.rxthread_task)
+		self.rxthread = None
 		self.sock = sock
 		self.sock.settimeout(0.1)	# for recv
 		self.bufsize=bufsize
@@ -158,6 +158,7 @@ class SocketConnection(BaseConnection):
 
 	def open(self):
 		self.exit_requested = False
+		self.rxthread = threading.Thread(target=self.rxthread_task)
 		self.rxthread.start()
 		self.opened = True
 		self.logger.info('Connection opened')
@@ -186,6 +187,7 @@ class SocketConnection(BaseConnection):
 
 	def close(self):
 		self.exit_requested = True
+		self.rxthread.join()
 		self.opened = False
 		self.logger.info('Connection closed')
 
@@ -218,7 +220,7 @@ class SocketConnection(BaseConnection):
 class IsoTPSocketConnection(BaseConnection):
 	"""
 	Sends and receives data through an ISO-TP socket. Makes cleaner code than SocketConnection but offers no additional functionality.
-	The `isotp module <https://github.com/pylessard/python-can-isotp>`_ must be installed in order to use this connection
+	The `can-isotp module <https://github.com/pylessard/python-can-isotp>`_ must be installed in order to use this connection
 
 	:param interface: The can interface to use (example: `can0`)
 	:type interface: string
@@ -243,7 +245,6 @@ class IsoTPSocketConnection(BaseConnection):
 		self.exit_requested = False
 		self.opened = False
 
-		self.rxthread = threading.Thread(target=self.rxthread_task)
 		if tpsock is None:
 			if 'isotp' not in sys.modules:
 				if _import_isotp_err is None:
@@ -258,6 +259,7 @@ class IsoTPSocketConnection(BaseConnection):
 	def open(self):
 		self.tpsock.bind(self.interface, rxid=self.rxid, txid=self.txid)
 		self.exit_requested = False
+		self.rxthread = threading.Thread(target=self.rxthread_task)
 		self.rxthread.start()
 		self.opened = True
 		self.logger.info('Connection opened')
@@ -286,6 +288,7 @@ class IsoTPSocketConnection(BaseConnection):
 
 	def close(self):
 		self.exit_requested = True
+		self.rxthread.join()
 		self.tpsock.close()
 		self.opened = False
 		self.logger.info('Connection closed')
@@ -401,6 +404,28 @@ class QueueConnection(BaseConnection):
 
 
 class PythonIsoTpConnection(BaseConnection):
+	"""
+	Sends and receives data using a `can-isotp <https://github.com/pylessard/python-can-isotp>`_ Python module which is a Python implementation of the IsoTp transport protocol
+	and `python-can <https://python-can.readthedocs.io>`_ module to interract with CAN hardware
+
+	Both `can-isotp <https://github.com/pylessard/python-can-isotp>`_ and `python-can <https://python-can.readthedocs.io>`_ must be installed in order to use this connection.
+
+	See an :ref:`example<example_using_python_can>`
+
+	:param bus: A python-can bus object.
+	:type bus: can.BusABC
+	:param txid: The CAN id used for transmission given to the IsoTP layer for Normal Addressing mode. 
+	:type txid: int
+	:param txid: The CAN id used for reception given to the IsoTP layer for Normal Addressing mode. 
+	:type txid: int
+	:param extended_id: When True, indicates that txid and rxid are extended CAN IDs (29 bits). 11 bits ID are assumed otherwise.
+	:type extended_id: bool
+	:param params: A dictionary passed to the IsoTP stack. Refer to the `can-isotp <https://github.com/pylessard/python-can-isotp>`_ module.
+	:type params: dict
+	:param name: This name is included in the logger name so that its output can be redirected. The logger name will be ``Connection[<name>]``
+	:type name: string
+
+	"""
 	mtu = 4095
 
 	def __init__(self, bus, txid, rxid, extended_id=False, params={}, name=None):
@@ -419,31 +444,27 @@ class PythonIsoTpConnection(BaseConnection):
 		BaseConnection.__init__(self, name)
 		self.toIsoTPQueue = queue.Queue()
 		self.fromIsoTPQueue = queue.Queue()	
-		self.rxthread = threading.Thread(target=self.rxthread_task)
+		self.rxthread = None
 		self.exit_requested = False
 		self.bus = bus
 		self.opened = False
 		self.txid = txid
 		self.rxid = rxid
-		self.stack = isotp.stack(rxid=rxid, txid=txid, rxfn=self.rxfn, txfn=self.txfn, extended_id=extended_id, params=params)
+		self.extended_id=extended_id
+		self.params=params
+		self.stack = isotp.CanStack(bus=self.bus, rxid=self.rxid, txid=self.txid, extended_id=self.extended_id, params=self.params)
 
 		assert isinstance(bus, can.BusABC), 'bus must be a pythhon-can Bus object'
 		assert isinstance(txid, int), 'txid must be an integer'
 		assert isinstance(rxid, int), 'txid must be an integer'
 		assert txid > 0 and rxid>0, 'txid and rxid must be positives integers'
 
-	def txfn(self, msg):
-		# Maps a isotp.stack.CanMessage to a python-can Message
-		self.bus.send(can.Message(arbitration_id=msg.arbitration_id, data = msg.data, extended_id=msg.is_extended_id))
+	def open(self, bus=None):
+		if bus is not None:
+			self.stack.set_bus(bus)
 
-	def rxfn(self):
-		msg = self.bus.recv(0)
-		if msg is not None:
-			#Maps a python-can Message to a isotp.stack.CanMessage
-			return isotp.stack.CanMessage(arbitration_id=msg.arbitration_id, data=msg.data, extended_id=msg.is_extended_id)
-
-	def open(self):
 		self.exit_requested = False
+		self.rxthread = threading.Thread(target=self.rxthread_task)
 		self.rxthread.start()
 		self.opened = True
 		self.logger.info('Connection opened')
@@ -462,6 +483,8 @@ class PythonIsoTpConnection(BaseConnection):
 		self.empty_rxqueue()
 		self.empty_txqueue()
 		self.exit_requested=True
+		self.rxthread.join()
+		self.stack.reset()
 		self.opened = False
 		self.logger.info('Connection closed')	
 
@@ -472,7 +495,7 @@ class PythonIsoTpConnection(BaseConnection):
 				self.logger.warning("Truncating payload to be set to a length of %d" % (self.mtu))
 				payload = payload[0:self.mtu]
 
-		self.toIsoTPQueue.put(bytearray(payload)) # isotp.stack uses byte array. udsoncan is strict on bytes format
+		self.toIsoTPQueue.put(bytearray(payload)) # isotp.protocol.TransportLayer uses byte array. udsoncan is strict on bytes format
 
 	def specific_wait_frame(self, timeout=2):
 		if not self.opened:
@@ -493,7 +516,7 @@ class PythonIsoTpConnection(BaseConnection):
 				self.logger.warning("Truncating received payload to a length of %d" % (self.mtu))
 				frame = frame[0:self.mtu]
 
-		return bytes(frame)	# isotp.stack uses bytearray. udsoncan is strict on bytes format
+		return bytes(frame)	# isotp.protocol.TransportLayer uses bytearray. udsoncan is strict on bytes format
 
 	def empty_rxqueue(self):
 		while not self.fromIsoTPQueue.empty():
@@ -519,3 +542,4 @@ class PythonIsoTpConnection(BaseConnection):
 			except Exception as e:
 				self.exit_requested = True
 				self.logger.error(str(e))
+				print(self.rxthread)
