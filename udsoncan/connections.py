@@ -542,4 +542,3 @@ class PythonIsoTpConnection(BaseConnection):
 			except Exception as e:
 				self.exit_requested = True
 				self.logger.error(str(e))
-				print(self.rxthread)
