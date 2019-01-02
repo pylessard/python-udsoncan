@@ -9,7 +9,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
   name = 'udsoncan',
-  packages = find_packages(),
+  packages = find_packages(exclude=['test']),
   package_data={
     '': ['*.conf'],
   },
