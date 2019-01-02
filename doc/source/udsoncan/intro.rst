@@ -5,7 +5,7 @@ The Unified Diagnostic Services (UDS) standard also known as ISO-14229 is an app
 
 UDS defines how messages should be formatted but not how they should be implemented (although the standard suggests some good practices); that's why it is an interface. 
 
-The UDS client is usually a tester unit meant to be connected to a vehicle diagnostic port. The UDS server is usually a device within the vehicle that is connected to the CAN bus (accessible by the diangostic port). This device is referred to as an Electronic Control Unit (ECU). 
+The UDS client is usually a tester unit meant to be connected to a vehicle diagnostic port. The UDS server is usually a device within the vehicle that is connected to the CAN bus (accessible by the diagnostic port). This device is referred to as an Electronic Control Unit (ECU). 
 
 Services
 --------
