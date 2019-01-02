@@ -75,6 +75,7 @@ Note that, in order to run this code, both ``python-can`` and ``can-isotp`` must
    from can.interfaces.vector import VectorBus
    from udsoncan.connections import PythonIsoTpConnection
    from udsoncan.client import Client
+   import isotp
 
    # Refer to isotp documentation for full details about parameters
    isotp_params = {
