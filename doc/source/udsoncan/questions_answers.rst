@@ -52,11 +52,11 @@ I have a CAN transceiver, how do I use this project now?
 
    This project is not all you need; you need to create a path for the data to reach your CAN box.
 
-   Under Linux, if your CAN box is supported by SocketCAN, you should have a new network interface after plugging in the device. Compile and install `this module <https://github.com/hartkopp/can-isotp>`_, then find out what CAN IDs are used for diagnostics and use the :class:`SocketConnection<udsoncan.connections.SocketConnection>` or :class:`IsoTPConnection<udsoncan.connections.IsoTPConnection>`
+   Under Linux, if your CAN box is supported by SocketCAN, you should have a new network interface after plugging in the device. Compile and install `this module <https://github.com/hartkopp/can-isotp>`_, then find out what CAN IDs are used for diagnostics and use the :class:`SocketConnection<udsoncan.connections.SocketConnection>` or :class:`IsoTPSocketConnection<udsoncan.connections.IsoTPSocketConnection>`
 
-   If you don't have the above privilege, you will need to write your own Connection class that handles everything from the transport protocol (IsoTP) to the hardware which means interacting with the drivers. 
+   If you do not want to rely on SocketCAN, you can use :class:`PythonIsoTpConnection<udsoncan.connections.PythonIsoTpConnection>`. This connection will make usage of `python-can <https://python-can.readthedocs.io>`_ module for the CAN layer and Python's `can-isotp <https://github.com/pylessard/python-can-isotp>`_ module for the transport layer. The main advantage of doing this is that python-can supports many can interface, both under Windows and Linux. Unfortunately, the transport layer (IsoTp) implementation needs to be in the user space, which usually fails to meet the protocol timing requirements. Most of time, this is not an issue.
 
-   Note that for windows users, Peak-System Technik Gmbh provides a DLL to handle the IsoTP protocol.
+   If you can't use any of the above solution, you will need to write your own Connection class that handles everything from the transport protocol (IsoTP) to the hardware which means interacting with the drivers. See :ref:`Defining a new Connection<DefiningNewConnection>`
 
 -----
 

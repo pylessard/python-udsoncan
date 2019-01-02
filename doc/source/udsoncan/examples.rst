@@ -3,13 +3,13 @@ Examples
 
 .. _layer_of_intelligneces:
 
-Different layers of intelligence
---------------------------------
+Different layers of intelligence (1 to 4)
+-----------------------------------------
 
 In the following examples, we will request an ECU reset in 4 different ways. We will start by crafting a binary payload manually, then we will add a layer of interpretation making the code more comprehensive each time. 
 
-Raw Connection
-##############
+1. Raw Connection
+#################
 
 .. code-block:: python
 
@@ -20,8 +20,8 @@ Raw Connection
    else:
       print('Reset failed')
 
-Request and Responses
-#####################
+2. Request and Responses
+########################
 
 .. code-block:: python
 
@@ -34,8 +34,8 @@ Request and Responses
    else:
       print('Reset failed')
 
-Services
-########
+3. Services
+###########
 
 .. code-block:: python
 
@@ -49,8 +49,8 @@ Services
    else:
       print('Reset failed')
 
-Client
-######
+4. Client
+#########
 
 .. code-block:: python
 
@@ -59,6 +59,42 @@ Client
       print('Success!')
    except:
       print('Reset failed')
+
+-----
+
+.. _example_using_python_can:
+
+Using UDS over python-can
+-------------------------
+
+In this example, we show how to use :class:`PythonIsoTpConnection<udsoncan.connections.PythonIsoTpConnection>` with a fictive Vector interface.
+Note that, in order to run this code, both ``python-can`` and ``can-isotp`` must be installed.
+
+.. code-block:: python
+
+   from can.interfaces.vector import VectorBus
+   from udsoncan.connections import PythonIsoTpConnection
+   from udsoncan.client import Client
+
+   # Refer to isotp documentation for full details of parameters
+   isotp_params = {
+      'stmin' : 32,                          # Will request the sender to wait 32ms between consecutive frame. 0-127ms or 100-900ns with values from 0xF1-0xF9
+      'blocksize' : 8,                       # Request the sender to send 8 consecutives frames before sending a new flow control message
+      'wftmax' : 0,                          # Number of wait frame allowed before triggering an error
+      'll_data_length' : 8,                  # Link layer (CAN layer) works with 8 byte payload (CAN 2.0)
+      'tx_padding' : 0,                      # Will pad tramissted CAN message with byte 0x00. None means no padding
+      'rx_flowcontrol_timeout' : 1000        # Triggers a timeout if a flow control is awaited for more than 1000 milliseconds
+      'rx_consecutive_frame_timeout' : 1000, # Triggers a timeout if a consecutive frame is awaited for more than 1000 milliseconds
+      'squash_stmin_requirement' : False     # When sending, respect the stmin requirement of the receiver. If set to True, go as fast as possible.
+   }
+
+   bus = VectorBus(channel=0, bitrate=500000)                                          # Link Layer (CAN protocol)
+   tp_addr = isotp.Address(isotp.AddressingMode.Normal_11bits, txid=0x123, rxid=0x456) # Network layer addressing scheme
+   stack = isotp.CanStack(bus=bus, address=tp_addr, params=isotp_params)               # Network/Transport layer (IsoTP protocol)
+   conn = PythonIsoTpConnection(stack)                                                 # interface between Application and Transport layer
+   with Client(conn, request_timeout=1) as client:                                     # Application layer (UDS protocol)
+      client.change_session(1)   
+      # ...
 
 -----
 
@@ -110,7 +146,6 @@ Security algorithm implementation
 -----
 
 
-
 .. _reading_a_did:
 
 Reading a DID with ReadDataByIdentifier
@@ -150,14 +185,15 @@ This example shows how to configure the client with a DID configuration and requ
       vin = client.read_data_by_identifier(0xF190)     
       print(vin)  # 'ABCDE0123456789' (15 chars)
 
-
+-----
 
 .. _iocontrol_composite_did:
 
 InputOutputControlByIdentifier Composite DID
 --------------------------------------------
 
-This example shows how the InputOutputControlByIdentifier can be used with a composite data identifier and how to build a proper `ioconfig` dict.
+This example shows how the InputOutputControlByIdentifier can be used with a composite data identifier and how to build a proper `ioconfig` dict which can be tricky.
+The example shown below correspond to a real example provided in ISO-14229 document
 
 .. code-block:: python
 

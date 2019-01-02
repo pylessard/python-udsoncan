@@ -412,56 +412,29 @@ class PythonIsoTpConnection(BaseConnection):
 
 	See an :ref:`example<example_using_python_can>`
 
-	:param bus: A python-can bus object.
-	:type bus: can.BusABC
-	:param txid: The CAN id used for transmission given to the IsoTP layer for Normal Addressing mode. 
-	:type txid: int
-	:param txid: The CAN id used for reception given to the IsoTP layer for Normal Addressing mode. 
-	:type txid: int
-	:param extended_id: When True, indicates that txid and rxid are extended CAN IDs (29 bits). 11 bits ID are assumed otherwise.
-	:type extended_id: bool
-	:param params: A dictionary passed to the IsoTP stack. Refer to the `can-isotp <https://github.com/pylessard/python-can-isotp>`_ module.
-	:type params: dict
+	:param isotp_layer: The IsoTP Transport layer object coming from the ``isotp`` module.
+	:type isotp_layer: :class:`isotp.TransportLayer<isotp.TransportLayer>`
+
 	:param name: This name is included in the logger name so that its output can be redirected. The logger name will be ``Connection[<name>]``
 	:type name: string
 
 	"""
 	mtu = 4095
 
-	def __init__(self, bus, txid, rxid, extended_id=False, params={}, name=None):
-		if 'isotp' not in sys.modules:
-			if _import_isotp_err is None:
-				raise ImportError('isotp module is not loaded')
-			else:
-				raise _import_isotp_err
-
-		if 'can' not in sys.modules:
-			if _import_can_err is None:
-				raise ImportError('can module is not loaded')
-			else:
-				raise _import_can_err
-
+	def __init__(self, isotp_layer, name=None):
 		BaseConnection.__init__(self, name)
 		self.toIsoTPQueue = queue.Queue()
 		self.fromIsoTPQueue = queue.Queue()	
 		self.rxthread = None
 		self.exit_requested = False
-		self.bus = bus
 		self.opened = False
-		self.txid = txid
-		self.rxid = rxid
-		self.extended_id=extended_id
-		self.params=params
-		self.stack = isotp.CanStack(bus=self.bus, rxid=self.rxid, txid=self.txid, extended_id=self.extended_id, params=self.params)
+		self.isotp_layer = isotp_layer
 
-		assert isinstance(bus, can.BusABC), 'bus must be a pythhon-can Bus object'
-		assert isinstance(txid, int), 'txid must be an integer'
-		assert isinstance(rxid, int), 'txid must be an integer'
-		assert txid > 0 and rxid>0, 'txid and rxid must be positives integers'
+		assert isinstance(self.isotp_layer, isotp.TransportLayer) , 'isotp_layer must be a valid isotp.TransportLayer '
 
 	def open(self, bus=None):
 		if bus is not None:
-			self.stack.set_bus(bus)
+			self.isotp_layer.set_bus(bus)
 
 		self.exit_requested = False
 		self.rxthread = threading.Thread(target=self.rxthread_task)
@@ -484,10 +457,9 @@ class PythonIsoTpConnection(BaseConnection):
 		self.empty_txqueue()
 		self.exit_requested=True
 		self.rxthread.join()
-		self.stack.reset()
+		self.isotp_layer.reset()
 		self.opened = False
 		self.logger.info('Connection closed')	
-
 
 	def specific_send(self, payload):
 		if self.mtu is not None:
@@ -530,14 +502,14 @@ class PythonIsoTpConnection(BaseConnection):
 		while not self.exit_requested:
 			try:
 				while not self.toIsoTPQueue.empty():
-					self.stack.send(self.toIsoTPQueue.get())
+					self.isotp_layer.send(self.toIsoTPQueue.get())
 
-				self.stack.process()
+				self.isotp_layer.process()
 				
-				while self.stack.available():
-					self.fromIsoTPQueue.put(self.stack.recv())
+				while self.isotp_layer.available():
+					self.fromIsoTPQueue.put(self.isotp_layer.recv())
 
-				time.sleep(self.stack.sleep_time())
+				time.sleep(self.isotp_layer.sleep_time())
 
 			except Exception as e:
 				self.exit_requested = True

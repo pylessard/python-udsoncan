@@ -12,7 +12,7 @@ try:
 	import isotp
 	import can
 	s = isotp.socket()
-	s.bind(_interface_name,1,2)
+	s.bind(_interface_name,rxid=1,txid=2)
 	s.close()
 	_STACK_POSSIBLE = True
 except Exception as e:
@@ -172,7 +172,8 @@ class TestPythonIsoTpConnection(UdsTest):
 
 	def setUp(self):
 		self.vcan0_bus = self.make_bus()
-		self.conn = PythonIsoTpConnection(bus=self.vcan0_bus, rxid=self.stack_rxid, txid=self.stack_txid, extended_id=False, name='unittest')
+		addr = isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=self.stack_rxid, txid=self.stack_txid)
+		self.conn = PythonIsoTpConnection(isotp.CanStack(bus=self.vcan0_bus, address=addr), name='unittest')
 		self.conn.open()
 
 	def test_open(self):
