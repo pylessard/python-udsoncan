@@ -35,7 +35,7 @@ Example
    
    udsoncan.setup_logging()
    
-   conn = IsoTPConnection('can0', rxid=0x123, txid=0x456)
+   conn = IsoTPSocketConnection('can0', rxid=0x123, txid=0x456)
    with Client(conn,  request_timeout=2, config=MyCar.config) as client:
       try:
          client.change_session(DiagnosticSessionControl.Session.extendedDiagnosticSession)  # integer with value of 3
