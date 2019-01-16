@@ -284,6 +284,7 @@ class Client:
 		:return: The server response parsed by :meth:`ReadDataByIdentifier.interpret_response<udsoncan.services.ReadDataByIdentifier.interpret_response>`
 		:rtype: :ref:`Response<Response>`
 		"""
+		didlist = services.ReadDataByIdentifier.validate_didlist_input(didlist)
 		response = self.read_data_by_identifier(didlist)
 		values = response.service_data.values
 		if len(values) > 0 and len(didlist) > 0:
