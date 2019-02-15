@@ -232,9 +232,13 @@ class IsoTPSocketConnection(BaseConnection):
 	:type name: string
 	:param tpsock: An optional ISO-TP socket to use instead of creating one.
 	:type tpsock: isotp.socket
+	:param args: Optional parameters list passed to ISO-TP socket binding method.
+	:type args: list
+	:param kwargs: Optional parameters dictionary passed to ISO-TP socket binding method.
+	:type kwargs: dict
 
 	"""
-	def __init__(self, interface, rxid, txid, name=None, tpsock=None):
+	def __init__(self, interface, rxid, txid, name=None, tpsock=None, *args, **kwargs):
 		
 		BaseConnection.__init__(self, name)
 
@@ -244,6 +248,8 @@ class IsoTPSocketConnection(BaseConnection):
 		self.rxqueue = queue.Queue()
 		self.exit_requested = False
 		self.opened = False
+		self.tpsock_bind_args = args
+		self.tpsock_bind_kwargs = kwargs
 
 		if tpsock is None:
 			if 'isotp' not in sys.modules:
@@ -257,7 +263,7 @@ class IsoTPSocketConnection(BaseConnection):
 
 
 	def open(self):
-		self.tpsock.bind(self.interface, rxid=self.rxid, txid=self.txid)
+		self.tpsock.bind(self.interface, rxid=self.rxid, txid=self.txid, *self.tpsock_bind_args, **self.tpsock_bind_kwargs)
 		self.exit_requested = False
 		self.rxthread = threading.Thread(target=self.rxthread_task)
 		self.rxthread.start()
