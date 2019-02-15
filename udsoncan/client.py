@@ -1409,9 +1409,14 @@ class Client:
 
 	# Basic transmission of requests. This will need to be improved
 	def send_request(self, request, timeout=-1):
+		# P2 server max and P2* server max are usually resp. 50ms and 5000ms. However, P2 server max is set to a lax value of 1000ms
+		# to avoid a timeout due to Python setup increased latencies.
+		p2_server_max = 1
+		p2_star_server_max = 5
+
 		if timeout is not None and timeout < 0:
 			timeout = self.request_timeout
-		original_timeout = timeout
+
 		self.conn.empty_rxqueue()
 		self.logger.debug("Sending request to server")
 		override_suppress_positive_response = False
@@ -1430,21 +1435,24 @@ class Client:
 			return
 		
 		done_receiving = False
+
+		if timeout is not None:
+			timeout_time = time.time() + timeout
+		else:
+			timeout_time = None
+
+		current_timeout = p2_server_max
 		while not done_receiving:
 			done_receiving = True
 			self.logger.debug("Waiting for server response")
 			try:
-				rx_time = time.time()
-				payload = self.conn.wait_frame(timeout=timeout, exception=True)
-				rx_time = time.time()-rx_time
-				if timeout is not None:
-					timeout =timeout - rx_time
-					if timeout < 0:
-						raise TimeoutException('Did not receive response in time (timeout=%.3f sec)' % original_timeout)
-			except TimeoutException as e:
-				raise TimeoutException('Did not receive response in time (timeout=%.3f sec)' % original_timeout)
+				payload = self.conn.wait_frame(timeout=current_timeout, exception=True)
+			except TimeoutException:
+				raise TimeoutException('Did not receive response in time (request timeout=%.3f sec)' % current_timeout)
 			except Exception as e:
 				raise e
+			if timeout_time is not None and timeout_time - time.time() < 0:
+					raise TimeoutException('Did not receive response in time (overall timeout=%.3f sec)' % timeout)
 
 			response = Response.from_payload(payload)
 			self.last_response = response
@@ -1462,8 +1470,10 @@ class Client:
 					self.logger.warning('Given response code "%s" (0x%02x) is not a supported negative response code according to UDS standard.' % (response.code_name, response.code))
 
 				if response.code == Response.Code.RequestCorrectlyReceived_ResponsePending:
+					# Received a 0x78 NRC: timeout is now set to P2* server max
+					current_timeout = p2_star_server_max
 					done_receiving = False
-					self.logger.debug("Server requested to wait with response code %s (0x%02x)" % (response.code_name, response.code))
+					self.logger.debug("Server requested to wait with response code %s (0x%02x), timeout is now set to %.3f seconds" % (response.code_name, response.code, current_timeout))
 				else:
 					raise NegativeResponseException(response)
 
