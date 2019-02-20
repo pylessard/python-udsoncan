@@ -1463,6 +1463,7 @@ class Client:
 
 				if response.code == Response.Code.RequestCorrectlyReceived_ResponsePending:
 					done_receiving = False
+					timeout = original_timeout # the timeout needs to be reset
 					self.logger.debug("Server requested to wait with response code %s (0x%02x)" % (response.code_name, response.code))
 				else:
 					raise NegativeResponseException(response)
