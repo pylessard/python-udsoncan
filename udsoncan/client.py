@@ -22,8 +22,17 @@ class Client:
 	:param config: The :ref:`client configuration<client_config>`
 	:type config: dict
 
-	:param request_timeout: Maximum amount of time to wait for a response after sending a request (in seconds). After this time is elapsed, a TimeoutException will be raised.
+	:param request_timeout: Maximum amount of time in seconds to wait for the final response (positive or negative except NRC 0x78) after sending a request.
+	After this time is elapsed, a TimeoutException will be raised. If less than or equal to p2_star, NRC 0x78 (requestCorrectlyReceived-ResponsePending) responses are not supported.
 	:type request_timeout: int
+
+	:param p2_timeout: Maximum amount of time in seconds to wait for a response (positive, negative, or NRC 0x78). After this time is elapsed, a TimeoutException will be raised.
+	See ISO 14229-2 (UDS Session Layer Services).
+	:type p2_timeout: int
+
+	:param p2_star_timeout: Maximum amount of time in seconds to wait for a response (positive, negative, or NRC0x78) after the reception of a negative response with code 0x78
+	(requestCorrectlyReceived-ResponsePending). After this time is elapsed, a TimeoutException will be raised. See ISO 14229-2 (UDS Session Layer Services).
+	:type p2_star_timeout: int
 	"""
 
 	class SuppressPositiveResponse:
@@ -37,9 +46,11 @@ class Client:
 		def __exit__(self, type, value, traceback):
 			self.enabled = False
 
-	def __init__(self, conn, config=default_client_config, request_timeout = 1):
+	def __init__(self, conn, config=default_client_config, request_timeout=5, p2_timeout=1, p2_star_timeout=5):
 		self.conn = conn
 		self.request_timeout = request_timeout
+		self.p2_timeout = p2_timeout
+		self.p2_star_timeout = p2_star_timeout
 		self.config = dict(config) # Makes a copy of given configuration
 		self.suppress_positive_response = Client.SuppressPositiveResponse()
 		self.last_response = None
@@ -1409,9 +1420,20 @@ class Client:
 
 	# Basic transmission of requests. This will need to be improved
 	def send_request(self, request, timeout=-1):
-		if timeout is not None and timeout < 0:
-			timeout = self.request_timeout
-		original_timeout = timeout
+		if timeout < 0:
+			# Timeout not provided by user: defaults to Client request_timeout value
+			overall_timeout = self.request_timeout
+		else:
+			overall_timeout = timeout
+
+		if overall_timeout > self.p2_star_timeout:
+			current_timeout = self.p2_timeout
+			response_pending_supported = True
+		else:
+			# NRC 0x78 (RequestCorrectlyReceived_ResponsePending) not supported
+			current_timeout = overall_timeout
+			response_pending_supported = False
+
 		self.conn.empty_rxqueue()
 		self.logger.debug("Sending request to server")
 		override_suppress_positive_response = False
@@ -1430,21 +1452,23 @@ class Client:
 			return
 		
 		done_receiving = False
+
+		if response_pending_supported:
+			overall_timeout_time = time.time() + overall_timeout
+		else:
+			overall_timeout_time = None
+
 		while not done_receiving:
 			done_receiving = True
 			self.logger.debug("Waiting for server response")
 			try:
-				rx_time = time.time()
-				payload = self.conn.wait_frame(timeout=timeout, exception=True)
-				rx_time = time.time()-rx_time
-				if timeout is not None:
-					timeout =timeout - rx_time
-					if timeout < 0:
-						raise TimeoutException('Did not receive response in time (timeout=%.3f sec)' % original_timeout)
-			except TimeoutException as e:
-				raise TimeoutException('Did not receive response in time (timeout=%.3f sec)' % original_timeout)
+				payload = self.conn.wait_frame(timeout=current_timeout, exception=True)
+			except TimeoutException:
+				raise TimeoutException('Did not receive response in time (timeout=%.3f sec)' % current_timeout)
 			except Exception as e:
 				raise e
+			if overall_timeout_time is not None and overall_timeout_time - time.time() < 0:
+				raise TimeoutException('Did not receive final response in time (request timeout=%.3f sec)' % overall_timeout)
 
 			response = Response.from_payload(payload)
 			self.last_response = response
@@ -1462,8 +1486,13 @@ class Client:
 					self.logger.warning('Given response code "%s" (0x%02x) is not a supported negative response code according to UDS standard.' % (response.code_name, response.code))
 
 				if response.code == Response.Code.RequestCorrectlyReceived_ResponsePending:
-					done_receiving = False
-					self.logger.debug("Server requested to wait with response code %s (0x%02x)" % (response.code_name, response.code))
+					if response_pending_supported:
+						# Received a 0x78 NRC: timeout is now set to P2*
+						current_timeout = self.p2_star_timeout
+						done_receiving = False
+						self.logger.debug("Server requested to wait with response code %s (0x%02x), timeout is now set to %.3f seconds" % (response.code_name, response.code, current_timeout))
+					else:
+						raise NegativeResponseException(response, "RequestCorrectlyReceived_ResponsePending not supported")
 				else:
 					raise NegativeResponseException(response)
 
