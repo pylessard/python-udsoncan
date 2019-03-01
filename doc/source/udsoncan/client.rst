@@ -182,6 +182,36 @@ The client configuration must be a dictionary with the following keys defined:
    
    The number of bytes used to encode a data identifier specifically for :ref:`ReadDTCInformation<ReadDTCInformation>` subfunction ``reportDTCSnapshotRecordByDTCNumber`` and ``reportDTCSnapshotRecordByRecordNumber``. The UDS standard does not specify a DID size although all other services expect a DID encoded over 2 bytes (16 bits). Default value of 2
 
+.. _config_timeouts:
+.. _config_request_timeout:
+
+.. attribute:: request_timeout
+   :annotation: (int)
+
+   Maximum amount of time in seconds to wait for a response (positive or negative except NRC 0x78) after sending a request.
+   After this time is elapsed, a TimeoutException will be raised regardless of other timeouts value or previous client response.
+   Ensure an exit path if the ECU keeps requesting to wait.
+   Default value of 5
+
+.. _config_p2_timeout:
+
+.. attribute:: p2_timeout
+   :annotation: (int)
+
+   Maximum amount of time in seconds to wait for a first response (positive, negative, or NRC 0x78). After this time is elapsed, a TimeoutException will be raised if no response has been received.
+   See ISO 14229-2:2013 (UDS Session Layer Services) for more details. 
+   Default value of 1
+
+.. _config_p2_star_timeout:
+
+.. attribute:: p2_star_timeout
+   :annotation: (int)
+
+   Maximum amount of time in seconds to wait for a response (positive, negative, or NRC0x78) after the reception of a negative response with code 0x78
+   (requestCorrectlyReceived-ResponsePending). After this time is elapsed, a TimeoutException will be raised if no response has been received. 
+   See ISO 14229-2:2013 (UDS Session Layer Services) for more details.
+   Default value of 5
+
 -------------
 
 Suppress positive response

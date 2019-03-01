@@ -35,7 +35,7 @@ class TestRequestDownload(ClientServerTest):
 		self.conn.fromuserqueue.put(b"\x74\x20\xab\xcd")	# Positive response
 
 	def _test_request_download_config_format(self):
-		self.udsclient.config = {'server_address_format':32, 'server_memorysize_format':16}
+		self.udsclient.set_configs({'server_address_format':32, 'server_memorysize_format':16})
 		memloc = MemoryLocation(address=0x1234, memorysize=0xFF)
 		response = self.udsclient.request_download(memory_location=memloc)
 		self.assertEqual(response.service_data.max_length,0xabcd)

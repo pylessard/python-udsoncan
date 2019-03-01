@@ -10,5 +10,8 @@ default_client_config  = {
 	'server_address_format'		: None,		# 8,16,24,32,40
 	'server_memorysize_format'	: None,		# 8,16,24,32,40
 	'data_identifiers' 			: {},
-	'input_output' 				: {}
+	'input_output' 				: {},
+	'request_timeout'			: 5,
+	'p2_timeout'				: 1, 
+	'p2_star_timeout'			: 5,
 }
