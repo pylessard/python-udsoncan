@@ -75,8 +75,8 @@ class Client:
 		self.refresh_config()
 
 	def set_configs(self, dic):
-		for k in dic:
-			self.set_config(k, dic[k])
+		self.config.update(dic)
+		self.refresh_config()
 
 	def refresh_config(self):
 		self.configure_logger()
