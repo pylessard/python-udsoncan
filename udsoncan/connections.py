@@ -381,7 +381,7 @@ class QueueConnection(BaseConnection):
 
 	def specific_wait_frame(self, timeout=2):
 		if not self.opened:
-			raise RuntimeException("Connection is not open")
+			raise RuntimeError("Connection is not open")
 
 		timedout = False
 		frame = None
@@ -477,7 +477,7 @@ class PythonIsoTpConnection(BaseConnection):
 
 	def specific_wait_frame(self, timeout=2):
 		if not self.opened:
-			raise RuntimeException("Connection is not open")
+			raise RuntimeError("Connection is not open")
 
 		timedout = False
 		frame = None
