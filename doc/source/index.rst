@@ -33,7 +33,7 @@ Here is an example of code to give an insight of the grammar.
    import SomeLib.SomeCar.SomeModel as MyCar
 
    import udsoncan
-   from udsoncan.connections import IsoTPConnection
+   from udsoncan.connections import IsoTPSocketConnection
    from udsoncan.client import Client
    from udsoncan.exceptions import *
    from udsoncan.services import *
