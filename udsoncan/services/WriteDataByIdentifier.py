@@ -38,7 +38,7 @@ class WriteDataByIdentifier(BaseService):
 		didconfig = ServiceHelper.check_did_config(did, didconfig=didconfig)	# Make sure all DIDs are correctly defined in client config
 		req.data = struct.pack('>H', did)	# encode DID number
 		codec = DidCodec.from_config(didconfig[did])
-		req.data += codec.encode(value)
+		req.data += codec.encode(*value)
 
 		return req
 
