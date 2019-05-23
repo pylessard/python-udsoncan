@@ -367,7 +367,7 @@ class Client:
 		:type didlist: int
 		
 		:param value: Value given to the :ref:`DidCodec <DidCodec>`.encode method. The payload returned by the codec will be sent to the server.
-		:type value: int
+		:type value: object
 
 		:return: The server response parsed by :meth:`WriteDataByIdentifier.interpret_response<udsoncan.services.WriteDataByIdentifier.interpret_response>`
 		:rtype: :ref:`Response<Response>`
