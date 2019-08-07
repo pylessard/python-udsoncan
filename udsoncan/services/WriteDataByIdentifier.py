@@ -22,7 +22,7 @@ class WriteDataByIdentifier(BaseService):
         :param did: The data identifier to write
         :type did: int
 
-        :param value: Value given to the :ref:`DidCodec <DidCodec>`.encode method
+        :param value: Value given to the :ref:`DidCodec <DidCodec>`.encode method. If involved codec is defined with a pack string (default codec), multiple values may be passed with a tuple.
         :type value: object
 
         :param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec <DidCodec>` class or pack/unpack string 
@@ -39,7 +39,7 @@ class WriteDataByIdentifier(BaseService):
         req.data = struct.pack('>H', did)	# encode DID number
         codec = DidCodec.from_config(didconfig[did])
         if codec.__class__ == DidCodec and isinstance(value, tuple):
-            req.data += codec.encode(*value)
+            req.data += codec.encode(*value)    # Fixes issue #29
         else:
             req.data += codec.encode(value)
 

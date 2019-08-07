@@ -403,6 +403,8 @@ Methods by services
 
 .. automethod:: udsoncan.client.Client.write_data_by_identifier
 
+.. note:: If the DID Codec that is written is defined with a pack string (default codec), multiple values may be passed with a tuple.
+
 -------------
 
 :ref:`WriteMemoryByAddress<WriteMemoryByAddress>`
