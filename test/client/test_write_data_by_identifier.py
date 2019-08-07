@@ -17,6 +17,18 @@ class StubbedDidCodec(DidCodec):
     def __len__(self):
         return 1
 
+class StubbedCodecThatExpectTuple(DidCodec):
+    def encode(self, the_tuple):
+        if not isinstance(the_tuple, tuple):
+            raise ValueError('Given value is not a tuple')
+        return struct.pack('BB', the_tuple[0], the_tuple[1])
+
+    def decode(self, did_payload):
+        return struct.unpack('BB', did_payload)
+
+    def __len__(self):
+        return 2
+
 class TestReadDataByIdentifier(ClientServerTest):
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
@@ -25,7 +37,9 @@ class TestReadDataByIdentifier(ClientServerTest):
         self.udsclient.config["data_identifiers"] = {
                 1 : '>H',
                 2 : '<H',
-                3 : StubbedDidCodec
+                3 : StubbedDidCodec,
+                4 : '<HHH',
+                5 : StubbedCodecThatExpectTuple
         }
 
     def test_wdbi_single_success1(self):
@@ -50,10 +64,28 @@ class TestReadDataByIdentifier(ClientServerTest):
     def test_wdbi_single_success2(self):
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b"\x2E\x00\x02\x34\x12")
-        self.conn.fromuserqueue.put(b"\x6E\x00\x02")	# Positive response
+        self.conn.fromuserqueue.put(b"\x6E\x00\x02")    # Positive response
 
     def _test_wdbi_single_success2(self):
         self.udsclient.write_data_by_identifier(did = 2, value=0x1234)
+
+    #Test for issue #29
+    def test_wdbi_single_success_multiple_vals_default_codec(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x2E\x00\x04\x22\x11\x44\x33\x66\x55")
+        self.conn.fromuserqueue.put(b"\x6E\x00\x04")    # Positive response
+
+    def _test_wdbi_single_success_multiple_vals_default_codec(self):
+        self.udsclient.write_data_by_identifier(did = 4, value=(0x1122, 0x3344, 0x5566))
+
+     #Test for issue #29
+    def test_wdbi_codec_using_tuple(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x2E\x00\x05\x12\x34")
+        self.conn.fromuserqueue.put(b"\x6E\x00\x05")    # Positive response
+
+    def _test_wdbi_codec_using_tuple(self):
+        self.udsclient.write_data_by_identifier(did = 5, value=(0x12, 0x34))
 
     def test_wdbi_incomplete_response_exception(self):
         self.wait_request_and_respond(b"\x6E\x00")	#Incomplete response
@@ -138,4 +170,4 @@ class TestReadDataByIdentifier(ClientServerTest):
 
     def _test_no_config(self):
         with self.assertRaises(ConfigError):
-            self.udsclient.write_data_by_identifier(did = 4, value=0x1234) 
+            self.udsclient.write_data_by_identifier(did = 6, value=0x1234) 
