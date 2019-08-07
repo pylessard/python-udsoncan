@@ -529,7 +529,7 @@ class Client:
         if control_type == services.RoutineControl.ControlType.startRoutine:
             action = "Starting routine ID"
         elif control_type == services.RoutineControl.ControlType.stopRoutine:
-            action = "Starting routine ID"
+            action = "Stoping routine ID"
         elif control_type == services.RoutineControl.ControlType.requestRoutineResults:
             action = "Requesting result for routine ID"
 
