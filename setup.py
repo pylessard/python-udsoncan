@@ -8,10 +8,10 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-  name = 'udsoncan',
+    name = 'udsoncan',
   packages = find_packages(exclude=['test']),
   package_data={
-    '': ['*.conf'],
+      '': ['*.conf'],
   },
   version = '1.8',
   description = 'Implementation of the Unified Diagnostic Service (UDS) protocol (ISO-14229) used in the automotive industry.',

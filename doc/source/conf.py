@@ -147,7 +147,7 @@ html_theme_options = {
 html_static_path = ['_static']
 
 html_context = {
-  'display_github': True,
+    'display_github': True,
   'github_user': 'pylessard',
   'github_repo': 'python-udsoncan',
   'github_version': 'master/doc'
@@ -298,4 +298,4 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 def setup(app):
-  app.add_stylesheet('theme_overrides.css')
+    app.add_stylesheet('theme_overrides.css')
