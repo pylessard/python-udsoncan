@@ -487,7 +487,7 @@ class PythonIsoTpConnection(BaseConnection):
 			timedout = True
 			
 		if timedout:
-			raise TimeoutException("Did not receive frame from user queue in time (timeout=%s sec)" % timeout)
+			raise TimeoutException("Did not receive frame IsoTP Transport layer in time (timeout=%s sec)" % timeout)
 		
 		if self.mtu is not None:
 			if frame is not None and len(frame) > self.mtu:
