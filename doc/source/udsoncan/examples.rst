@@ -29,7 +29,7 @@ In the following examples, we will request an ECU reset in 4 different ways. We 
    my_connection.send(req.get_payload()) 
    payload = my_connection.wait_frame(timeout=1)
    response = Response.from_payload(payload)
-   if response.service == service.ECUReset and response.code == Response.PositiveResponse and response.data == b'\x01':
+   if response.service == service.ECUReset and response.code == Response.Code.PositiveResponse and response.data == b'\x01':
       print('Success!')
    else:
       print('Reset failed')
@@ -44,7 +44,7 @@ In the following examples, we will request an ECU reset in 4 different ways. We 
    payload = my_connection.wait_frame(timeout=1)
    response = Response.from_payload(payload)
    services.ECUReset.interpret_response(response)
-   if response.service == service.ECUReset and response.code == Response.PositiveResponse and response.service_data.reset_type_echo == 1:
+   if response.service == service.ECUReset and response.code == Response.Code.PositiveResponse and response.service_data.reset_type_echo == 1:
       print('Success!')
    else:
       print('Reset failed')
