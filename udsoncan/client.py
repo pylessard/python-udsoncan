@@ -1414,6 +1414,34 @@ class Client:
 
         return response
 
+    # Performs a WriteDataByIdentifier request.
+    @standard_error_management
+    def raw_request(self, rawcmd):
+        """
+        Requests to write a value associated with a data identifier (DID) through the :ref:`WriteDataByIdentifier<WriteDataByIdentifier>` service.
+
+        :dependent configuration:  ``exception_on_<type>_response`` ``data_identifiers``
+
+        :param rawcmd: the raw usd request without length information
+        :type rawcmd: hex str
+
+        :return: The server response parsed by :meth:`WriteDataByIdentifier.interpret_response<udsoncan.services.WriteDataByIdentifier.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+
+        """
+
+        req = services.RawRequestSrv.make_request(rawcmd)
+        self.logger.info("%s - Writing raw uds request {0}".format(rawcmd))
+
+        response = self.send_request(req)
+        if response is None:
+            return
+        res = services.RawRequestSrv.interpret_response(response)
+
+
+        return res
+
+
     # Basic transmission of requests. This will need to be improved
     def send_request(self, request, timeout=-1):
         if timeout < 0:

@@ -18,8 +18,12 @@ class Request:
 
     :param data: The service data appended after service ID and payload
     :type data: bytes
+
+    :param raw_request: Indicates that the server is about to send a raw UDS request, then no need to handle the suppress_positive_response.
+    :type suppress_positive_response: bool
+
     """
-    def __init__(self, service = None, subfunction = None, suppress_positive_response = False, data=None):
+    def __init__(self, service = None, subfunction = None, suppress_positive_response = False, data=None, raw_request = False):
         if service is None:
             self.service = None
         elif isinstance(service, services.BaseService):
@@ -48,6 +52,9 @@ class Request:
         if data is not None and not isinstance(data, bytes):
             raise ValueError("data must be a valid bytes object")
 
+        if raw_request is not None:
+            self.raw_request = raw_request
+
         self.data = data
 
     def get_payload(self, suppress_positive_response=None):
@@ -66,24 +73,27 @@ class Request:
 
         requestid = self.service.request_id()	# Returns the service ID used to make a client request
 
-        payload = struct.pack("B", requestid)
-        if self.service.use_subfunction():
-            subfunction = self.subfunction
-            if suppress_positive_response is None:
-                if self.suppress_positive_response:
-                    subfunction |= 0x80
+        if self.raw_request == False:
+            payload = struct.pack("B", requestid)
+            if self.service.use_subfunction():
+                subfunction = self.subfunction
+                if suppress_positive_response is None:
+                    if self.suppress_positive_response:
+                        subfunction |= 0x80
+                else:
+                    if suppress_positive_response == True:
+                        subfunction |= 0x80
+                    elif suppress_positive_response == False:
+                        subfunction &= ~0x80
+                payload += struct.pack("B", subfunction)
             else:
-                if suppress_positive_response == True:
-                    subfunction |= 0x80
-                elif suppress_positive_response == False:
-                    subfunction &= ~0x80
-            payload += struct.pack("B", subfunction)
-        else:
-            if suppress_positive_response == True or self.suppress_positive_response == True:
-                raise ValueError('Cannot suppress positive response for service %s. This service does not have a subfunction' % (self.service.get_name()))
+                if suppress_positive_response == True or self.suppress_positive_response == True:
+                    raise ValueError('Cannot suppress positive response for service %s. This service does not have a subfunction' % (self.service.get_name()))
 
-        if self.data is not None:
-            payload += self.data
+            if self.data is not None:
+                payload += self.data
+        else:
+            payload = self.data
 
         return payload
 
@@ -107,7 +117,7 @@ class Request:
                 offset = 0
                 if req.service.use_subfunction():
                     offset += 1
-                    if len(payload) >= offset+1: 
+                    if len(payload) >= offset+1:
                         req.subfunction = int(payload[1]) & 0x7F
                         req.suppress_positive_response = True if payload[1] & 0x80 > 0 else False
                 if len(payload) > offset+1:
