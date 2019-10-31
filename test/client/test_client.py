@@ -107,3 +107,29 @@ class TestClient(ClientServerTest):
             self.assertGreater(diff, timeout, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
             self.assertLess(diff, timeout+0.5, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
 
+
+    def test_payload_override_literal(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b'\x12\x34\x56\x78')
+        self.conn.fromuserqueue.put(b"\x7E\x00")
+
+    def _test_payload_override_literal(self):
+        req = Request(service = services.TesterPresent, subfunction=0) 
+        with self.udsclient.payload_override(b'\x12\x34\x56\x78'):
+            response = self.udsclient.send_request(req)
+            self.assertEqual(response.original_payload, b'\x7E\x00')
+
+
+    def test_payload_override_func(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b'\x99\x88\x77\x66')
+        self.conn.fromuserqueue.put(b"\x7E\x00")
+
+    def _test_payload_override_func(self):
+        def func(payload):
+            return b'\x99\x88\x77\x66'
+
+        req = Request(service = services.TesterPresent, subfunction=0) 
+        with self.udsclient.payload_override(func):
+            response = self.udsclient.send_request(req)
+            self.assertEqual(response.original_payload, b'\x7E\x00')

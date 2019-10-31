@@ -37,6 +37,30 @@ class Client:
         def __exit__(self, type, value, traceback):
             self.enabled = False
 
+    class PayloadOverrider:
+        def __init__(self):
+            self.modifier = None
+            self.enabled = False
+
+        def __enter__(self):
+            self.enabled = True
+            return self
+
+        def __exit__(self, type, value, traceback):
+            self.modifier = None
+            self.enabled = False
+
+        def __call__(self, modifier):
+            self.modifier = modifier
+            return self
+
+        def get_overrided_payload(self, original_payload):
+            if callable(self.modifier):
+                return self.modifier(original_payload)
+            else:
+                return self.modifier
+
+
     def __init__(self, conn, config=default_client_config, request_timeout=None):
         self.conn = conn
         self.config = dict(config) # Makes a copy of given configuration
@@ -45,6 +69,7 @@ class Client:
         if request_timeout is not None:
             self.config['request_timeout'] = request_timeout
         self.suppress_positive_response = Client.SuppressPositiveResponse()
+        self.payload_override = Client.PayloadOverrider()
         self.last_response = None
 
         self.refresh_config()
@@ -1434,6 +1459,9 @@ class Client:
             override_suppress_positive_response = True
         else:
             payload = request.get_payload()
+
+        if self.payload_override.enabled:
+            payload = self.payload_override.get_overrided_payload(payload)
 
         if self.suppress_positive_response.enabled and not request.service.use_subfunction():
             self.logger.warning('SuppressPositiveResponse cannot be used for service %s. Ignoring' % (request.service.get_name()))
