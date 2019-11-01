@@ -220,7 +220,7 @@ Suppress positive response
 The UDS standard proposes a mechanism to avoid treating useless positive responses. For all services using a subfunction byte, the client can set bit 7 of the subfunction byte to signal that no response is necessary if the response is positive. 
 This bit is called the ``suppressPosRspMsgIndicationBit``
 
-The ``Client`` object lets you use that feature by using ``suppress_positive_response`` into a ``with`` statement. See following example:
+The ``Client`` object lets you use that feature by using ``suppress_positive_response`` into a ``with`` statement. See the following example:
 
 .. code-block:: python
 
@@ -230,6 +230,35 @@ The ``Client`` object lets you use that feature by using ``suppress_positive_res
 When ``suppress_positive_response`` is asking for a service using a subfunction byte, the client will set suppressPosRspMsgIndicationBit before sending the request. The client will not wait for any response and will disregard negative responses if they happen. The response returned by the client function will always be ``None`` in that case.
 
 If ``suppress_positive_response`` is asking for a service with no subfunction byte, the directive will be ignored and a warning message will be logged.
+
+-----
+
+Overriding the output
+---------------------
+
+For mean of testing, it may be useful to send invalid payloads to the server and still want the ``Client`` object to parse the response of the server. 
+
+It is possible to do so by using the ``payload_override`` property into a ``with`` statement. See the following example:
+
+.. code-block:: python
+
+   with client.payload_override(b'\x11\x22\x33'): # Client will send 112233 (hex) in every call within this "with" statement
+      client.tester_present()
+
+It is also possible to override with a function that modify the original output
+
+.. code-block:: python
+   
+   def my_func(payload):
+      return payload + b'\x00'  # Add extra 00 to the payload
+
+   with client.payload_override(my_func): # Client will append 00 to its output
+      client.tester_present()
+
+When using that feature, the client will process the response from the server just like if a valid request was sent. The response may be :ref:`Invalid<InvalidResponseException>`, :ref:`Unexpected<UnexpectedResponseException>` or :ref:`Negative<NegativeResponseException>`.
+
+
+.. note:: It is possible to change the behaviour of the client on failing requests. See the client parameters :ref:`exception_on_invalid_response<config_exception_on_invalid_response>`, :ref:`exception_on_unexpected_response<config_exception_on_unexpected_response>` and :ref:`exception_on_negative_response<config_exception_on_negative_response>`
 
 -----
 
