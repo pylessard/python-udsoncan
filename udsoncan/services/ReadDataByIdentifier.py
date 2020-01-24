@@ -104,11 +104,20 @@ class ReadDataByIdentifier(BaseService):
             codec = DidCodec.from_config(didconfig[did])
             offset+=2
 
-            if len(response.data) < offset+len(codec):
+            try:
+                payload_size = len(codec)
+            except NotImplementedError as nie:
+                if len(didlist) > 1:
+                    raise nie
+                else:
+                    # we assume the remaining response data corresponds to only one DID, thus read all of it
+                    payload_size = len(response.data) - offset
+
+            if len(response.data) < offset+payload_size:
                 raise InvalidResponseException(response, "Value for data identifier 0x%04x was incomplete according to definition in configuration" % did)
 
-            subpayload = response.data[offset:offset+len(codec)]
-            offset += len(codec)	# Codec must define a __len__ function that matches the encoded payload length.
+            subpayload = response.data[offset:offset+payload_size]
+            offset += payload_size	# Codec must define a __len__ function that matches the encoded payload length.
             val = codec.decode(subpayload)
             response.service_data.values[did] = val
 
