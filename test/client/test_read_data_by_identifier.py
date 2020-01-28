@@ -26,7 +26,7 @@ class ReadRemainingDataCodec(DidCodec):
         return did_payload
 
     def __len__(self):
-        return self.ReadAllRemainingData
+        raise self.ReadAllRemainingData
 
 class CodecWithNoLength(DidCodec):
 
@@ -162,7 +162,7 @@ class TestReadDataByIdentifier(ClientServerTest):
 
     # DID 5 read all the data up to the end. Makes no sense to read another DID after that.
     def test_rdbi_variable_size_did_not_last(self):
-        pass  
+        pass
 
     def _test_rdbi_variable_size_did_not_last(self):
         with self.assertRaises(ValueError):
@@ -257,5 +257,5 @@ class TestReadDataByIdentifier(ClientServerTest):
         pass
 
     def _test_no_length(self):
-        with self.assertRaises(ConfigError):
+        with self.assertRaises(NotImplementedError):
             self.udsclient.read_data_by_identifier(didlist=[6]) 

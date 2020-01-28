@@ -40,7 +40,7 @@ class DidCodec:
     :type packstr: string
     """
 
-    class ReadAllRemainingData:
+    class ReadAllRemainingData(Exception):
         pass
 
     def __init__(self, packstr=None):
