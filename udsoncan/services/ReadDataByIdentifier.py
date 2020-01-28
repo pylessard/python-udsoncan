@@ -45,10 +45,28 @@ class ReadDataByIdentifier(BaseService):
         :raises ConfigError: If didlist contains a DID not defined in didconfig
         """		
         from udsoncan import Request
+        from udsoncan import DidCodec
+
         didlist = cls.validate_didlist_input(didlist)
 
         req = Request(cls)
         ServiceHelper.check_did_config(didlist, didconfig)
+
+        did_reading_all_data = None
+        for did in didlist:
+            if did not in didconfig:    # Already checked in check_did_config. Paranoid check
+                raise ConfigError(key=did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
+                
+            codec = DidCodec.from_config(didconfig[did])
+            try:
+                length = len(codec)
+                if did_reading_all_data is not None:
+                    raise ValueError('Did 0x%04X is configured to read the rest of the payload (__len__ raisong ReadAllRemainingData), but a subsequent DID is requested (0x%04x)' % (did_reading_all_data, did))
+            except DidCodec.ReadAllRemainingData:
+                if did_reading_all_data is not None:
+                    raise ValueError('It is impossible to read 2 DIDs configured to read the rest of the payload (__len__ raising ReadAllRemainingData). Dids are : 0x%04X and 0x%04X' % (did_reading_all_data, did))
+                did_reading_all_data = did
+
         req.data = struct.pack('>'+'H'*len(didlist), *didlist) #Encode list of DID
 
         return req
@@ -104,11 +122,16 @@ class ReadDataByIdentifier(BaseService):
             codec = DidCodec.from_config(didconfig[did])
             offset+=2
 
-            if len(response.data) < offset+len(codec):
+            try:
+                payload_size = len(codec)
+            except DidCodec.ReadAllRemainingData:
+                payload_size = len(response.data) - offset
+
+            if len(response.data) < offset+payload_size:
                 raise InvalidResponseException(response, "Value for data identifier 0x%04x was incomplete according to definition in configuration" % did)
 
-            subpayload = response.data[offset:offset+len(codec)]
-            offset += len(codec)	# Codec must define a __len__ function that matches the encoded payload length.
+            subpayload = response.data[offset:offset+payload_size]
+            offset += payload_size	# Codec must define a __len__ function that matches the encoded payload length.
             val = codec.decode(subpayload)
             response.service_data.values[did] = val
 
