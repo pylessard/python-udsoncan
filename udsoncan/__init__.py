@@ -40,6 +40,9 @@ class DidCodec:
     :type packstr: string
     """
 
+    class ReadAllRemainingData:
+        pass
+
     def __init__(self, packstr=None):
         self.packstr = packstr
 

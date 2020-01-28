@@ -17,6 +17,26 @@ class StubbedDidCodec(DidCodec):
     def __len__(self):
         return 1
 
+class ReadRemainingDataCodec(DidCodec):
+
+    def encode(self, *args, **kwargs):
+        return b''
+
+    def decode(self, did_payload):
+        return did_payload
+
+    def __len__(self):
+        return self.ReadAllRemainingData
+
+class CodecWithNoLength(DidCodec):
+
+    def encode(self, *args, **kwargs):
+        return b''
+
+    def decode(self, did_payload):
+        return did_payload
+
+
 class TestReadDataByIdentifier(ClientServerTest):
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
@@ -26,7 +46,9 @@ class TestReadDataByIdentifier(ClientServerTest):
                 1 : '>H',
                 2 : '<H',
                 3 : StubbedDidCodec,
-                4 : AsciiCodec(5)
+                4 : AsciiCodec(5),
+                5 : ReadRemainingDataCodec,
+                6 : CodecWithNoLength
         }
 
     def test_rdbi_single_success(self):
@@ -125,10 +147,29 @@ class TestReadDataByIdentifier(ClientServerTest):
             self.udsclient.config['data_identifiers'][0] = 'B'*i
             response = self.udsclient.read_data_by_identifier(didlist = [1,2,3])
             self.assertTrue(response.valid)
-            self.assertTrue(response.unexpected)		
+            self.assertTrue(response.unexpected)	
 
+    def test_rdbi_variable_size_did(self):
+        self.wait_request_and_respond(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x05\xaa\xbb\xcc\xdd")  
+
+    def _test_rdbi_variable_size_did(self):
+        response = self.udsclient.read_data_by_identifier(didlist = [1,2,5])
+        self.assertTrue(response.positive)
+        values = response.service_data.values
+        self.assertEqual(values[1], (0x1234,))      
+        self.assertEqual(values[2], (0x7856,))      
+        self.assertEqual(values[5], b'\xaa\xbb\xcc\xdd') 
+
+    # DID 5 read all the data up to the end. Makes no sense to read another DID after that.
+    def test_rdbi_variable_size_did_not_last(self):
+        pass  
+
+    def _test_rdbi_variable_size_did_not_last(self):
+        with self.assertRaises(ValueError):
+            self.udsclient.read_data_by_identifier(didlist = [1,2,5,3])
+       
     def test_rdbi_incomplete_response_exception(self):
-        self.wait_request_and_respond(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03")	
+        self.wait_request_and_respond(b"\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03")  
 
     def _test_rdbi_incomplete_response_exception(self):
         with self.assertRaises(InvalidResponseException):
@@ -211,3 +252,10 @@ class TestReadDataByIdentifier(ClientServerTest):
     def _test_no_config(self):
         with self.assertRaises(ConfigError):
             self.udsclient.read_data_by_identifier(didlist=[1,2,3,99]) 
+
+    def test_no_length(self):
+        pass
+
+    def _test_no_length(self):
+        with self.assertRaises(ConfigError):
+            self.udsclient.read_data_by_identifier(didlist=[6]) 
