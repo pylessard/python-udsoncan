@@ -32,7 +32,7 @@ class DidCodec:
 
             - ``encode`` Must receive any Python object and must return a bytes payload
             - ``decode`` Must receive a bytes payload and may return any Python object
-            - ``__len__`` Must return the length of the bytes payload
+            - ``__len__`` Must return the length of the bytes payload or raise a ``DidCodec.ReadAllRemainingData`` to read the whole payload. Reading the whole payload is not a feature proposed by ISO-14229.
 
     If a data can be processed by a pack string, then this class may be used as is, without being extended.
 
