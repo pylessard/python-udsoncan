@@ -1,4 +1,4 @@
-from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc, DidCodec, AsciiCodec
+from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc, DidCodec, AsciiCodec, Filesize
 from test.UdsTest import UdsTest
 import struct
 
@@ -444,3 +444,83 @@ class TestCodec(UdsTest):
 
         with self.assertRaises(ValueError):
             AsciiCodec()
+
+class TestFilesize(UdsTest):
+
+    def test_create(self):
+        #Normal use case
+        Filesize(uncompressed=123)
+        Filesize(compressed=123)
+        Filesize(uncompressed=123, compressed=100)
+        Filesize(uncompressed=123, compressed=100, width=2)
+        Filesize(uncompressed=123, width=2)
+        Filesize(compressed=100, width=2)
+
+    def test_width(self):
+
+        self.assertEqual(Filesize(uncompressed=0xFF).get_width(), 1)
+        self.assertEqual(Filesize(uncompressed=0x100).get_width(), 2)
+        self.assertEqual(Filesize(uncompressed=0xFFFF).get_width(), 2)
+        self.assertEqual(Filesize(uncompressed=0x10000).get_width(), 3)
+        self.assertEqual(Filesize(uncompressed=0xFFFFFF).get_width(), 3)
+        self.assertEqual(Filesize(uncompressed=0x1000000).get_width(), 4)
+        self.assertEqual(Filesize(uncompressed=0xFFFFFFFF).get_width(), 4)
+
+        self.assertEqual(Filesize(compressed=0xFF).get_width(), 1)
+        self.assertEqual(Filesize(compressed=0x100).get_width(), 2)
+        self.assertEqual(Filesize(compressed=0xFFFF).get_width(), 2)
+        self.assertEqual(Filesize(compressed=0x10000).get_width(), 3)
+        self.assertEqual(Filesize(compressed=0xFFFFFF).get_width(), 3)
+        self.assertEqual(Filesize(compressed=0x1000000).get_width(), 4)
+        self.assertEqual(Filesize(compressed=0xFFFFFFFF).get_width(), 4)
+
+        self.assertEqual(Filesize(uncompressed=0xFF, compressed=0xFF).get_width(), 1)
+        self.assertEqual(Filesize(uncompressed=0x100, compressed=0xFF).get_width(), 2)
+        self.assertEqual(Filesize(uncompressed=0xFF, compressed=0x100).get_width(), 2)
+        self.assertEqual(Filesize(uncompressed=0xFFFFFF, compressed=0x100).get_width(), 3)
+        self.assertEqual(Filesize(uncompressed=0xFFFFFF, compressed=0xFFFFFFFF).get_width(), 4)
+
+        self.assertEqual(Filesize(uncompressed=0xFF, compressed=0xFF, width=4).get_width(), 4)
+        self.assertEqual(Filesize(uncompressed=0xFF, compressed=0xFF, width=8).get_width(), 8)
+
+        with self.assertRaises(ValueError):
+            Filesize(uncompressed=0x100, compressed=0x100, width=1)
+
+        with self.assertRaises(ValueError):
+            Filesize(uncompressed=0xFF, compressed=0x100, width=1)
+
+        with self.assertRaises(ValueError):
+            Filesize(uncompressed=0x100, compressed=0xFF, width=1)
+
+    def test_bytes(self):
+
+        self.assertEqual(Filesize(uncompressed=0xFF).get_uncompressed_bytes(), b'\xFF')
+        self.assertEqual(Filesize(uncompressed=0x12345678).get_uncompressed_bytes(), b'\x12\x34\x56\x78')
+        self.assertEqual(Filesize(uncompressed=0x1234, width=4).get_uncompressed_bytes(), b'\x00\x00\x12\x34')
+        self.assertEqual(Filesize(uncompressed=0xFF).get_compressed_bytes(), b'')
+
+        self.assertEqual(Filesize(compressed=0xFF).get_compressed_bytes(), b'\xFF')
+        self.assertEqual(Filesize(compressed=0x12345678).get_compressed_bytes(), b'\x12\x34\x56\x78')
+        self.assertEqual(Filesize(compressed=0x1234, width=4).get_compressed_bytes(), b'\x00\x00\x12\x34')
+        self.assertEqual(Filesize(compressed=0x12345678).get_uncompressed_bytes(), b'')
+
+    def test_bad_values(self):
+        with self.assertRaises(ValueError):
+            Filesize();
+
+        with self.assertRaises(ValueError):
+            Filesize(uncompressed='asd')
+
+        with self.assertRaises(ValueError):
+            Filesize(compressed='asd')
+
+        with self.assertRaises(ValueError):
+            Filesize(compressed=123, width='asd')
+
+        with self.assertRaises(ValueError):
+            Filesize(compressed=123, width=0)
+
+    def test_str_repr(self):
+        fs = Filesize(uncompressed=123)
+        str(fs)
+        fs.__repr__()
