@@ -1078,8 +1078,8 @@ class Filesize:
     :param uncompressed: Represent the uncompressed size in bytes
     :type uncompressed: int
 
-    :param uncompressed: Represent the compressed size in bytes
-    :type uncompressed: int
+    :param compressed: Represent the compressed size in bytes
+    :type compressed: int
 
     :param width: The number of byte that should be used to encode the filesize in a payload
     :type width: int
@@ -1145,3 +1145,17 @@ class Filesize:
             return self.compressed.to_bytes(self.width, byteorder='big')
         else:
             return b''
+
+    def __str__(self):
+        uncompressed_str    = 'None' if self.uncompressed   is None else '0x%02x' % self.uncompressed
+        compressed_str      = 'None' if self.compressed     is None else '0x%02x' % self.compressed
+        width_str           = 'None' if self.width          is None else '0x%02x' % self.width
+
+        return "Filesize<Uncompressed=%s, Compressed=%s. Width=%s>" % (uncompressed_str, compressed_str, width_str)
+
+    def __repr__(self):
+        uncompressed_str    = 'None' if self.uncompressed   is None else '0x%02x' % self.uncompressed
+        compressed_str      = 'None' if self.compressed     is None else '0x%02x' % self.compressed
+        width_str           = 'None' if self.width          is None else '0x%02x' % self.width
+
+        return "<Filesize: Uncompressed=%s, Compressed=%s. Width=%s at 0x%08x>" % (uncompressed_str, compressed_str, width_str, id(self))

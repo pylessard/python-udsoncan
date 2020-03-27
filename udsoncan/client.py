@@ -165,7 +165,7 @@ class Client:
         """ 
         Requests the server to change the diagnostic session with a :ref:`DiagnosticSessionControl<DiagnosticSessionControl>` service request
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param newsession: The session to try to switch. Values from :class:`DiagnosticSessionControl.Session <udsoncan.services.DiagnosticSessionControl.Session>` can be used.
         :type newsession: int 
@@ -194,7 +194,7 @@ class Client:
         """ 
         Requests a seed to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service 
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param level: The security level to unlock. If value is even, it will be converted to the corresponding odd value
         :type level: int 
@@ -226,7 +226,7 @@ class Client:
         """ 
         Sends a key to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service 
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param level: The security level to unlock. If value is odd, it will be converted to the corresponding even value
         :type level: int 
@@ -260,7 +260,7 @@ class Client:
         Successively calls request_seed and send_key to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service.
         The key computation is done by calling config['security_algo']
 
-        :dependent configuration: ``exception_on_<type>_response`` ``security_algo`` ``security_algo_params``
+        :Effective configuration: ``exception_on_<type>_response`` ``security_algo`` ``security_algo_params``
 
         :param level: The level to unlock. Can be the odd or even variant of it.
         :type level: int
@@ -283,7 +283,7 @@ class Client:
         """
         Sends a TesterPresent request to keep the session active.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :return: The server response parsed by :meth:`TesterPresent.interpret_response<udsoncan.services.TesterPresent.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -308,7 +308,7 @@ class Client:
         Shortcut to extract a single DID. 
         Calls read_data_by_identifier then returns the first DID asked for. 
 
-        :dependent configuration: ``exception_on_<type>_response`` ``data_identifiers`` ``tolerate_zero_padding``
+        :Effective configuration: ``exception_on_<type>_response`` ``data_identifiers`` ``tolerate_zero_padding``
 
         :param didlist: The list of DID to be read
         :type didlist: list[int]
@@ -327,7 +327,7 @@ class Client:
         """
         Requests a value associated with a data identifier (DID) through the :ref:`ReadDataByIdentifier<ReadDataByIdentifier>` service.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``data_identifiers`` ``tolerate_zero_padding``
+        :Effective configuration: ``exception_on_<type>_response`` ``data_identifiers`` ``tolerate_zero_padding``
 
         See :ref:`an example<reading_a_did>` about how to read a DID
 
@@ -386,7 +386,7 @@ class Client:
         """
         Requests to write a value associated with a data identifier (DID) through the :ref:`WriteDataByIdentifier<WriteDataByIdentifier>` service.
 
-        :dependent configuration:  ``exception_on_<type>_response`` ``data_identifiers``
+        :Effective configuration:  ``exception_on_<type>_response`` ``data_identifiers``
 
         :param didlist: The DID to write its value
         :type didlist: int
@@ -416,7 +416,7 @@ class Client:
         """
         Requests the server to execute a reset sequence through the :ref:`ECUReset<ECUReset>` service.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param reset_type: The type of reset to perform.  :class:`ECUReset.ResetType<udsoncan.services.ECUReset.ResetType>`
         :type reset_type: int
@@ -446,7 +446,7 @@ class Client:
         """
         Requests the server to clear its active Diagnostic Trouble Codes with the :ref:`ClearDiagnosticInformation<ClearDiagnosticInformation>` service.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param group: The group of DTCs to clear. It may refer to Powertrain DTCs, Chassis DTCs, etc. Values are defined by the ECU manufacturer except for two specific values
 
@@ -477,7 +477,7 @@ class Client:
         """
         Requests the server to start a routine through the :ref:`RoutineControl<RoutineControl>` service (subfunction = 0x01).
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param routine_id: The 16-bit numerical ID of the routine to start
         :type group: int
@@ -496,7 +496,7 @@ class Client:
         """
         Requests the server to stop a routine through the :ref:`RoutineControl<RoutineControl>` service (subfunction = 0x02).
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param routine_id: The 16-bit numerical ID of the routine to stop
         :type group: int
@@ -515,7 +515,7 @@ class Client:
         """
         Requests the server to send back the execution result of the specified routine through the :ref:`RoutineControl<RoutineControl>` service (subfunction = 0x03).
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param routine_id: The 16-bit numerical ID of the routine
         :type group: int
@@ -534,7 +534,7 @@ class Client:
         """
         Sends a generic request for the :ref:`RoutineControl<RoutineControl>` service with custom subfunction (control_type).
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param control_type: The service subfunction. See :class:`RoutineControl.ControlType<udsoncan.services.RoutineControl.ControlType>`
         :type group: int
@@ -579,7 +579,7 @@ class Client:
         """
         Reads the timing parameters from the server with :ref:`AccessTimingParameter<AccessTimingParameter>` service with subfunction ``readExtendedTimingParameterSet`` (0x01).
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :return: The server response parsed by :meth:`AccessTimingParameter.interpret_response<udsoncan.services.AccessTimingParameter.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -591,7 +591,7 @@ class Client:
         """
         Resets the server timing parameters to their default value with :ref:`AccessTimingParameter<AccessTimingParameter>` service with subfunction ``setTimingParametersToDefaultValues`` (0x02).
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :return: The server response parsed by :meth:`AccessTimingParameter.interpret_response<udsoncan.services.AccessTimingParameter.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -603,7 +603,7 @@ class Client:
         """
         Reads the currently active timing parameters from the server with :ref:`AccessTimingParameter<AccessTimingParameter>` service with subfunction ``readCurrentlyActiveTimingParameters`` (0x03).
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :return: The server response parsed by :meth:`AccessTimingParameter.interpret_response<udsoncan.services.AccessTimingParameter.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -615,7 +615,7 @@ class Client:
         """
         Sets the timing parameters into the server with :ref:`AccessTimingParameter<AccessTimingParameter>` service with subfunction ``setTimingParametersToGivenValues`` (0x04).
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param params: The parameters data. Specific to each ECU.
         :type params: bytes
@@ -632,7 +632,7 @@ class Client:
         """
         Sends a generic request for :ref:`AccessTimingParameter<AccessTimingParameter>` service with configurable subfunction (access_type).
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param access_type: The service subfunction. See :class:`AccessTimingParameter.AccessType<udsoncan.services.AccessTimingParameter.AccessType>`
         :type access_type: bytes
@@ -676,7 +676,7 @@ class Client:
         """
         Switches the transmission or reception of certain messages on/off with :ref:`CommunicationControl<CommunicationControl>` service.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param control_type: The action to request such as enabling or disabling some messages. See :class:`CommunicationControl.ControlType<udsoncan.services.CommunicationControl.ControlType>`. This value can also be ECU manufacturer-specific
         :type control_type: int
@@ -708,7 +708,7 @@ class Client:
         """
         Informs the server that the client wants to initiate a download from the client to the server by sending a :ref:`RequestDownload<RequestDownload>` service request.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``server_address_format`` ``server_memorysize_format``
+        :Effective configuration: ``exception_on_<type>_response`` ``server_address_format`` ``server_memorysize_format``
 
         :param memory_location: The address and size of the memory block to be written.
         :type memory_location: :ref:`MemoryLocation <MemoryLocation>`
@@ -726,7 +726,7 @@ class Client:
         """
         Informs the server that the client wants to initiate an upload from the server to the client by sending a :ref:`RequestUpload<RequestUpload>` service request.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``server_address_format`` ``server_memorysize_format``
+        :Effective configuration: ``exception_on_<type>_response`` ``server_address_format`` ``server_memorysize_format``
 
         :param memory_location: The address and size of the memory block to be written.
         :type memory_location: :ref:`MemoryLocation <MemoryLocation>`
@@ -780,7 +780,7 @@ class Client:
         """
         Transfer a block of data to/from the client to/from the server by sending a :ref:`TransferData<TransferData>` service request and returning the server response.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param sequence_number: Corresponds to an 8bit counter that should increment for each new block transferred.
                 Allowed values are from 0 to 0xFF
@@ -814,7 +814,7 @@ class Client:
         """
         Informs the server that the client wants to stop the data transfer by sending a :ref:`RequestTransferExit<RequestTransferExit>` service request.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param data: Optional additional data to send to the server
         :type data: bytes
@@ -837,7 +837,7 @@ class Client:
         """
         Controls the communication baudrate by sending a :ref:`LinkControl<LinkControl>` service request.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param control_type: Allowed values are from 0 to 0xFF. See :class:`LinkControl.ControlType<udsoncan.services.LinkControl.ControlType>`
         :type control_type: int
@@ -874,7 +874,7 @@ class Client:
         """
         Substitutes the value of an input signal or overrides the state of an output by sending a :ref:`InputOutputControlByIdentifier<InputOutputControlByIdentifier>` service request.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``input_output`` ``tolerate_zero_padding``
+        :Effective configuration: ``exception_on_<type>_response`` ``input_output`` ``tolerate_zero_padding``
 
         :param did: Data identifier to represent the IO
         :type did: int
@@ -930,7 +930,7 @@ class Client:
         Controls some settings related to the Diagnostic Trouble Codes by sending a :ref:`ControlDTCSetting<ControlDTCSetting>` service request. 
         It can enable/disable some DTCs or perform some ECU specific configuration.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param setting_type: Allowed values are from 0 to 0x7F. See :class:`ControlDTCSetting.SettingType<udsoncan.services.ControlDTCSetting.SettingType>`
         :type setting_type: int
@@ -969,7 +969,7 @@ class Client:
         """
         Reads a block of memory from the server by sending a :ref:`ReadMemoryByAddress<ReadMemoryByAddress>` service request. 
 
-        :dependent configuration: ``exception_on_<type>_response`` ``server_address_format`` ``server_memorysize_format``
+        :Effective configuration: ``exception_on_<type>_response`` ``server_address_format`` ``server_memorysize_format``
 
         :param memory_location: The address and the size of the memory block to read.
         :type memory_location: :ref:`MemoryLocation <MemoryLocation>`
@@ -1012,7 +1012,7 @@ class Client:
         """
         Writes a block of memory in the server by sending a :ref:`WriteMemoryByAddress<WriteMemoryByAddress>` service request. 
 
-        :dependent configuration: ``exception_on_<type>_response`` ``server_address_format`` ``server_memorysize_format``
+        :Effective configuration: ``exception_on_<type>_response`` ``server_address_format`` ``server_memorysize_format``
 
         :param memory_location: The address and the size of the memory block to read. 
         :type memory_location: :ref:`MemoryLocation <MemoryLocation>`
@@ -1066,7 +1066,7 @@ class Client:
         Reads all the Diagnostic Trouble Codes that have a status matching the given mask. 
         The server will check all of its DTCs and if (Dtc.status & status_mask) != 0, then the DTCs match the filter and are sent back to the client.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :param status_mask: The status mask against which the DTCs are tested. 
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
@@ -1081,7 +1081,7 @@ class Client:
         Reads the emission-related Diagnostic Trouble Codes that have a status matching the given mask.
         The server will check its emission-related DTCs and if (Dtc.status & status_mask) != 0, then the DTCs match the filter and are sent back to the client.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :param status_mask: The status mask against which the DTCs are tested. 
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
@@ -1096,7 +1096,7 @@ class Client:
         Reads all the Diagnostic Trouble Codes stored in mirror memory that have a status matching the given mask. 
         The server will check all of its DTCs and if (Dtc.status & status_mask) != 0, then the DTCs match the filter and are sent back to the client.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :param status_mask: The status mask against which the DTCs are tested. 
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
@@ -1111,7 +1111,7 @@ class Client:
         Reads all the Diagnostic Trouble Codes that have a status and a severity matching the given masks. 
         The server will check all of its DTCs and if ( (Dtc.status & status_mask) != 0 && (Dtc.severity & severity) !=0), then the DTCs match the filter and are sent back to the client.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :param status_mask: The status mask against which the DTCs are tested. 
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
@@ -1128,7 +1128,7 @@ class Client:
         """
         Gets the number of DTCs that match the specified status mask.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param status_mask: The status mask against which the DTCs are tested. 
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
@@ -1142,7 +1142,7 @@ class Client:
         """
         Gets the number of DTCs that match the specified status mask in mirror memory.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param status_mask: The status mask against which the DTCs are tested. 
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
@@ -1156,7 +1156,7 @@ class Client:
         """
         Gets the number of emission-related DTCs that match the specified status mask.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param status_mask: The status mask against which the DTCs are tested. 
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
@@ -1170,7 +1170,7 @@ class Client:
         """
         Gets the number of DTCs that match the specified status mask and severity mask.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param status_mask: The status mask against which the DTCs are tested. 
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
@@ -1187,7 +1187,7 @@ class Client:
         """
         Requests the server for a specific DTC severity level.
 
-        :dependent configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``
 
         :param dtc: The DTC ID for which we request the severity. It can be a 3-byte integer or a DTC instance with an ID set.
         :type dtc: int or :ref:`Dtc<DTC>`
@@ -1201,7 +1201,7 @@ class Client:
         """
         Requests the list of supported DTCs by the server.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -1212,7 +1212,7 @@ class Client:
         """
         Reads a single DTC. Requests the server for the first DTC that set its ``Dtc.Status.test_failed`` bit.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -1223,7 +1223,7 @@ class Client:
         """
         Reads a single DTC. Requests the server for the first DTC that set its ``Dtc.Status.confirmed`` bit.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -1234,7 +1234,7 @@ class Client:
         """
         Reads a single DTC. Requests the server for the last DTC that set its ``Dtc.Status.test_failed`` bit.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -1245,7 +1245,7 @@ class Client:
         """
         Reads a single DTC. Requests the server for the last DTC that set its ``Dtc.Status.confirmed`` bit.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -1258,7 +1258,7 @@ class Client:
 
         A permanent DTC is a DTC stored in Non-Volatile memory and that cannot be erased by test equipment or by power-cycling the ECU.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -1274,7 +1274,7 @@ class Client:
         If the ECU follows the UDS guidelines, it will wait to detect a fault many times before setting a status bit for this fault DTC. Each time the fault is detected, a fault counter is incremented, when it is not detected, the counter is decremented.
         Once the fault counter reaches a threshold, a status bit is set and the DTC is not `prefailed` anymore. A `prefailed` DTC is any DTC that has fault detection counter greater than 0, but less than the detection threshold.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -1285,7 +1285,7 @@ class Client:
         """
         Requests the server to return an index of all the DTC snapshots available. The server will respond with a list of DTCs and a list of snapshot record numbers for each DTC.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -1297,7 +1297,7 @@ class Client:
         Requests the server for one or many specific DTC snapshots associated with a single DTC.
         Each snapshot has a data identifier associated with it. The data will be decoded using the associated :ref:`DidCodec<DidCodec>` defined in ``config['data_identifiers']``.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc`` ``dtc_snapshot_did_size``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc`` ``dtc_snapshot_did_size``
 
         :param dtc: The DTC ID for which we request the snapshot data. It can be a 3-byte integer or a DTC instance with an ID set.
         :type dtc: int or :ref:`Dtc<DTC>`
@@ -1316,7 +1316,7 @@ class Client:
 
         Each snapshot has a data identifier associated with it. The data will be decoded using the associated :ref:`DidCodec<DidCodec>` defined in ``config['data_identifiers']``.
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding``  ``dtc_snapshot_did_size``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding``  ``dtc_snapshot_did_size``
 
         :param record_number: The record number of the snapshot data to read. If 0xFF is given, then all snapshots will be read, otherwise, a single snapshot will be read.
         :type record_number: int
@@ -1332,7 +1332,7 @@ class Client:
 
         The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``extended_data_size``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``extended_data_size``
 
         :param dtc: The DTC ID for which we request the extended data. It can be a 3-byte integer or a DTC instance with an ID set.
         :type dtc: int or :ref:`Dtc<DTC>`
@@ -1354,7 +1354,7 @@ class Client:
 
         The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
 
-        :dependent configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``extended_data_size``
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``extended_data_size``
 
         :param dtc: The DTC ID for which we request the extended data. It can be a 3-byte integer or a DTC instance with an ID set.
         :type dtc: int or :ref:`Dtc<DTC>`
@@ -1441,24 +1441,105 @@ class Client:
 
 
     def add_file(self, filename, dfi=None, filesize=None):
+        """
+        Sends a RequestFileTransfer request with ModeOfOperation=AddFile(1).
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding``
+
+        :param filename: The name of the file to create, limited to ASCII characters.
+        :type filename: str
+
+        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data. 
+                If not specified, the default value of 00 will be used, specifying no encryption and no compression. 
+        :type dfi: :ref:`DataFormatIdentifier<DataFormatIdentifier>`
+
+        :param filesize: The filesize of the file to write. 
+            If filesize is an object of type :ref:`Filesize<Filesize>`, the uncompressed size and compressed size will be encoded on
+            the minimum amount of bytes necessary, unless a ``width`` is explicitly defined. If no compressed size is given or filesize is an ``int``,
+            then the compressed size will be set equal to the uncompressed size or the integer value given as specified by ISO-14229
+        :type filesize: :ref:`Filesize<Filesize>` or int
+
+        :return: The server response parsed by :meth:`RequestFileTransfer.interpret_response<udsoncan.services.RequestFileTransfer.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
         return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.AddFile, path=filename, dfi=dfi, filesize=filesize)
 
     def delete_file(self, filename):
+        """
+        Sends a RequestFileTransfer request with ModeOfOperation=DeleteFile(2).
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding``
+
+        :param filename: The name of the file to delete, limited to ASCII characters.
+        :type filename: str
+
+        :return: The server response parsed by :meth:`RequestFileTransfer.interpret_response<udsoncan.services.RequestFileTransfer.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
         return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.DeleteFile, path=filename)
     
     def replace_file(self, filename, dfi=None, filesize=None):
+        """
+        Sends a RequestFileTransfer request with ModeOfOperation=ReplaceFile(3).
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding``
+
+        :param filename: The name of the file to replace, limited to ASCII characters.
+        :type filename: str
+
+        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data. 
+                If not specified, the default value of 00 will be used, specifying no encryption and no compression. 
+        :type dfi: :ref:`DataFormatIdentifier<DataFormatIdentifier>`
+
+        :param filesize: The filesize of the file to write. 
+            If filesize is an object of type :ref:`Filesize<Filesize>`, the uncompressed size and compressed size will be encoded on
+            the minimum amount of bytes necessary, unless a ``width`` is explicitly defined. If no compressed size is given or filesize is an ``int``,
+            then the compressed size will be set equal to the uncompressed size or the integer value given as specified by ISO-14229
+        :type filesize: :ref:`Filesize<Filesize>` or int
+
+        :return: The server response parsed by :meth:`RequestFileTransfer.interpret_response<udsoncan.services.RequestFileTransfer.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
         return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.ReplaceFile, path=filename, dfi=dfi, filesize=filesize)
    
     def read_file(self, filename, dfi=None):
+        """
+        Sends a RequestFileTransfer request with ModeOfOperation=ReadFile(4).
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding``
+
+        :param filename: The name of the file to read, limited to ASCII characters.
+        :type filename: str
+
+        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data. 
+                If not specified, the default value of 00 will be used, specifying no encryption and no compression. 
+        :type dfi: :ref:`DataFormatIdentifier<DataFormatIdentifier>`
+
+        :return: The server response parsed by :meth:`RequestFileTransfer.interpret_response<udsoncan.services.RequestFileTransfer.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
         return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.ReadFile, path=filename, dfi=dfi)
    
     def read_dir(self, path):
+        """
+        Sends a RequestFileTransfer request with ModeOfOperation=ReadDir(5).
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding``
+
+        :param path: The name of the directory to read, limited to ASCII characters.
+        :type path: str
+
+        :return: The server response parsed by :meth:`RequestFileTransfer.interpret_response<udsoncan.services.RequestFileTransfer.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
         return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.ReadDir, path=path)
 
     @standard_error_management
     def request_file_transfer(self, moop, path, dfi=None, filesize=None):
         request = services.RequestFileTransfer.make_request(moop=moop, path=path, dfi=dfi, filesize=filesize)
-
+        self.logger.info('%s - Sending a "%s"(0x%02x) request on "%s". ' % (self.service_log_prefix(services.RequestFileTransfer), services.RequestFileTransfer.ModeOfOperation.get_name(moop), moop, path))
+        self.logger.debug("%s - DataFormatIdentifier = %s. Filesize = %s" % (self.service_log_prefix(services.RequestFileTransfer), dfi, filesize))
+       
         response = self.send_request(request)
         if response is None:
             return

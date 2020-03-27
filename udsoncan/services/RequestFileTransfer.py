@@ -13,7 +13,7 @@ class RequestFileTransfer(BaseService):
                                         Response.Code.RequestOutOfRange,
                                         Response.Code.UploadDownloadNotAccepted
                                         ]
-    class ModeOfOperation(BaseSubfunction):
+    class ModeOfOperation(BaseSubfunction): # Not really a subfunction, but we wantto inherit the helpers in BaseSubfunction class
         """
         RequestFileTransfer Mode Of Operation (MOOP). Represent the action that can be done on the server filesystem.
         See ISO-14229:2013 Annex G
@@ -40,6 +40,28 @@ class RequestFileTransfer(BaseService):
 
     @classmethod
     def make_request(cls, moop, path, dfi = None, filesize = None):
+        """
+        Generates a request for RequestFileTransfer
+
+        :param moop: Mode of operation. Can be AddFile(1), DeleteFile(2), ReplaceFile(3), ReadFile(4), ReadDir(5). See :class:`RequestFileTransfer.ModeOfOperation<udsoncan.services.RequestFileTransfer.ModeOfOperation>`
+        :type moop: int
+
+        :param path: String representing the path to the target file or directory.
+        :type path: string
+
+        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data. 
+                If not specified, the default value of 00 will be used, specifying no encryption and no compression. 
+                This value is only used when ModeOfOperation is : ``AddFile``, ``ReplaceFile``, ``ReadFile``
+        :type dfi: :ref:`DataFormatIdentifier<DataFormatIdentifier>`
+
+        :param filesize: The filesize of the file to write when ModeOfOperation is ``AddFile`` or ``ReplaceFile``. 
+            If filesize is an object of type :ref:`Filesize<Filesize>`, the uncompressed size and compressed size will be encoded on
+            the minimum amount of bytes necessary, unless a ``width`` is explicitly defined. If no compressed size is given or filesize is an ``int``,
+            then the compressed size will be set equal to the uncompressed size or the integer value given as specified by ISO-14229
+        :type filesize: :ref:`Filesize<Filesize>` or int
+
+        :raises ValueError: If parameters are out of range, missing or wrong type
+        """             
         from udsoncan import Request, Filesize
         if not isinstance(moop, int):
             raise ValueError('Mode of operation must be an integer')
@@ -106,6 +128,15 @@ class RequestFileTransfer(BaseService):
 
     @classmethod
     def interpret_response(cls, response, tolerate_zero_padding=True):
+        """
+        Populates the response ``service_data`` property with an instance of :class:`RequestFileTransfer.ResponseData<udsoncan.services.RequestFileTransfer.ResponseData>`
+
+        :param response: The received response to interpret
+        :type response: :ref:`Response<Response>`
+
+        :raises InvalidResponseException: If length of ``response.data`` is too short or payload does not respect ISO-14229 specifications
+        :raises NotImplementedError: If the MaxNumberOfBlock or fileSizeUncompressedOrDirInfoLength value is encoded over more than 8 bytes.
+        """         
         from udsoncan import Filesize, DataFormatIdentifier
         response.service_data = cls.ResponseData()
         if len(response.data) < 1:
@@ -187,7 +218,6 @@ class RequestFileTransfer(BaseService):
             else:
                 compressed_size = None
 
-        
         if has_uncompressed_filesize and response.service_data.moop_echo == cls.ModeOfOperation.ReadDir:
             response.service_data.dirinfo_length = uncompressed_size
         else:
@@ -199,17 +229,48 @@ class RequestFileTransfer(BaseService):
                 pass
             else:
                 raise InvalidResponseException(response, 'Response payload has extra data that has no meaning')
-        #from IPython import embed
-        #embed()
+
         response.service_data = response.service_data
 
     class ResponseData(BaseResponseData):
+        """
+        .. data:: moop_echo (int)
+
+                Request ModeOfOperation echoed back by the server
+
+        .. data:: max_length (int)
+
+                The MaxNumberOfBlockLength returned by the server. Represent the number of data bytes that should be included
+                in each subsequent TransferData request excepted the last one that might be smaller. 
+
+                Not set for a response to ``DeleteFile``.
+        
+        .. data:: dfi (DataFormatIdentifier)
+
+                Request DataFormatIdentifier echoed back by the server.
+
+                Not set for a response to ``DeleteFile``.
+                Set to Compression=0, Encryption=0, when getting a response for ``ReadDir`` as specified by ISO-14229.
+
+        .. data:: filesize (Filesize)
+
+                Defines the size fo the file to be read in bytes, including its uncompressed and compressed size.
+
+                Only set when performing a ``ReadFile`` request
+
+        .. data:: dirinfo_length (int)
+
+                Defines the size of the directory information to be read in bytes.
+
+                Only set when performing a ``ReadDir`` request
+
+        """ 
         __slots__ = 'moop_echo', 'max_length', 'dfi', 'filesize', 'dirinfo_length'
         
         def __init__(self):
             super().__init__(RequestFileTransfer)
-            self.moop_echo          = None
-            self.max_length         = None
-            self.dfi           = None
-            self.filesize           = None
-            self.dirinfo_length     = None
+            self.moop_echo      = None
+            self.max_length     = None
+            self.dfi            = None
+            self.filesize       = None
+            self.dirinfo_length = None

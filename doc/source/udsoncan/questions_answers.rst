@@ -6,14 +6,14 @@ What version of the standard has been used?
 
 .. epigraph::
    
-   ISO-14229:2006, which is the document that I had access to when writing the code.
+   The cod ewas originally written based on ISO-14229:2006. Some addition from the 2013 version has been added, but not exhaustively.
 
-Can we expect an update for the 2013 version?
+Can we expect an update for the 2020 version?
 ---------------------------------------------
 
 .. epigraph::
    
-   Yes, one day, when I'll put my hands on the 2013 document. 
+   Yes, one day, when I'll put my hands on the 2020 document. 
    Access to ISO standard costs money and this project is 100% voluntary.
 
 -----

@@ -58,6 +58,15 @@ AddressAndLengthFormatIdentifier
 
 -----
 
+.. _Filesize:
+
+Filesize
+--------
+
+.. autoclass:: udsoncan.Filesize
+
+-----
+
 .. _DTC:
 
 DTC

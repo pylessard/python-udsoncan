@@ -192,6 +192,21 @@ ReadDataByIdentifier (0x22)
 
 -------
 
+.. _RequestFileTransfer :
+
+RequestFileTransfer (0x38)
+--------------------------
+
+.. automethod:: udsoncan.services.RequestFileTransfer.make_request
+.. automethod:: udsoncan.services.RequestFileTransfer.interpret_response
+
+.. autoclass:: udsoncan.services::RequestFileTransfer.ResponseData
+   :members: 
+
+.. note:: This service does not have subfunctions
+
+-------
+
 .. _ReadDTCInformation:
 
 ReadDTCInformation (0x19)

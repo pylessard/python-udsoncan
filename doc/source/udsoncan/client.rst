@@ -440,3 +440,14 @@ Methods by services
 #################################################
 
 .. automethod:: udsoncan.client.Client.write_memory_by_address
+
+-------------
+
+:ref:`RequestFileTransfer<RequestFileTransfer>`
+###############################################
+
+.. automethod:: udsoncan.client.Client.add_file
+.. automethod:: udsoncan.client.Client.delete_file
+.. automethod:: udsoncan.client.Client.replace_file
+.. automethod:: udsoncan.client.Client.read_file
+.. automethod:: udsoncan.client.Client.read_dir
