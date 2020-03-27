@@ -949,7 +949,7 @@ class Client:
         elif setting_type == services.ControlDTCSetting.SettingType.off:
             action =  "Turning DTC Off"
 
-        self.logger.info('%s - SettingType=0x%02x (%s) - %s with a paylod of %d bytes' % (self.service_log_prefix(services.ControlDTCSetting), setting_type, services.ControlDTCSetting.SettingType.get_name(setting_type), action, data_len))
+        self.logger.info('%s - SettingType=0x%02x (%s) - %s with a payload of %d bytes' % (self.service_log_prefix(services.ControlDTCSetting), setting_type, services.ControlDTCSetting.SettingType.get_name(setting_type), action, data_len))
         if data is not None:
             self.logger.debug("Payload of data : %s" % binascii.hexlify(data))
 
