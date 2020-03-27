@@ -52,6 +52,12 @@ class TestDataFormatIdentifier(UdsTest):
         str(dfi)
         dfi.__repr__()
 
+    def test_from_byte(self):
+        dfi = DataFormatIdentifier.from_byte(0xAB)
+        self.assertEqual(dfi.compression, 0xA)
+        self.assertEqual(dfi.encryption, 0xB)
+
+
     def test_ali_oob_values(self):
         with self.assertRaises(ValueError):
             DataFormatIdentifier(compression=-1, encryption=1)

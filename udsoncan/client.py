@@ -1439,6 +1439,47 @@ class Client:
 
         return response
 
+
+    def add_file(self, filename, dfi=None, filesize=None):
+        return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.AddFile, path=filename, dfi=dfi, filesize=filesize)
+
+    def delete_file(self, filename):
+        return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.DeleteFile, path=filename)
+    
+    def replace_file(self, filename, dfi=None, filesize=None):
+        return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.ReplaceFile, path=filename, dfi=dfi, filesize=filesize)
+   
+    def read_file(self, filename, dfi=None):
+        return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.ReadFile, path=filename, dfi=dfi)
+   
+    def read_dir(self, path):
+        return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.ReadDir, path=path)
+
+    @standard_error_management
+    def request_file_transfer(self, moop, path, dfi=None, filesize=None):
+        request = services.RequestFileTransfer.make_request(moop=moop, path=path, dfi=dfi, filesize=filesize)
+
+        response = self.send_request(request)
+        if response is None:
+            return
+        try:
+            services.RequestFileTransfer.interpret_response(response, tolerate_zero_padding = self.config['tolerate_zero_padding'])
+        except InvalidResponseException as e:
+            if e.response.service_data.moop_echo is not None and e.response.service_data.moop_echo != moop:
+                raise UnexpectedResponseException(e.response, 'ModeOfOperation echo does not match request and caused the service to failed decoding the payload correctly. Received 0x%02x, Requested=0x%02x' % (e.response.service_data.moop_echo, moop))    
+            else:
+                raise e
+
+        if response.service_data.moop_echo != moop:
+            raise UnexpectedResponseException(response, 'ModeOfOperation echo does not match request. Received 0x%02x, Requested=0x%02x' % (response.service_data.moop_echo, moop))
+
+        if response.service_data.dfi is not None and dfi is not None:
+            received = response.service_data.dfi.get_byte_as_int()
+            expected = dfi.get_byte_as_int()
+            if received != expected:
+                raise UnexpectedResponseException(response, 'DataFormatIdentifier echo does not match request. Received 0x%02x, Requested=0x%02x' % (received, expected))
+
+        return response
     # Basic transmission of requests. This will need to be improved
     def send_request(self, request, timeout=-1):
         if timeout < 0:

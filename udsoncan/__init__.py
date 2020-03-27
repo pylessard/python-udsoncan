@@ -478,7 +478,12 @@ class DataFormatIdentifier:
                 raise ValueError('compression and encryption method must each be an integer between 0 and 0xF')
 
         self.compression = compression
-        self.encryption=encryption
+        self.encryption = encryption
+
+    @classmethod
+    def from_byte(cls, byte):
+        byte = int(byte)
+        return cls(compression = (byte >> 4)&0xF, encryption = (byte & 0xF) )
 
     def get_byte_as_int(self):
         return ((self.compression & 0xF) << 4) | (self.encryption & 0xF)
@@ -1067,6 +1072,18 @@ class IOValues:
 
 
 class Filesize:
+    """
+    This class represent a file size used by the RequestFileTransfer service.
+
+    :param uncompressed: Represent the uncompressed size in bytes
+    :type uncompressed: int
+
+    :param uncompressed: Represent the compressed size in bytes
+    :type uncompressed: int
+
+    :param width: The number of byte that should be used to encode the filesize in a payload
+    :type width: int
+    """
     def __init__(self, uncompressed=None, compressed = None, width=None):
         
         if uncompressed is None and compressed is None:
