@@ -274,7 +274,23 @@ class Client:
 
         seed = self.request_seed._func_no_error_management(self, level).service_data.seed
         params = self.config['security_algo_params'] if 'security_algo_params' in self.config else None
-        key = self.config['security_algo'].__call__(seed, params)
+
+        # Starting from V1.12, level is now passed to the algorithm.
+        # We now use named parameters for backward compatibility
+        algo_params = {}
+        try:
+            algo_args =  self.config['security_algo'].__code__.co_varnames[:self.config['security_algo'].__code__.co_argcount]
+            
+            if 'seed' in algo_args:
+                algo_params['seed'] = seed
+            if 'level' in algo_args:
+                algo_params['level'] = level
+            if 'params' in algo_args:
+                algo_params['params'] = params
+        except:
+            algo_params = {'seed':seed, 'params' : params, 'level' : level}
+
+        key = self.config['security_algo'].__call__(**algo_params)
         return self.send_key._func_no_error_management(self, level, key)
 
 

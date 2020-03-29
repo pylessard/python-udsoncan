@@ -231,40 +231,63 @@ class TestUnlockSecurityService(ClientServerTest):
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
 
-    def dummy_algo(self, seed, params=None):
+    def dummy_algo_backward_compatible(self, seed, params=None):
         key = bytearray(seed)
         for i in range(len(key)):
             key[i] ^= params
         return bytes(key)
 
+    def dummy_algo(self, level, seed, params=None):
+        key = bytearray(seed)
+        for i in range(len(key)):
+            key[i] = (params + level + i + key[i])
+        return bytes(key)
+
     def test_unlock_success(self):
         for i in range(2):
             request = self.conn.touserqueue.get(timeout=0.2)
-            self.assertEqual(request, b"\x27\x07")		# Request seed
-            self.conn.fromuserqueue.put(b"\x67\x07\x11\x22\x33\x44")	# Positive response
+            self.assertEqual(request, b"\x27\x07")      # Request seed
+            self.conn.fromuserqueue.put(b"\x67\x07\x11\x22\x33\x44")    # Positive response
             request = self.conn.touserqueue.get(timeout=0.2)
-            self.assertEqual(request, b"\x27\x08\xEE\xDD\xCC\xBB")
-            self.conn.fromuserqueue.put(b"\x67\x08")	# Positive response
+            key = bytearray([(0x10 + 0x07+i + 0 + 0x11), (0x10 + 0x07+i + 1 + 0x22), (0x10 + 0x07+i + 2 + 0x33), (0x10 + 0x07+i + 3 + 0x44)])
+            self.assertEqual(request, b"\x27\x08" + bytes(key))
+            self.conn.fromuserqueue.put(b"\x67\x08")    # Positive response
 
     def _test_unlock_success(self):
         self.udsclient.config['security_algo'] = self.dummy_algo
+        self.udsclient.config['security_algo_params'] = 0x10
+        response = self.udsclient.unlock_security_access(0x07)  
+        response = self.udsclient.unlock_security_access(0x08)  
+        self.assertTrue(response.positive)
+
+    def test_unlock_success_backward_compatibility(self):
+        for i in range(2):
+            request = self.conn.touserqueue.get(timeout=0.2)
+            self.assertEqual(request, b"\x27\x07")      # Request seed
+            self.conn.fromuserqueue.put(b"\x67\x07\x11\x22\x33\x44")    # Positive response
+            request = self.conn.touserqueue.get(timeout=0.2)
+            self.assertEqual(request, b"\x27\x08\xEE\xDD\xCC\xBB")
+            self.conn.fromuserqueue.put(b"\x67\x08")    # Positive response
+
+    def _test_unlock_success_backward_compatibility(self):
+        self.udsclient.config['security_algo'] = self.dummy_algo_backward_compatible
         self.udsclient.config['security_algo_params'] = 0xFF
-        response = self.udsclient.unlock_security_access(0x07)	
-        response = self.udsclient.unlock_security_access(0x08)	
+        response = self.udsclient.unlock_security_access(0x07)  
+        response = self.udsclient.unlock_security_access(0x08)  
         self.assertTrue(response.positive)
 
 
     def test_unlock_seed_fail_exception(self):
-        self.wait_request_and_respond(b"\x7F\x27\x11")	
+        self.wait_request_and_respond(b"\x7F\x27\x11")  
 
     def _test_unlock_seed_fail_exception(self):
         self.udsclient.config['security_algo'] = self.dummy_algo
         self.udsclient.config['security_algo_params'] = 0xFF
         with self.assertRaises(NegativeResponseException):
-            response = self.udsclient.unlock_security_access(0x07)	
+            response = self.udsclient.unlock_security_access(0x07)  
 
     def test_unlock_seed_fail_no_exception(self):
-        self.wait_request_and_respond(b"\x7F\x27\x11")	
+        self.wait_request_and_respond(b"\x7F\x27\x11")  
 
     def _test_unlock_seed_fail_no_exception(self):
         self.udsclient.config['security_algo'] = self.dummy_algo

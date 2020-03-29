@@ -128,7 +128,7 @@ Security algorithm implementation
 
 .. code-block:: python
 
-   def myalgo(seed, params):
+   def myalgo(level, seed, params):
    """
    Builds the security key to unlock a security level. Returns the seed xor'ed with pre-shared key.
    """

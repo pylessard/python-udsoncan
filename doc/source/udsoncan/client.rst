@@ -64,15 +64,21 @@ The client configuration must be a dictionary with the following keys defined:
 
    The implementation of the security algorithm necessary for the :ref:`SecurityAccess<SecurityAccess>` service. This function must have the following signatures: 
       
-      .. function:: SomeAlgorithm(seed, params=None)
+      .. function:: SomeAlgorithm(level, seed, params)
 
+         :param level: The requested security level.
+         :type level: int
          :param seed: The seed given by the server
          :type seed: bytes
          :param params: The value provided by the client configuration ``security_algo_params``
          :return: The security key
          :rtype: bytes
 
-   See :ref:`an example <example_security_algo>`
+.. warning:: Starting from v1.12, parameters are passed by name, so their order is not important, but their name is. 
+   Also, for backward compatibility, Python reflection is used to pass only arguments present in the signature. So a signature such as ``SomeAlgorithm()`` would be accepted.
+
+
+See :ref:`an example <example_security_algo>`
 
 .. _config_security_algo_params:
 
