@@ -80,8 +80,8 @@ class RequestFileTransfer(BaseService):
             raise ValueError('Path must be a string longer than 0 character')
 
         path_ascii = path.encode('ascii')
-        if len(path_ascii) > 0xFF:
-            raise ValueError('Path length must be smaller or equal than 255 bytes when encoded in ASCII')
+        if len(path_ascii) > 0xFFFF:
+            raise ValueError('Path length must be smaller or equal than 65535  bytes (16 bits) when encoded in ASCII')
 
         use_dfi = moop in [cls.ModeOfOperation.AddFile, cls.ModeOfOperation.ReplaceFile, cls.ModeOfOperation.ReadFile]
         use_filesize = moop in [cls.ModeOfOperation.AddFile, cls.ModeOfOperation.ReplaceFile]
@@ -112,7 +112,7 @@ class RequestFileTransfer(BaseService):
                 raise ValueError('Filesize is not needed with ModeOfOperation=%d' % moop)               
 
         data = moop.to_bytes(1, 'big')
-        data += len(path_ascii).to_bytes(1, 'big')
+        data += len(path_ascii).to_bytes(2, 'big')
         data += path_ascii
         if use_dfi:
             data += dfi.get_byte()

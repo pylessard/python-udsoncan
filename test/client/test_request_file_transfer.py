@@ -12,7 +12,7 @@ class TestRequestFileTransfer(ClientServerTest):
 
     def test_add_file_success(self):
         request = self.conn.touserqueue.get(timeout=0.2)
-        self.assertEqual(request, b"\x38\x01\x0b" + "my_file.txt".encode('ascii') + b"\x52\x04\x00\x00\x02\x22\x00\x00\x01\x11")
+        self.assertEqual(request, b"\x38\x01\x00\x0b" + "my_file.txt".encode('ascii') + b"\x52\x04\x00\x00\x02\x22\x00\x00\x01\x11")
         self.conn.fromuserqueue.put(b"\x78\x01\x02\xab\xcd\x52")	# Positive response
 
     def _test_add_file_success(self):
@@ -134,7 +134,7 @@ class TestRequestFileTransfer(ClientServerTest):
 
     def test_delete_file_success(self):
         request = self.conn.touserqueue.get(timeout=0.2)
-        self.assertEqual(request, b"\x38\x02\x0b" + "my_file.txt".encode('ascii'))
+        self.assertEqual(request, b"\x38\x02\x00\x0b" + "my_file.txt".encode('ascii'))
         self.conn.fromuserqueue.put(b"\x78\x02")    # Positive response
 
     def _test_delete_file_success(self):
@@ -221,7 +221,7 @@ class TestRequestFileTransfer(ClientServerTest):
 
     def test_replace_file_success(self):
         request = self.conn.touserqueue.get(timeout=0.2)
-        self.assertEqual(request, b"\x38\x03\x0b" + "my_file.txt".encode('ascii') + b"\x52\x04\x00\x00\x02\x22\x00\x00\x01\x11")
+        self.assertEqual(request, b"\x38\x03\x00\x0b" + "my_file.txt".encode('ascii') + b"\x52\x04\x00\x00\x02\x22\x00\x00\x01\x11")
         self.conn.fromuserqueue.put(b"\x78\x03\x02\xab\xcd\x52")    # Positive response
 
     def _test_replace_file_success(self):
@@ -360,7 +360,7 @@ class TestRequestFileTransfer(ClientServerTest):
 
     def test_read_file_success(self):
         request = self.conn.touserqueue.get(timeout=0.2)
-        self.assertEqual(request, b"\x38\x04\x0b" + "my_file.txt".encode('ascii') + b"\x52")
+        self.assertEqual(request, b"\x38\x04\x00\x0b" + "my_file.txt".encode('ascii') + b"\x52")
         self.conn.fromuserqueue.put(b"\x78\x04\x02\xab\xcd\x52\x00\x02\x98\x76\x12\x34")    # Positive response
 
     def _test_read_file_success(self):
@@ -504,7 +504,7 @@ class TestRequestFileTransfer(ClientServerTest):
 
     def test_read_dir_success(self):
         request = self.conn.touserqueue.get(timeout=0.2)
-        self.assertEqual(request, b"\x38\x05\x0c" + "/path/to/dir".encode('ascii'))
+        self.assertEqual(request, b"\x38\x05\x00\x0c" + "/path/to/dir".encode('ascii'))
         self.conn.fromuserqueue.put(b"\x78\x05\x02\xab\xcd\x00\x00\x02\x12\x34")    # Positive response
 
     def _test_read_dir_success(self):
@@ -660,7 +660,7 @@ class TestRequestFileTransfer(ClientServerTest):
 
     def test_default_dfi(self):
         request = self.conn.touserqueue.get(timeout=0.2)
-        self.assertEqual(request, b"\x38\x01\x0b" + "my_file.txt".encode('ascii') + b"\x00\x04\x00\x00\x02\x22\x00\x00\x01\x11")
+        self.assertEqual(request, b"\x38\x01\x00\x0b" + "my_file.txt".encode('ascii') + b"\x00\x04\x00\x00\x02\x22\x00\x00\x01\x11")
         self.conn.fromuserqueue.put(b"\x78\x01\x02\xab\xcd\x00")    # Positive response
 
     def _test_default_dfi(self):
@@ -670,7 +670,7 @@ class TestRequestFileTransfer(ClientServerTest):
 
     def test_default_filesize_width(self):
         request = self.conn.touserqueue.get(timeout=0.2)
-        self.assertEqual(request, b"\x38\x01\x0b" + "my_file.txt".encode('ascii') + b"\x00\x02\x02\x22\x01\x11")
+        self.assertEqual(request, b"\x38\x01\x00\x0b" + "my_file.txt".encode('ascii') + b"\x00\x02\x02\x22\x01\x11")
         self.conn.fromuserqueue.put(b"\x78\x01\x02\xab\xcd\x00")    # Positive response
 
     def _test_default_filesize_width(self):
@@ -678,7 +678,7 @@ class TestRequestFileTransfer(ClientServerTest):
 
     def test_filesize_no_compressed_size(self):
         request = self.conn.touserqueue.get(timeout=0.2)
-        self.assertEqual(request, b"\x38\x01\x0b" + "my_file.txt".encode('ascii') + b"\x00\x04\x00\x00\x02\x22\x00\x00\x02\x22")
+        self.assertEqual(request, b"\x38\x01\x00\x0b" + "my_file.txt".encode('ascii') + b"\x00\x04\x00\x00\x02\x22\x00\x00\x02\x22")
         self.conn.fromuserqueue.put(b"\x78\x01\x02\xab\xcd\x00")    # Positive response
 
     def _test_filesize_no_compressed_size(self):
@@ -686,7 +686,7 @@ class TestRequestFileTransfer(ClientServerTest):
 
     def test_filesize_numerical(self):
         request = self.conn.touserqueue.get(timeout=0.2)
-        self.assertEqual(request, b"\x38\x01\x0b" + "my_file.txt".encode('ascii') + b"\x00\x02\x01\x00\x01\x00")
+        self.assertEqual(request, b"\x38\x01\x00\x0b" + "my_file.txt".encode('ascii') + b"\x00\x02\x01\x00\x01\x00")
         self.conn.fromuserqueue.put(b"\x78\x01\x02\xab\xcd\x00")    # Positive response
 
     def _test_filesize_numerical(self):
@@ -704,7 +704,7 @@ class TestRequestFileTransfer(ClientServerTest):
         good_filesize = Filesize(uncompressed=0x222, compressed=0x111, width=4)
         good_dfi = DataFormatIdentifier(compression=5, encryption=2)
         with self.assertRaises(ValueError):
-            self.udsclient.request_file_transfer(moop=1, path="a"*256, dfi=good_dfi, filesize = good_filesize)
+            self.udsclient.request_file_transfer(moop=1, path="a"*(2**16), dfi=good_dfi, filesize = good_filesize)
 
         with self.assertRaises(ValueError):
             self.udsclient.request_file_transfer(moop=1, path="", dfi=good_dfi, filesize = good_filesize)
