@@ -272,7 +272,12 @@ class Client:
         if 'security_algo' not in self.config or not callable(self.config['security_algo']):
             raise NotImplementedError("Client configuration does not provide a security algorithm")
 
-        seed = self.request_seed._func_no_error_management(self, level).service_data.seed
+        response = self.request_seed._func_no_error_management(self, level)
+        seed = response.service_data.seed
+        if len(seed) > 0 and seed == b'\x00' * len(seed):
+            self.logger.info('%s - Security access level 0x%02x is already unlocked, no key will be sent.' % (self.service_log_prefix(services.SecurityAccess), level))
+            return response
+
         params = self.config['security_algo_params'] if 'security_algo_params' in self.config else None
 
         # Starting from V1.12, level is now passed to the algorithm.

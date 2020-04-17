@@ -260,6 +260,16 @@ class TestUnlockSecurityService(ClientServerTest):
         response = self.udsclient.unlock_security_access(0x08)  
         self.assertTrue(response.positive)
 
+    def test_unlock_already_unlocked(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x67\x07\x00\x00\x00\x00")    # Positive response, seed=0 : already unlocked
+
+    def _test_unlock_already_unlocked(self):
+        self.udsclient.config['security_algo'] = self.dummy_algo
+        self.udsclient.config['security_algo_params'] = 0x10
+        response = self.udsclient.unlock_security_access(0x07)  
+        self.assertTrue(response.positive)
+
     def test_unlock_success_backward_compatibility(self):
         for i in range(2):
             request = self.conn.touserqueue.get(timeout=0.2)
