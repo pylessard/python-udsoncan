@@ -364,7 +364,7 @@ class Client:
         if len(didlist) == 1:
             self.logger.info("%s - Reading data identifier : 0x%04x (%s)" % (self.service_log_prefix(services.ReadDataByIdentifier), didlist[0], DataIdentifier.name_from_id(didlist[0])))
         else:
-            self.logger.info("%s - Reading %d data identifier : %s" % (self.service_log_prefix(services.ReadDataByIdentifier), len(didlist), didlist))
+            self.logger.info("%s - Reading %d data identifier : %s" % (self.service_log_prefix(services.ReadDataByIdentifier), len(didlist), list(map(hex,didlist))))
 
         if 'data_identifiers' not in self.config or  not isinstance(self.config['data_identifiers'], dict):
             raise AttributeError('Configuration does not contains a valid data identifier description.')
