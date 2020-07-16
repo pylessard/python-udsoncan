@@ -63,7 +63,7 @@ class Response:
         GeneralReject = 0x10
         ServiceNotSupported = 0x11
         SubFunctionNotSupported = 0x12
-        IncorrectMessageLegthOrInvalidFormat = 0x13
+        IncorrectMessageLengthOrInvalidFormat = 0x13
         ResponseTooLong = 0x14
         BusyRepeatRequest = 0x21
         ConditionsNotCorrect = 0x22
