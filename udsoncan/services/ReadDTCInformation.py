@@ -7,7 +7,7 @@ class ReadDTCInformation(BaseService):
     _sid = 0x19
 
     supported_negative_response = [	 Response.Code.SubFunctionNotSupported,
-                                                    Response.Code.IncorrectMessageLegthOrInvalidFormat,
+                                                    Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.RequestOutOfRange
                                                     ]
 

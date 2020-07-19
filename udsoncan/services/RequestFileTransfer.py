@@ -8,7 +8,7 @@ class RequestFileTransfer(BaseService):
     _use_subfunction = False
 
     supported_negative_response = [	
-                                        Response.Code.IncorrectMessageLegthOrInvalidFormat,
+                                        Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                         Response.Code.ConditionsNotCorrect,
                                         Response.Code.RequestOutOfRange,
                                         Response.Code.UploadDownloadNotAccepted

@@ -20,7 +20,7 @@ class InputOutputControlByIdentifier(BaseService):
         freezeCurrentState = 2
         shortTermAdjustment = 3
 
-    supported_negative_response = [	 Response.Code.IncorrectMessageLegthOrInvalidFormat,
+    supported_negative_response = [	 Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.ConditionsNotCorrect,
                                                     Response.Code.RequestOutOfRange,
                                                     Response.Code.SecurityAccessDenied

@@ -17,7 +17,7 @@ class RoutineControl(BaseService):
         requestRoutineResults = 3
 
     supported_negative_response = [	 Response.Code.SubFunctionNotSupported,
-                                                    Response.Code.IncorrectMessageLegthOrInvalidFormat,
+                                                    Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.ConditionsNotCorrect,
                                                     Response.Code.RequestSequenceError,
                                                     Response.Code.RequestOutOfRange,

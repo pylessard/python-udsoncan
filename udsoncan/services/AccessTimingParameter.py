@@ -18,7 +18,7 @@ class AccessTimingParameter(BaseService):
         setTimingParametersToGivenValues = 4
 
     supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
-                                                    Response.Code.IncorrectMessageLegthOrInvalidFormat,
+                                                    Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.ConditionsNotCorrect,
                                                     Response.Code.RequestOutOfRange
                                                     ]	

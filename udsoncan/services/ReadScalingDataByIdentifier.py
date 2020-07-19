@@ -5,7 +5,7 @@ from udsoncan.exceptions import *
 class ReadScalingDataByIdentifier(BaseService):
     _sid = 0x24
 
-    supported_negative_response = [	 Response.Code.IncorrectMessageLegthOrInvalidFormat,
+    supported_negative_response = [	 Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.ConditionsNotCorrect,
                                                     Response.Code.RequestOutOfRange,
                                                     Response.Code.SecurityAccessDenied

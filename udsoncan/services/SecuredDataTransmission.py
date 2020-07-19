@@ -17,7 +17,7 @@ class SecuredDataTransmission(BaseService):
         AuditTrailInformationNotAvailable 	= Response.Code.AuditTrailInformationNotAvailable	- 0x38
 
     supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
-                                                    Response.Code.IncorrectMessageLegthOrInvalidFormat,
+                                                    Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.GeneralSecurityViolation,
                                                     Response.Code.SecuredModeRequested,
                                                     Response.Code.InsufficientProtection,

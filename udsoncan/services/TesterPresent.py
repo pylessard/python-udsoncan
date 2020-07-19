@@ -6,7 +6,7 @@ class TesterPresent(BaseService):
     _sid = 0x3E
 
     supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
-                                                    Response.Code.IncorrectMessageLegthOrInvalidFormat
+                                                    Response.Code.IncorrectMessageLengthOrInvalidFormat
                                                     ]	
 
     @classmethod

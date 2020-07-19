@@ -7,7 +7,7 @@ class TransferData(BaseService):
     _sid = 0x36
     _use_subfunction = False
 
-    supported_negative_response = [	 Response.Code.IncorrectMessageLegthOrInvalidFormat,
+    supported_negative_response = [	 Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.RequestSequenceError,
                                                     Response.Code.RequestOutOfRange,
                                                     Response.Code.TransferDataSuspended,

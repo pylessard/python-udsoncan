@@ -8,7 +8,7 @@ class ClearDiagnosticInformation(BaseService):
     _use_subfunction = False
     _no_response_data = True
 
-    supported_negative_response = [	 Response.Code.IncorrectMessageLegthOrInvalidFormat,
+    supported_negative_response = [	 Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.ConditionsNotCorrect,
                                                     Response.Code.RequestOutOfRange
                                                     ]

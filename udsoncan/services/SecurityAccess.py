@@ -6,7 +6,7 @@ class SecurityAccess(BaseService):
     _sid = 0x27
 
     supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
-                                                    Response.Code.IncorrectMessageLegthOrInvalidFormat,
+                                                    Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.ConditionsNotCorrect,
                                                     Response.Code.RequestSequenceError,
                                                     Response.Code.RequestOutOfRange,

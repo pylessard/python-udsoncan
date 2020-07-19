@@ -6,7 +6,7 @@ class ControlDTCSetting(BaseService):
     _sid = 0x85
 
     supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
-                                                    Response.Code.IncorrectMessageLegthOrInvalidFormat,
+                                                    Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.ConditionsNotCorrect,
                                                     Response.Code.RequestOutOfRange
                                                     ]

@@ -7,7 +7,7 @@ class RequestDownload(BaseService):
     _sid = 0x34
     _use_subfunction = False
 
-    supported_negative_response = [	 Response.Code.IncorrectMessageLegthOrInvalidFormat,
+    supported_negative_response = [	 Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.ConditionsNotCorrect,
                                                     Response.Code.RequestOutOfRange,
                                                     Response.Code.SecurityAccessDenied,

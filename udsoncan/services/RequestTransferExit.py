@@ -7,7 +7,7 @@ class RequestTransferExit(BaseService):
     _use_subfunction = False
     _no_response_data = True
 
-    supported_negative_response = [	 Response.Code.IncorrectMessageLegthOrInvalidFormat,
+    supported_negative_response = [	 Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                                     Response.Code.RequestSequenceError
                                                     ]
 
