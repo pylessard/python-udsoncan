@@ -72,6 +72,8 @@ class Client:
         self.payload_override = Client.PayloadOverrider()
         self.last_response = None
 
+        self.session_timing = dict(p2_server_max=None, p2_star_server_max=None)
+
         self.refresh_config()
 
     def __enter__(self):
@@ -108,6 +110,12 @@ class Client:
         for k in default_client_config:
             if k not in self.config:
                 self.config[k] = default_client_config[k]
+        self.validate_config()
+
+    def validate_config(self):
+        if self.config['standard_version'] not in [2006,2013,2020]:
+            raise ConfigError('Valid standard versions are 2006, 2013, 2020. %s is not supported' % self.config['standard_version'])
+
 
 
 
@@ -182,10 +190,16 @@ class Client:
         if response is None:
             return 
 
-        services.DiagnosticSessionControl.interpret_response(response)
+        services.DiagnosticSessionControl.interpret_response(response, standard_version = self.config['standard_version'])
 
         if newsession != response.service_data.session_echo:
             raise UnexpectedResponseException(response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (response.service_data.session_echo, newsession))
+
+        if self.config['standard_version'] > 2006:
+            if self.config['use_server_timing']:
+                self.logger.info('%s - Received new timing parameters. P2=%.3fs and P2*=%.3fs.  Using these value from now on.' % (self.service_log_prefix(services.DiagnosticSessionControl), response.service_data.p2_server_max, response.service_data.p2_star_server_max))
+                self.session_timing['p2_server_max'] = response.service_data.p2_server_max
+                self.session_timing['p2_star_server_max'] = response.service_data.p2_star_server_max
 
         return response
 
@@ -1582,12 +1596,14 @@ class Client:
                 raise UnexpectedResponseException(response, 'DataFormatIdentifier echo does not match request. Received 0x%02x, Requested=0x%02x' % (received, expected))
 
         return response
+
     # Basic transmission of requests. This will need to be improved
     def send_request(self, request, timeout=-1):
         if timeout < 0:
             # Timeout not provided by user: defaults to Client request_timeout value
             overall_timeout = self.config['request_timeout']
-            single_request_timeout = min(overall_timeout, self.config['p2_timeout'])
+            p2 = self.config['p2_timeout'] if self.session_timing['p2_server_max'] is None else self.session_timing['p2_server_max']
+            single_request_timeout = min(overall_timeout, p2)
         else:
             overall_timeout = timeout
             single_request_timeout = timeout
@@ -1659,7 +1675,8 @@ class Client:
                     done_receiving = False
                     if not using_p2_star:
                         # Received a 0x78 NRC: timeout is now set to P2*
-                        single_request_timeout = self.config['p2_star_timeout']
+                        p2_star = self.config['p2_star_timeout'] if self.session_timing['p2_star_server_max'] is None else self.session_timing['p2_star_server_max']
+                        single_request_timeout = p2_star
                         using_p2_star = True
                         self.logger.debug("Server requested to wait with response code %s (0x%02x), single request timeout is now set to P2* (%.3f seconds)" % (response.code_name, response.code, single_request_timeout))
                 else:

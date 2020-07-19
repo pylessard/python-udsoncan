@@ -54,8 +54,8 @@ The client configuration must be a dictionary with the following keys defined:
 .. attribute:: exception_on_unexpected_response
    :annotation: (bool)
 
-   When set to `True`, the client will raise a :ref:`UnexpectedResponseException<UnexpectedResponseException>` when the server returns a response that is not expected. For instance, a response for a different service or when the subfunction echo doesn't match the request.
-   When set to `False`, the returned `Response` will have its property `unexpected` set to True in the same case.
+   When set to ``True``, the client will raise a :ref:`UnexpectedResponseException<UnexpectedResponseException>` when the server returns a response that is not expected. For instance, a response for a different service or when the subfunction echo doesn't match the request.
+   When set to ``False``, the returned `Response` will have its property ``unexpected`` set to True in the same case.
 
 .. _config_security_algo:
 
@@ -188,6 +188,14 @@ See :ref:`an example <example_security_algo>`
    
    The number of bytes used to encode a data identifier specifically for :ref:`ReadDTCInformation<ReadDTCInformation>` subfunction ``reportDTCSnapshotRecordByDTCNumber`` and ``reportDTCSnapshotRecordByRecordNumber``. The UDS standard does not specify a DID size although all other services expect a DID encoded over 2 bytes (16 bits). Default value of 2
 
+.. _config_standard_version:
+
+.. attribute:: standard_version
+   :annotation: (int)
+
+   The standard version to use, valid values are : 2006, 2013, 2020.  
+   Default value is 2020
+
 .. _config_timeouts:
 .. _config_request_timeout:
 
@@ -217,6 +225,17 @@ See :ref:`an example <example_security_algo>`
    (requestCorrectlyReceived-ResponsePending). After this time is elapsed, a TimeoutException will be raised if no response has been received. 
    See ISO 14229-2:2013 (UDS Session Layer Services) for more details.
    Default value of 5
+
+.. _config_use_server_timing:
+
+.. attribute:: use_server_timing
+   :annotation: (bool)
+
+   When using 2013 standard or above, the server is required to provide its P2 and P2* timing values with a DiagnosticSessionControl request. By setting this parameter to ``True``, the value received from the server will be used. When ``False``, these timing values will be ignored and local configuration timing will be used.  Note that no timeout value can exceed the ``config['request_timeout']`` as it is meant to avoid the client from hanging for too long.
+
+   This parameter has no effect when ``config['standard_version']`` is set to ``2006``.
+
+   Default value is True
 
 -------------
 

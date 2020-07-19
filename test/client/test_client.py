@@ -107,6 +107,31 @@ class TestClient(ClientServerTest):
             self.assertGreater(diff, timeout, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
             self.assertLess(diff, timeout+0.5, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
 
+    #  Sends 2 "pending response" response to switch to P2* timeout.
+    def test_p2_star_timeout_overrided_by_diagnostic_session_control(self):
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x50\x01\x03\xE8\x00\xC8")  # Respond to diagnostic session control with timeout of 2 sec
+        
+        response = Response(service=services.TesterPresent, code=Response.Code.RequestCorrectlyReceived_ResponsePending)
+        self.conn.fromuserqueue.put(response.get_payload())
+        time.sleep(0.1)
+        self.conn.fromuserqueue.put(response.get_payload())
+
+    def _test_p2_star_timeout_overrided_by_diagnostic_session_control(self):
+        req = Request(service = services.TesterPresent, subfunction=0) 
+        self.udsclient.set_configs({'request_timeout': 5, 'p2_timeout' : 0.5, 'p2_star_timeout':1})
+        self.udsclient.change_session(1)
+        timeout = 2
+        try:
+            t1 = time.time()
+            response = self.udsclient.send_request(req)
+            raise Exception('Request did not raise a TimeoutException')
+        except TimeoutException as e:
+            self.assertIsNotNone(self.udsclient.last_response, 'Client never received the PendingResponse message')
+            self.completed = True
+            diff = time.time() - t1
+            self.assertGreater(diff, timeout, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
+            self.assertLess(diff, timeout+0.5, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
 
     def test_payload_override_literal(self):
         request = self.conn.touserqueue.get(timeout=0.2)
