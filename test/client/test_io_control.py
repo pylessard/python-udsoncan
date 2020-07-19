@@ -33,7 +33,18 @@ class StubbedCompositeCodec(DidCodec):
         }
 
     def __len__(self):
-        return 5		
+        return 5	
+
+class ReadRemainingDataCodec(DidCodec):
+
+    def encode(self, *args, **kwargs):
+        return b''
+
+    def decode(self, did_payload):
+        return did_payload
+
+    def __len__(self):
+        raise self.ReadAllRemainingData	
 
 class TestIOControl(ClientServerTest):
     def __init__(self, *args, **kwargs):
@@ -53,7 +64,8 @@ class TestIOControl(ClientServerTest):
                                 'EGR_duty'	: 0x08
                         },
                         'mask_size' : 2
-                }
+                },
+                0x111 : ReadRemainingDataCodec
         }
 
 #As defined by ISO-14229:2006, section 12.2.5.2 (Example #1)
@@ -67,6 +79,17 @@ class TestIOControl(ClientServerTest):
         self.assertEqual(response.service_data.control_param_echo, 1)	
         self.assertEqual(response.service_data.did_echo, 0x132)	
         self.assertEqual(response.service_data.decoded_data, 0x4A)	# 0x4B-1 as defined by codec decode method
+
+    def test_io_control_variable_size_codec(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x2F\x01\x11\x01")
+        self.conn.fromuserqueue.put(b"\x6F\x01\x11\x01\x99\x88\x77")    # Positive response
+
+    def _test_io_control_variable_size_codec(self):
+        response = self.udsclient.io_control(control_param=1, did=0x111) # Did 111 read all the data.
+        self.assertEqual(response.service_data.control_param_echo, 1)   
+        self.assertEqual(response.service_data.did_echo, 0x111) 
+        self.assertEqual(response.service_data.decoded_data, b'\x99\x88\x77')  # Raw data
 
     def test_io_control_single_reset_spr_no_effect(self):
         request = self.conn.touserqueue.get(timeout=0.2)

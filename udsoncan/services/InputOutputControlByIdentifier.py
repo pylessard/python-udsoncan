@@ -183,10 +183,15 @@ class InputOutputControlByIdentifier(BaseService):
         if len(response.data) >= next_byte:
             remaining_data = response.data[next_byte:]
 
-            if len(remaining_data) > len(codec):
-                if remaining_data[len(codec):] == b'\x00' * (len(remaining_data) - len(codec)):
+            try:
+                payload_size = len(codec)
+            except DidCodec.ReadAllRemainingData:
+                payload_size = len(response.data) - next_byte
+
+            if len(remaining_data) > payload_size:
+                if remaining_data[payload_size:] == b'\x00' * (len(remaining_data) - payload_size):
                     if tolerate_zero_padding:
-                        remaining_data = remaining_data[0:len(codec)]
+                        remaining_data = remaining_data[0:payload_size]
             try:
                 response.service_data.decoded_data = codec.decode(remaining_data)
             except Exception as e:
