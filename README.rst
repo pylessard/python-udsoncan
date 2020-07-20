@@ -1,6 +1,9 @@
 python-udsoncan
 ###############
 
+.. image:: https://travis-ci.com/pylessard/python-udsoncan.svg?branch=master
+    :target: https://travis-ci.com/pylessard/python-udsoncan
+
 This project is an implementation of the Unified Diagnostic Services (UDS) protocol defined by ISO-14229 written in Python 3. The code is published under MIT license on GitHub (pylessard/python-udsoncan).
 
 Documentation
