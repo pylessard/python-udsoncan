@@ -180,7 +180,7 @@ class TestPythonIsoTpConnection(UdsTest):
         self.assertTrue(self.conn.is_open())
 
     def test_receive(self):
-        self.vcan0_bus.send(can.Message(arbitration_id = self.stack_rxid, data =  b"\x03\x01\x02\x03", extended_id = False))
+        self.vcan0_bus.send(can.Message(arbitration_id = self.stack_rxid, data =  b"\x03\x01\x02\x03", is_extended_id = False))
         frame = self.conn.wait_frame(timeout=1)
         self.assertEqual(frame, b"\x01\x02\x03")
 
@@ -193,7 +193,7 @@ class TestPythonIsoTpConnection(UdsTest):
 
     def test_reopen(self):
         self.conn.send(b"\x0A\x0B\x0C\x0D")
-        self.vcan0_bus.send(can.Message(arbitration_id = self.stack_rxid, data =  b"\x03\x01\x02\x03", extended_id = False))
+        self.vcan0_bus.send(can.Message(arbitration_id = self.stack_rxid, data =  b"\x03\x01\x02\x03", is_extended_id = False))
         self.conn.close()
         self.vcan0_bus.shutdown()
         self.vcan0_bus = self.make_bus()
