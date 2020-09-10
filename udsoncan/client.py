@@ -1607,7 +1607,7 @@ class Client:
         else:
             overall_timeout = timeout
             single_request_timeout = timeout
-        overall_timeout_time = time.time() + overall_timeout
+
         using_p2_star = False	# Will switch to true when Nrc 0x78 will be received the first time.
 
         self.conn.empty_rxqueue()
@@ -1631,7 +1631,7 @@ class Client:
             return
 
         done_receiving = False
-
+        overall_timeout_time = time.time() + overall_timeout
         while not done_receiving:
             done_receiving = True
             self.logger.debug("Waiting for server response")
