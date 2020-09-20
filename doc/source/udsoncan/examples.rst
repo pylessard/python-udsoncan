@@ -181,7 +181,7 @@ This example shows how to configure the client with a DID configuration and requ
       0xF190 : udsoncan.AsciiCodec(15)       # Codec that read ASCII string. We must tell the length of the string
       }
 
-   // IsoTPSocketconnection only works with SocketCAN under Linux. Use another connection if needed.
+   # IsoTPSocketconnection only works with SocketCAN under Linux. Use another connection if needed.
    conn = IsoTPSocketConnection('vcan0', rxid=0x123, txid=0x456)  
    with Client(conn,  request_timeout=2, config=config) as client:
       response = client.read_data_by_identifier(0xF190)
