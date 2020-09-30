@@ -47,6 +47,6 @@ Example
          print('Vehicle Identification Number successfully changed.')
          client.ecu_reset(ECUReset.ResetType.hardReset)  # HardReset = 0x01
       except NegativeResponseException as e:
-         print('Server refused our request for service %s with code "%s" (0x%02x)' % (e.response.service.get_name(), e.response.code_name, e.response.code))
+         print('Server refused your request for service %s with code "%s" (0x%02x)' % (e.response.service.get_name(), e.response.code_name, e.response.code))
       except InvalidResponseException, UnexpectedResponseException as e:
          print('Server sent an invalid payload : %s' % e.response.original_payload)
