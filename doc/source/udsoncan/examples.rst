@@ -84,7 +84,7 @@ Note that, in order to run this code, both ``python-can`` and ``can-isotp`` must
       'wftmax' : 0,                          # Number of wait frame allowed before triggering an error
       'll_data_length' : 8,                  # Link layer (CAN layer) works with 8 byte payload (CAN 2.0)
       'tx_padding' : 0,                      # Will pad all transmitted CAN messages with byte 0x00. None means no padding
-      'rx_flowcontrol_timeout' : 1000        # Triggers a timeout if a flow control is awaited for more than 1000 milliseconds
+      'rx_flowcontrol_timeout' : 1000,       # Triggers a timeout if a flow control is awaited for more than 1000 milliseconds
       'rx_consecutive_frame_timeout' : 1000, # Triggers a timeout if a consecutive frame is awaited for more than 1000 milliseconds
       'squash_stmin_requirement' : False     # When sending, respect the stmin requirement of the receiver. If set to True, go as fast as possible.
    }
