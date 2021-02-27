@@ -53,6 +53,11 @@ QueueConnection
 
 .. autoclass:: udsoncan.connections.QueueConnection
 
+J2534Connection
+################
+
+.. autoclass:: udsoncan.connections.J2534Connection
+
 ---------
 
 .. _DefiningNewConnection:
