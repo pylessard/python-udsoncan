@@ -243,3 +243,28 @@ The example shown below correspond to a real example provided in ISO-14229 docum
 
       values = {'IAC_pintle': 0x07, 'rpm': 0x1234, 'pedalA': 0x4, 'pedalB' : 0x5,  'EGR_duty': 0x99}
       req = InputOutputControlByIdentifier.make_request(0x155, values=values, masks=['IAC_pintle', 'pedalA'], ioconfig=ioconfig)
+
+.. _example_using_j2534:
+
+Using J2534 PassThru Interface
+-------------------------
+
+This is an example for how to use :class:`J2534Connection<udsoncan.connections.J2534Connection>`.
+This connection *requires* a compatible J2534 PassThru device (such as a tactrix openport 2.0 cable), with a DLL for said device installed.
+Note, this conncection has been written to plug in where a standard IsoTPSocketConncetion had been used (i.e. code ported from Linux to Windows).  Functionality, from a high level, is identical.
+
+.. code-block:: python
+
+   from udsoncan.connections import J2534Connection
+   
+   conn = J2434Connection(windll='C:\Program Files (x86)\OpenECU\OpenPort 2.0\drivers\openport 2.0\op20pt32.dll',
+           rxid=0x7E8, txid=0x7E0)                                                     # Define the connection using the absolute path to the DLL, rxid and txid's for isotp
+           
+   conn.send(b'\x22\xf2\x00')                                                          # Mode 22 request for DID F200
+   response = conn.wait_frame()                                                        # response should = 0x62 F2 00 data data data data
+   
+   with Client(conn, request_timeout=1) as client:                                     # Application layer (UDS protocol)
+      client.change_session(1)   
+      # ...
+
+-----
