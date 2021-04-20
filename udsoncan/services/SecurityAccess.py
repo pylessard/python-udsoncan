@@ -30,7 +30,7 @@ class SecurityAccess(BaseService):
             return level if level % 2 == 0 else level+1
 
     @classmethod
-    def make_request(cls, level, mode, key=None):
+    def make_request(cls, level, mode, data=bytes()):
         """
         Generates a request for SecurityAccess
 
@@ -42,8 +42,8 @@ class SecurityAccess(BaseService):
         :param mode: Type of request to perform. ``SecurityAccess.Mode.RequestSeed`` or ``SecurityAccess.Mode.SendKey`` 
         :type mode: SecurityAccess.Mode, int
 
-        :param key: When mode=``SendKey``, this value must be provided.
-        :type key: bytes
+        :param data
+        :type data: bytes
 
         :raises ValueError: If parameters are out of range, missing or wrong type
         """		
@@ -53,10 +53,9 @@ class SecurityAccess(BaseService):
         ServiceHelper.validate_int(level, min=0, max=0x7F, name='Security level')
         req = Request(service=cls, subfunction=cls.normalize_level(mode=mode, level=level))
 
-        if mode == cls.Mode.SendKey:
-            if not isinstance(key, bytes):
-                raise ValueError('key must be a valid bytes object')
-            req.data = key
+        if not isinstance(data, bytes):
+            raise ValueError('key must be a valid bytes object')
+        req.data = data
 
         return req
 
