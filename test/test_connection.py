@@ -207,3 +207,4 @@ class TestPythonIsoTpConnection(UdsTest):
     def tearDown(self):
         self.conn.close()
         self.vcan0_bus.shutdown()
+
