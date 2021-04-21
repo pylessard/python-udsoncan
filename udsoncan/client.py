@@ -204,7 +204,7 @@ class Client:
         return response
 
     @standard_error_management
-    def request_seed(self, level):
+    def request_seed(self, level, data=bytes()):
         """ 
         Requests a seed to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service 
 
@@ -213,10 +213,13 @@ class Client:
         :param level: The security level to unlock. If value is even, it will be converted to the corresponding odd value
         :type level: int 
 
+        :param data: The data to send to the server
+        :type data: bytes 
+
         :return: The server response parsed by :meth:`SecurityAccess.interpret_response<udsoncan.services.SecurityAccess.interpret_response>`
         :rtype: :ref:`Response<Response>`
         """		
-        req = services.SecurityAccess.make_request(level, mode=services.SecurityAccess.Mode.RequestSeed)
+        req = services.SecurityAccess.make_request(level, mode=services.SecurityAccess.Mode.RequestSeed, data=data)
 
         self.logger.info('%s - Requesting seed to unlock security access level 0x%02x' % (self.service_log_prefix(services.SecurityAccess), req.subfunction))	# level may be corrected by service.
 
@@ -251,7 +254,7 @@ class Client:
         :return: The server response parsed by :meth:`SecurityAccess.interpret_response<udsoncan.services.SecurityAccess.interpret_response>`
         :rtype: :ref:`Response<Response>`
         """			
-        req = services.SecurityAccess.make_request(level, mode=services.SecurityAccess.Mode.SendKey, key=key)
+        req = services.SecurityAccess.make_request(level, mode=services.SecurityAccess.Mode.SendKey, data=key)
         self.logger.info('%s - Sending key to unlock security access level 0x%02x' % (self.service_log_prefix(services.SecurityAccess), req.subfunction))
         self.logger.debug('\tKey to send [%s]' % (binascii.hexlify(key)))
 
