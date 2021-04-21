@@ -42,7 +42,7 @@ class SecurityAccess(BaseService):
         :param mode: Type of request to perform. ``SecurityAccess.Mode.RequestSeed`` or ``SecurityAccess.Mode.SendKey`` 
         :type mode: SecurityAccess.Mode, int
 
-        :param data
+        :param data: securityAccessDataRecord (optional) for the get seed, securityKey (required) for the send key
         :type data: bytes
 
         :raises ValueError: If parameters are out of range, missing or wrong type
