@@ -426,8 +426,8 @@ class Client:
 
         :Effective configuration:  ``exception_on_<type>_response`` ``data_identifiers``
 
-        :param didlist: The DID to write its value
-        :type didlist: int
+        :param did: The DID to write its value
+        :type did: int
 
         :param value: Value given to the :ref:`DidCodec <DidCodec>`.encode method. The payload returned by the codec will be sent to the server.
         :type value: int
