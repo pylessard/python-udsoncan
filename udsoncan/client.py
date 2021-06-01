@@ -1681,8 +1681,9 @@ class Client:
                         p2_star = self.config['p2_star_timeout'] if self.session_timing['p2_star_server_max'] is None else self.session_timing['p2_star_server_max']
                         single_request_timeout = p2_star
                         using_p2_star = True
-                        overall_timeout_time = time.time() + single_request_timeout
                         self.logger.debug("Server requested to wait with response code %s (0x%02x), single request timeout is now set to P2* (%.3f seconds)" % (response.code_name, response.code, single_request_timeout))
+                    # Update the timeout when received NRC 0x78
+                    overall_timeout_time = time.time() + single_request_timeout
                 else:
                     raise NegativeResponseException(response)
 
