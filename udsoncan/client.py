@@ -1601,7 +1601,7 @@ class Client:
         return response
 
     # Basic transmission of requests. This will need to be improved
-    def send_request(self, request, timeout=-1):
+    def send_request(self, request, timeout=-1, respect_overall_timeout=False):
         if timeout < 0:
             # Timeout not provided by user: defaults to Client request_timeout value
             overall_timeout = self.config['request_timeout']
@@ -1640,7 +1640,7 @@ class Client:
             self.logger.debug("Waiting for server response")
 
             try:
-                if time.time() + single_request_timeout < overall_timeout_time:	
+                if not respect_overall_timeout or time.time() + single_request_timeout < overall_timeout_time:	
                     timeout_type_used 	= 'single_request'
                     timeout_value 		= single_request_timeout
                 else:	
