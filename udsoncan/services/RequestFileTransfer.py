@@ -199,7 +199,7 @@ class RequestFileTransfer(BaseService):
                     raise InvalidResponseException(response, 'Missing or incomplete fileSizeUncompressedOrDirInfoLength in received response')
 
                 todecode = bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00')
-                for i in range(1,lfid+1):
+                for i in range(1,fsodipl+1):
                     todecode[-i] = response.data[cursor+fsodipl-i]
                 uncompressed_size = struct.unpack('>q', todecode)[0]
                 cursor+= fsodipl
@@ -211,7 +211,7 @@ class RequestFileTransfer(BaseService):
                     raise InvalidResponseException(response, 'Missing or incomplete fileSizeCompressed in received response')
 
                 todecode = bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00')
-                for i in range(1,lfid+1):
+                for i in range(1,fsodipl+1):
                     todecode[-i] = response.data[cursor+fsodipl-i]
                 compressed_size = struct.unpack('>q', todecode)[0]
                 cursor += fsodipl
