@@ -76,7 +76,7 @@ class TestClient(ClientServerTest):
         self.udsclient.set_configs({'request_timeout': timeout, 'p2_timeout' : 2, 'p2_star_timeout':2})
         try:
             t1 = time.time()
-            response = self.udsclient.send_request(req, respect_overall_timeout=True)
+            response = self.udsclient.send_request(req)
             raise Exception('Request did not raise a TimeoutException')
         except TimeoutException as e:
             self.assertIsNotNone(self.udsclient.last_response, 'Client never received the PendingResponse message')
@@ -113,11 +113,10 @@ class TestClient(ClientServerTest):
     #  * checking there is a timeout when the overall_timeout is repected
     #  * checking that the full transaction is allowed to complete with the overall_timeout is ignored 
     def RCRRP_responses(self):
-        overall_timeout = 2.0
         self.conn.touserqueue.get(timeout=0.2)
         response = Response(service=services.TesterPresent, code=Response.Code.RequestCorrectlyReceived_ResponsePending)
         t1 = time.time()
-        while time.time() - t1 <= 2*overall_timeout:
+        while time.time() - t1 <= 4.0:
             self.conn.fromuserqueue.put(response.get_payload())
             time.sleep(0.1)
         response = Response(service=services.TesterPresent, code=Response.Code.PositiveResponse, data=bytes(2))
@@ -126,14 +125,18 @@ class TestClient(ClientServerTest):
     def RCRRP_responses_check(self, respect_overall_timeout):
         req = Request(service = services.TesterPresent, subfunction=0) 
         overall_timeout = 2.0
+        if not respect_overall_timeout:
+            overall_timeout = None
         p2_star_timeout = 1.0
 
         self.udsclient.set_configs({'request_timeout': overall_timeout, 'p2_timeout' : 0.5, 'p2_star_timeout':p2_star_timeout})
+
+        # Record our expectation on how long the timeout wlil be
         if respect_overall_timeout:
             timeout = overall_timeout
         else:
-            # Server is going to send RCRRP for 2*overall timeout.  Then the client will wait for P2*
-            timeout = 2*overall_timeout + p2_star_timeout
+            # Server is going to send RCRRP for 4s.  Then the client will wait for P2*
+            timeout = 4.0 + p2_star_timeout
 
         t1 = time.time()
         try:
