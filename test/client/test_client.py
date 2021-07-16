@@ -148,7 +148,6 @@ class TestClient(ClientServerTest):
                 raise Exception('Request raised a TimeoutException')
         if not respect_overall_timeout:
             self.assertEqual(self.udsclient.last_response.code, Response.Code.PositiveResponse, 'Client never received the Positive Response')
-        self.completed = True
 
     #  Sends "pending response" responses to go past the overall_timeout and check there is a timeout when overall_timeout is respected.
     def test_RCRRP_with_overall_timeout(self):
