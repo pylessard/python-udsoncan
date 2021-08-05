@@ -1606,11 +1606,16 @@ class Client:
             # Timeout not provided by user: defaults to Client request_timeout value
             overall_timeout = self.config['request_timeout']
             p2 = self.config['p2_timeout'] if self.session_timing['p2_server_max'] is None else self.session_timing['p2_server_max']
-            single_request_timeout = min(overall_timeout, p2)
+            if overall_timeout is not None:
+                single_request_timeout = min(overall_timeout, p2)
+            else:
+                single_request_timeout = p2
         else:
             overall_timeout = timeout
             single_request_timeout = timeout
-
+        respect_overall_timeout = True
+        if overall_timeout is None:
+            respect_overall_timeout = False
         using_p2_star = False	# Will switch to true when Nrc 0x78 will be received the first time.
 
         self.conn.empty_rxqueue()
@@ -1634,13 +1639,14 @@ class Client:
             return
 
         done_receiving = False
-        overall_timeout_time = time.time() + overall_timeout
+        if respect_overall_timeout:
+            overall_timeout_time = time.time() + overall_timeout
         while not done_receiving:
             done_receiving = True
             self.logger.debug("Waiting for server response")
 
             try:
-                if time.time() + single_request_timeout < overall_timeout_time:	
+                if not respect_overall_timeout or (respect_overall_timeout and time.time() + single_request_timeout < overall_timeout_time):
                     timeout_type_used 	= 'single_request'
                     timeout_value 		= single_request_timeout
                 else:	

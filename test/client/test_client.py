@@ -58,7 +58,8 @@ class TestClient(ClientServerTest):
             self.assertGreater(diff, timeout, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
             self.assertLess(diff, timeout+0.5, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
 
-    #  overall timeout is set to 0.5. Server respond "pendingResponse" for 1 sec. Client should timeout first.
+    # Overall timeout is set to 0.5. Server respond "pendingResponse" for 1 sec. 
+    # Client should timeout first as we are setting respect_overall_timeout True.
     def test_overall_timeout_pending_response(self):
         if not hasattr(self, 'completed'):
             self.completed = False
@@ -106,6 +107,64 @@ class TestClient(ClientServerTest):
             diff = time.time() - t1
             self.assertGreater(diff, timeout, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
             self.assertLess(diff, timeout+0.5, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
+
+    # send RequestCorrectlyReceived_ResponsePending responses until well beyond overall_timeout to check response
+    # This function is used in 2 tests:
+    #  * checking there is a timeout when the overall_timeout is repected
+    #  * checking that the full transaction is allowed to complete with the overall_timeout is ignored 
+    def RCRRP_responses(self):
+        self.conn.touserqueue.get(timeout=0.2)
+        response = Response(service=services.TesterPresent, code=Response.Code.RequestCorrectlyReceived_ResponsePending)
+        t1 = time.time()
+        while time.time() - t1 <= 4.0:
+            self.conn.fromuserqueue.put(response.get_payload())
+            time.sleep(0.1)
+        response = Response(service=services.TesterPresent, code=Response.Code.PositiveResponse, data=bytes(2))
+        self.conn.fromuserqueue.put(response.get_payload())
+    
+    def RCRRP_responses_check(self, respect_overall_timeout):
+        req = Request(service = services.TesterPresent, subfunction=0) 
+        overall_timeout = 2.0
+        if not respect_overall_timeout:
+            overall_timeout = None
+        p2_star_timeout = 1.0
+
+        self.udsclient.set_configs({'request_timeout': overall_timeout, 'p2_timeout' : 0.5, 'p2_star_timeout':p2_star_timeout})
+
+        # Record our expectation on how long the timeout wlil be
+        if respect_overall_timeout:
+            timeout = overall_timeout
+        else:
+            # Server is going to send RCRRP for 4s.  Then the client will wait for P2*
+            timeout = 4.0 + p2_star_timeout
+
+        t1 = time.time()
+        try:
+            response = self.udsclient.send_request(req)
+        except TimeoutException as e:
+            if respect_overall_timeout:
+                diff = time.time() - t1
+                self.assertGreater(diff, timeout, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
+                self.assertLess(diff, timeout+0.5, 'Timeout raised after %.3f seconds when it should be %.3f sec' % (diff, timeout))
+                self.assertIsNotNone(self.udsclient.last_response, 'Client never received the PendingResponse message')
+            else:
+                raise Exception('Request raised a TimeoutException')
+        if not respect_overall_timeout:
+            self.assertEqual(self.udsclient.last_response.code, Response.Code.PositiveResponse, 'Client never received the Positive Response')
+
+    #  Sends "pending response" responses to go past the overall_timeout and check there is a timeout when overall_timeout is respected.
+    def test_RCRRP_with_overall_timeout(self):
+        self.RCRRP_responses()
+
+    def _test_RCRRP_with_overall_timeout(self):
+        self.RCRRP_responses_check(respect_overall_timeout=True)
+
+    # Sends "pending response" responses to got past the overall_timeout and check there is no timeout in default state.
+    def test_RCRRP_no_overall_timeout(self):
+        self.RCRRP_responses()
+
+    def _test_RCRRP_no_overall_timeout(self):
+        self.RCRRP_responses_check(respect_overall_timeout=False)
 
     #  Sends 2 "pending response" response to switch to P2* timeout.
     def test_p2_star_timeout_overrided_by_diagnostic_session_control(self):

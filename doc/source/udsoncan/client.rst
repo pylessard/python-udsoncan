@@ -202,9 +202,14 @@ See :ref:`an example <example_security_algo>`
 .. attribute:: request_timeout
    :annotation: (float)
 
-   Maximum amount of time in seconds to wait for a response (positive or negative except NRC 0x78) after sending a request.
-   After this time is elapsed, a TimeoutException will be raised regardless of other timeouts value or previous client response.
-   Ensure an exit path if the ECU keeps requesting to wait.
+   Maximum amount of time in seconds to wait for a response of any kind, positive or negative, after sending a request.
+   After this time is elapsed, a TimeoutException will be raised regardless of other timeouts value or previous client responses.
+   In particular even if the server requests that the client wait, by returning response requestCorrectlyReceived-ResponsePending (0x78),
+   this timeout will still trigger.
+
+   If you wish to disable this behaviour and have your server wait for as long as it takes for the ECU to finish whatever activity
+   you have requested, set this value to None.
+
    Default value of 5
 
 .. _config_p2_timeout:
