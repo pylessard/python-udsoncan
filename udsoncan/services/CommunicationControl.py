@@ -39,7 +39,7 @@ class CommunicationControl(BaseService):
         """
         Generates a request for CommunicationControl
 
-        :param control_type: Service subfunction. Allowed values are from 0 to 0x7F
+        :param control_type: Service subfunction. Allowed values are from 0 to 0xFF
         :type control_type: int
 
         :param communication_type: The communication type requested.
@@ -49,7 +49,7 @@ class CommunicationControl(BaseService):
         """		
         from udsoncan import Request
 
-        ServiceHelper.validate_int(control_type, min=0, max=0x7F, name='Control type')
+        ServiceHelper.validate_int(control_type, min=0, max=0xFF, name='Control type')
 
         communication_type = cls.normalize_communication_type(communication_type)
         request = Request(service=cls, subfunction=control_type)
