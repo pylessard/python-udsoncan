@@ -143,7 +143,7 @@ class TestCommunicationControl(ClientServerTest):
             self.udsclient.communication_control(control_type='x', communication_type=valid_com_type)	
 
         with self.assertRaises(ValueError):
-            self.udsclient.communication_control(control_type=0x100, communication_type=valid_com_type)
+            self.udsclient.communication_control(control_type=0x80, communication_type=valid_com_type)
 
         with self.assertRaises(ValueError):
             self.udsclient.communication_control(control_type=-1, communication_type=valid_com_type)
