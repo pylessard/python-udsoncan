@@ -1,4 +1,4 @@
-from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc, DidCodec, AsciiCodec, Filesize
+from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc, DidCodec, AsciiCodec, Filesize, DynamicDidDefinition
 from test.UdsTest import UdsTest
 import struct
 
@@ -530,3 +530,48 @@ class TestFilesize(UdsTest):
         fs = Filesize(uncompressed=123)
         str(fs)
         fs.__repr__()
+
+
+class TestDynamicDidDefinition(UdsTest):
+    def test_def_mismatch(self):
+        diddef = DynamicDidDefinition()
+        diddef.add(source_did = 0x1234, position=1, memorysize=1)
+        with self.assertRaises(ValueError):
+            diddef.add(MemoryLocation(address=0x1234, memorysize=1))
+
+    def test_type(self):
+        diddef = DynamicDidDefinition()
+
+        self.assertFalse(diddef.is_by_source_did())
+        self.assertFalse(diddef.is_by_memory_address())
+        diddef.add(source_did = 0x1234, position=1, memorysize=1)
+        diddef.add(source_did = 0x1234, position=2, memorysize=1)
+
+        self.assertTrue(diddef.is_by_source_did())
+        self.assertFalse(diddef.is_by_memory_address())
+
+        diddef = DynamicDidDefinition()
+        diddef.add(MemoryLocation(address=0x1234, memorysize=1))
+        diddef.add(MemoryLocation(address=0x1235, memorysize=1))
+
+        self.assertFalse(diddef.is_by_source_did())
+        self.assertTrue(diddef.is_by_memory_address())
+
+    def test_get_alfid(self):
+        diddef = DynamicDidDefinition()
+        diddef.add(source_did = 0x1234, position=1, memorysize=1)
+        diddef.add(source_did = 0x1234, position=2, memorysize=1)
+        with self.assertRaises(ValueError):
+            diddef.get_alfid()
+
+        diddef = DynamicDidDefinition()
+        diddef.add(MemoryLocation(address=0x1234, memorysize=1, address_format=16, memorysize_format=8))
+        diddef.add(MemoryLocation(address=0x1235, memorysize=1, address_format=16, memorysize_format=8))
+        alfid = diddef.get_alfid()
+        self.assertEqual(alfid.get_byte_as_int(), 0x12)
+
+        diddef = DynamicDidDefinition()
+        diddef.add(MemoryLocation(address=0x1234, memorysize=1, address_format=16, memorysize_format=8))
+        diddef.add(MemoryLocation(address=0x1235, memorysize=1, address_format=16, memorysize_format=16))
+        with self.assertRaises(ValueError):
+            alfid = diddef.get_alfid()

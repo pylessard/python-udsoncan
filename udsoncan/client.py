@@ -1,4 +1,4 @@
-from udsoncan import Response, Request, services, DidCodec, Routine, IOMasks, Dtc, DataIdentifier, MemoryLocation
+from udsoncan import Response, Request, services, DidCodec, Routine, IOMasks, Dtc, DataIdentifier, MemoryLocation, DynamicDidDefinition
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
 import struct
@@ -1571,6 +1571,76 @@ class Client:
         :rtype: :ref:`Response<Response>`
         """
         return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.ReadDir, path=path)
+
+
+    @standard_error_management
+    def dynamically_define_did(self, did, *args, **kwargs):
+        diddef = None
+        if len(args) > 0:
+            if isinstance(args[0], DynamicDidDefinition):
+                diddef = args[0]
+
+        if diddef is None:
+            diddef = DynamicDidDefinition(*args, **kwargs)
+
+        if diddef.is_by_source_did():
+            subfunction = services.DynamicallyDefineDataIdentifier.Subfunction.defineByIdentifier
+        elif diddef.is_by_memory_address():
+            subfunction = services.DynamicallyDefineDataIdentifier.Subfunction.defineByMemoryAddress
+            entries = diddef.get()
+            if 'server_address_format' in self.config:
+                for entry in entries:
+                    entry.memloc.set_format_if_none(address_format=self.config['server_address_format'])
+    
+            if 'server_memorysize_format' in self.config:
+                for entry in entries:
+                    entry.memloc.set_format_if_none(memorysize_format=self.config['server_memorysize_format'])
+        else:
+            raise ValueError('Cannot determine the subfunction from DID Definition')
+
+        request = services.DynamicallyDefineDataIdentifier.make_request(subfunction, did, diddef)
+
+        response = self.send_request(request)
+        if response is None:
+            return
+
+        services.DynamicallyDefineDataIdentifier.interpret_response(response)
+
+        if subfunction != response.service_data.subfunction_echo:
+            raise UnexpectedResponseException(response, "Subfunction echo of response (0x%02x) does not match request subfunction (0x%02x)" % (response.service_data.subfunction_echo, subfunction))
+
+        if did != response.service_data.did_echo:
+            raise UnexpectedResponseException(response, "DID echo of response (0x%02x) does not match requested DID (0x%02x)" % (response.service_data.did_echo, did))
+
+        return response
+
+    @standard_error_management
+    def do_clear_dynamically_defined_did(self, did=None):
+        subfunction = services.DynamicallyDefineDataIdentifier.Subfunction.clearDynamicallyDefinedDataIdentifier
+        request = services.DynamicallyDefineDataIdentifier.make_request(subfunction, did=did)
+        response = self.send_request(request)
+        if response is None:
+            return
+        services.DynamicallyDefineDataIdentifier.interpret_response(response)
+        
+        if subfunction != response.service_data.subfunction_echo:
+            raise UnexpectedResponseException(response, "Subfunction echo of response (0x%02x) does not match request subfunction (0x%02x)" % (response.service_data.subfunction_echo, subfunction))
+
+        if did is not None:
+            if did != response.service_data.did_echo:
+                raise UnexpectedResponseException(response, "DID echo of response (0x%02x) does not match requested DID (0x%02x)" % (response.service_data.did_echo, did))                
+        
+        return response
+
+    def clear_dynamically_defined_did(self, did):
+        if did is None:
+            raise ValueError('Missing DID number')
+
+        return self.do_clear_dynamically_defined_did(did)
+
+    def clear_all_dynamically_defined_did(self):
+        return self.do_clear_dynamically_defined_did()
+
 
     @standard_error_management
     def request_file_transfer(self, moop, path, dfi=None, filesize=None):
