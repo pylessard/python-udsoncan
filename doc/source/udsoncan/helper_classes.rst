@@ -149,3 +149,11 @@ DataIdentifier
    :member-order: bysource
    :exclude-members: name_from_id
 
+
+.. _DynamicDidDefinition:
+
+DynamicDidDefinition
+--------------------
+
+.. autoclass:: udsoncan.DynamicDidDefinition
+   :members: 

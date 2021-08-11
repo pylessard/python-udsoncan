@@ -733,7 +733,11 @@ WriteMemoryByAddress (0x3D)
 DynamicallyDefineDataIdentifier (0x2C)
 --------------------------------------
 
-.. warning:: Not implemented
+.. automethod:: udsoncan.services.DynamicallyDefineDataIdentifier.make_request
+.. automethod:: udsoncan.services.DynamicallyDefineDataIdentifier.interpret_response
+
+.. autoclass:: udsoncan.services::DynamicallyDefineDataIdentifier.ResponseData
+   :members: 
 
 -------
 

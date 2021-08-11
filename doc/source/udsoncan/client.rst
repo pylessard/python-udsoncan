@@ -335,6 +335,17 @@ Methods by services
 
 -------------
 
+:ref:`DynamicallyDefineDataIdentifier<DynamicallyDefineDataIdentifier>`
+#######################################################################
+
+.. automethod:: udsoncan.client.Client.dynamically_define_did
+.. note:: See :ref:`an example<example_define_dynamic_did>` showing how to define a dynamic DID.
+.. automethod:: udsoncan.client.Client.clear_dynamically_defined_did
+.. automethod:: udsoncan.client.Client.clear_all_dynamically_defined_did
+
+
+-------------
+
 :ref:`ECUReset<ECUReset>`
 #########################
 

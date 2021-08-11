@@ -247,11 +247,11 @@ The example shown below correspond to a real example provided in ISO-14229 docum
 .. _example_using_j2534:
 
 Using J2534 PassThru Interface
--------------------------
+------------------------------
 
 This is an example for how to use :class:`J2534Connection<udsoncan.connections.J2534Connection>`.
 This connection *requires* a compatible J2534 PassThru device (such as a tactrix openport 2.0 cable), with a DLL for said device installed.
-Note, this conncection has been written to plug in where a standard IsoTPSocketConncetion had been used (i.e. code ported from Linux to Windows).  Functionality, from a high level, is identical.
+Note, this connection has been written to plug in where a standard IsoTPSocketConnection had been used (i.e. code ported from Linux to Windows).  Functionality, from a high level, is identical.
 
 .. code-block:: python
 
@@ -268,3 +268,37 @@ Note, this conncection has been written to plug in where a standard IsoTPSocketC
       # ...
 
 -----
+
+.. _example_define_dynamic_did:
+
+Define a Dynamic DID with DynamicallyDefineDataIdentifier
+---------------------------------------------------------
+
+.. code-block:: python
+
+   # Example 1)  defineByIdentifier - single value
+   my_def = DynamicDidDefinition(source_did = 0x1111, position=1, memorysize=2)
+   client.dynamically_define_did(0x1234, my_def)
+
+   # Example 2) defineByIdentifier - composite value
+   my_def = DynamicDidDefinition(source_did = 0x1111, position=1, memorysize=2)
+   my_def.add(source_did = 0x2222, position=5, memorysize=4)
+   client.dynamically_define_did(0x1234, my_def)
+
+   # Example 3) defineByMemoryAddress - single value
+   my_memloc = MemoryLocation(address=0x1111, memorysize=2, address_format=16, memorysize_format=8)
+   client.dynamically_define_did(0x1234, my_memloc)
+
+   # Example 4) defineByMemoryAddress - composite value
+   my_def = DynamicDidDefinition(MemoryLocation(address=0x1111, memorysize=2, address_format=16, memorysize_format=8))
+   my_def.add(MemoryLocation(address=0x2222, memorysize=4, address_format=16, memorysize_format=8))
+   my_def.add(MemoryLocation(address=0x3333, memorysize=1, address_format=16, memorysize_format=8))
+   client.dynamically_define_did(0x1234, my_def)
+
+   # Example 5) defineByMemoryAddress - composite value and client default format
+   client.set_config('server_address_format', 16)
+   client.set_config('server_memorysize_format', 8)
+   my_def = DynamicDidDefinition(MemoryLocation(address=0x1111, memorysize=2))
+   my_def.add(MemoryLocation(address=0x2222, memorysize=4))
+   my_def.add(MemoryLocation(address=0x3333, memorysize=1))
+   client.dynamically_define_did(0x1234, my_def)

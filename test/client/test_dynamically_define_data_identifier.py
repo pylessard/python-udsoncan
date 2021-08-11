@@ -16,7 +16,7 @@ class TestDynamicallyDefineDataIdentifier(ClientServerTest):
         self.conn.fromuserqueue.put(b"\x6c\x01\xf2\x01")    # Positive response
 
     def _test_define_by_did_success(self):
-        response = self.udsclient.dynamically_define_did(0xf201, source_did = 0x1234, position=1, memorysize=2)
+        response = self.udsclient.dynamically_define_did(0xf201, DynamicDidDefinition(source_did = 0x1234, position=1, memorysize=2))
         self.assertEqual(response.service_data.subfunction_echo, 1)
         self.assertEqual(response.service_data.did_echo, 0xf201)
 
@@ -64,7 +64,7 @@ class TestDynamicallyDefineDataIdentifier(ClientServerTest):
 
     def _test_define_by_did_incomplete_response(self):
         with self.assertRaises(InvalidResponseException):
-            self.udsclient.dynamically_define_did(0xf201, source_did = 0x1234, position=1, memorysize=2)
+            self.udsclient.dynamically_define_did(0xf201, DynamicDidDefinition(source_did = 0x1234, position=1, memorysize=2))
 
 
 

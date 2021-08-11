@@ -1162,6 +1162,10 @@ class Filesize:
 
 
 class DynamicDidDefinition:
+    """
+    This class serves as a container for the different pieces of a dynamic DID defined by the DynamicallyDefineDataIDentifier service.
+    
+    """
 
     class ByDidDefinition:
         def __init__(self, source_did, position, memorysize):
@@ -1200,6 +1204,28 @@ class DynamicDidDefinition:
             self.add(*args, **kwargs)
 
     def add(self, *args, **kwargs):
+        """
+        Add a piece of definition for a dynamic DID. 
+        
+        When defining by memory address, only ``memloc`` can be supplied. 
+        Example : ``myDidDefinition.add(myMemLoc)``
+        
+        When defining with a source DID, these parameters must be supplied : ``source_did``, ``position``, ``memorysize``. 
+        Example : ``myDidDefinition.add(source_did=1234, position=1, memorysize=2)``
+        
+        :param source_did: The source DID from which to fetch data from
+        :type source_did: int
+        
+        :param position: Start position of the data to fetch inside the source DID data
+        :type position: int
+        
+        :param memorysize: Length of data to fetch inside the source DID data
+        :type memorysize: int
+        
+        :param memloc: MemoryLocation containing an address, a size and an encoding format
+        :type memloc: :ref:`MemoryLocation<MemoryLocation>`
+
+        """
         entry = None
         if len(args) > 0:
             if isinstance(args[0], MemoryLocation):

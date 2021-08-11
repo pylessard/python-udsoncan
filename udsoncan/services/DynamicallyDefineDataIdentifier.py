@@ -24,6 +24,20 @@ class DynamicallyDefineDataIdentifier(BaseService):
 
     @classmethod
     def make_request(cls, subfunction, did=None, diddef = None):
+        """
+        Generates a request for DynamicallyDefineDataIdentifier
+
+        :param subfunction: Service subfunction. Allowed values are from 1 to 3
+        :type subfunction: int
+
+        :param did: The Data Identifier to define. Values from 0x0000 to 0xFFFF
+        :type did: int
+
+        :param diddef: Definition of the DID. Either by source DID or memory address. This parameter is only needed with subfunctions defineByIdentifie (1)` and defineByMemoryAddress (2)
+        :type diddef: :ref:`DynamicDidDefinition<DynamicDidDefinition>`
+
+        :raises ValueError: If parameters are out of range, missing or wrong type
+        """         
         from udsoncan import Request, DynamicDidDefinition
         ServiceHelper.validate_int(subfunction, min=1, max=3, name='Subfunction')
         req = Request(service=cls, subfunction=subfunction)
@@ -71,6 +85,15 @@ class DynamicallyDefineDataIdentifier(BaseService):
 
     @classmethod
     def interpret_response(cls, response):
+        """
+        Populates the response ``service_data`` property with an instance of :class:`DynamicallyDefineDataIdentifier.ResponseData<udsoncan.services.DynamicallyDefineDataIdentifier.ResponseData>`
+
+        :param response: The received response to interpret
+        :type response: :ref:`Response<Response>`
+
+        :raises InvalidResponseException: If length of ``response.data`` is too short
+        """
+
         if len(response.data) < 1:
             raise InvalidResponseException(response, "Response data must be at least 1 bytes") 
         
