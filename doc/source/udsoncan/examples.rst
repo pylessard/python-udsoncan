@@ -191,7 +191,7 @@ This example shows how to configure the client with a DID configuration and requ
       print(response.service_data.values[0xF190]) # This is a dict of DID:Value
       
       # Or, if a single DID is expected, a shortcut to read the value of the first DID
-      vin = client.read_data_by_identifier_first(0xF190)     
+      vin = client.read_data_by_identifier_first([0xF190])     
       print(vin)  # 'ABCDE0123456789' (15 chars)
 
 -----
