@@ -1704,26 +1704,31 @@ class Client:
         """
         return self.do_clear_dynamically_defined_did()
 
+    def iter_responses(self, response):
+        """
+            Receive mulitiple responses to one request
+            Can be used when the request is using functional addressing
+
+            :return: List of response
+            :rtype: :ref:`list[Response<Response>]`
+        """
+        if response is None:
+            return []
+        
+        responses = []
+        while response is not None:
+            responses.append(response)
+            try:
+                response = self._receive_reponse(response.service)
+            except TimeoutException:
+                response = None
+        return responses
 
     # Basic transmission of requests. This will need to be improved
     def send_request(self, request, timeout=-1):
-        if timeout < 0:
-            # Timeout not provided by user: defaults to Client request_timeout value
-            overall_timeout = self.config['request_timeout']
-            p2 = self.config['p2_timeout'] if self.session_timing['p2_server_max'] is None else self.session_timing['p2_server_max']
-            if overall_timeout is not None:
-                single_request_timeout = min(overall_timeout, p2)
-            else:
-                single_request_timeout = p2
-        else:
-            overall_timeout = timeout
-            single_request_timeout = timeout
-        respect_overall_timeout = True
-        if overall_timeout is None:
-            respect_overall_timeout = False
-        using_p2_star = False	# Will switch to true when Nrc 0x78 will be received the first time.
 
         self.conn.empty_rxqueue()
+
         self.logger.debug("Sending request to server")
         override_suppress_positive_response = False
         if self.suppress_positive_response.enabled == True and request.service.use_subfunction():
@@ -1740,8 +1745,29 @@ class Client:
 
         self.conn.send(payload)
 
-        if request.suppress_positive_response  or override_suppress_positive_response:
+        if request.suppress_positive_response or override_suppress_positive_response:
             return
+
+        return self._receive_reponse(request.service, timeout)
+
+    def _receive_reponse(self, service, timeout=-1):
+
+        if timeout < 0:
+            # Timeout not provided by user: defaults to Client request_timeout value
+            overall_timeout = self.config['request_timeout']
+            p2 = self.config['p2_timeout'] if self.session_timing['p2_server_max'] is None else self.session_timing['p2_server_max']
+            if overall_timeout is not None:
+                single_request_timeout = min(overall_timeout, p2)
+            else:
+                single_request_timeout = p2
+        else:
+            overall_timeout = timeout
+            single_request_timeout = timeout
+        respect_overall_timeout = True
+        if overall_timeout is None:
+            respect_overall_timeout = False
+
+        using_p2_star = False	# Will switch to true when Nrc 0x78 will be received the first time.
 
         done_receiving = False
         if respect_overall_timeout:
@@ -1777,12 +1803,12 @@ class Client:
             if not response.valid:
                 raise InvalidResponseException(response)
 
-            if response.service.response_id() != request.service.response_id():
-                msg = "Response gotten from server has a service ID different than the request service ID. Received=0x%02x, Expected=0x%02x" % (response.service.response_id() , request.service.response_id() )
+            if response.service.response_id() != service.response_id():
+                msg = "Response gotten from server has a service ID different than the request service ID. Received=0x%02x, Expected=0x%02x" % (response.service.response_id() , service.response_id() )
                 raise UnexpectedResponseException(response, msg)
 
             if not response.positive:
-                if not request.service.is_supported_negative_response(response.code):
+                if not service.is_supported_negative_response(response.code):
                     self.logger.warning('Given response code "%s" (0x%02x) is not a supported negative response code according to UDS standard.' % (response.code_name, response.code))
 
                 if response.code == Response.Code.RequestCorrectlyReceived_ResponsePending:
