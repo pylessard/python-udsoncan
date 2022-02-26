@@ -26,6 +26,7 @@ class TestTterResponses(ClientServerTest):
         self.assertEqual(len(responses), 3)
         for res in responses:
             self.assertIsNotNone(res)
+            self.assertIsNotNone(res.service_data)
 
     def test_iter_responses_error(self):
         request = self.conn.touserqueue.get(timeout=0.2)
@@ -43,3 +44,7 @@ class TestTterResponses(ClientServerTest):
         self.assertEqual(len(responses), 3)
         for res in responses:
             self.assertIsNotNone(res)
+
+        self.assertFalse(responses[0].positive)
+        self.assertIsNotNone(responses[1].service_data)
+        self.assertIsNotNone(responses[2].service_data)

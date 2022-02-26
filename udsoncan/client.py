@@ -1715,11 +1715,13 @@ class Client:
         if response is None:
             return []
         
+        service = response.service
         responses = []
         while response is not None:
             responses.append(response)
             try:
-                response = self._receive_reponse(response.service)
+                response = self._receive_reponse(service)
+                service.interpret_response(response)
             except TimeoutException:
                 response = None
         return responses
