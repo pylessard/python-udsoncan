@@ -36,6 +36,17 @@ class ReadDTCInformation(BaseService):
         reportDTCFaultDetectionCounter = 0x14
         reportDTCWithPermanentStatus = 0x15
 
+        #todo
+        reportDTCExtDataRecordByRecordNumber = 0x16
+        reportUserDefMemoryDTCByStatusMask = 0x17
+        reportUserDefMemoryDTCSnapshotRecordByDTCNumber = 0x18
+        reportUserDefMemoryDTCExtDataRecordByDTCNumber = 0x19
+        reportSupportedDTCExtDataRecord = 0x1A
+        reportWWHOBDDTCByMaskRecord = 0x42
+        reportWWHOBDDTCWithPermanentStatus = 0x55
+        reportDTCInformationByDTCReadinessGroupIdentifier = 0x56
+
+
     @classmethod
     def assert_severity_mask(cls, severity_mask, subfunction):
         if severity_mask is None:
@@ -74,11 +85,11 @@ class ReadDTCInformation(BaseService):
 
     @classmethod	
     def pack_dtc(cls, dtcid):
-        return struct.pack('BBB', (dtcid >> 16) & 0xFF, (dtcid >> 8) & 0xFF,  (dtcid >> 0) & 0xFF)
+        return struct.pack('BBB', (dtcid >> 16) & 0xFF, (dtcid >> 8) & 0xFF, (dtcid >> 0) & 0xFF)
 
 
     @classmethod
-    def make_request(cls, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None):
+    def make_request(cls, subfunction, status_mask=None, severity_mask=None, dtc=None, snapshot_record_number=None, extended_data_record_number=None):
         """
         Generates a request for ReadDTCInformation. 
         Each subfunction uses a subset of parameters. 

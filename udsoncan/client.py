@@ -1,11 +1,8 @@
 from udsoncan import Response, Request, services, DidCodec, Routine, IOMasks, Dtc, DataIdentifier, MemoryLocation, DynamicDidDefinition
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
-import struct
 import logging
-import math
 import binascii
-import traceback
 import functools
 import time
 
@@ -480,11 +477,11 @@ class Client:
         return response
 
     @standard_error_management 
-    def clear_dtc(self, group=0xFFFFFF):
+    def clear_dtc(self, group=0xFFFFFF, memory_selection=None):
         """
         Requests the server to clear its active Diagnostic Trouble Codes with the :ref:`ClearDiagnosticInformation<ClearDiagnosticInformation>` service.
 
-        :Effective configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``. ``standard_version``
 
         :param group: The group of DTCs to clear. It may refer to Powertrain DTCs, Chassis DTCs, etc. Values are defined by the ECU manufacturer except for two specific values
 
@@ -492,16 +489,23 @@ class Client:
                 - ``0xFFFFFF`` : All DTCs
         :type group: int
 
+        :param memory_selection: MemorySelection byte (0-0xFF). This value is user defined and introduced in 2020 version of ISO-14229-1. 
+        Only added to the request payload when different from None. Default : None
+        :type memory_selection: int
+
         :return: The server response parsed by :meth:`ClearDiagnosticInformation.interpret_response<udsoncan.services.ClearDiagnosticInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
 
         """
 
-        request = services.ClearDiagnosticInformation.make_request(group)
+        request = services.ClearDiagnosticInformation.make_request(group, memory_selection=memory_selection, standard_version=self.config['standard_version'])
+        memys_str = ''
+        if memory_selection is not None:
+            memys_str = ' , MemorySelection : %d' % memory_selection
         if group == 0xFFFFFF:
-            self.logger.info('%s - Clearing all DTCs (group mask : 0xFFFFFF)' % (self.service_log_prefix(services.ClearDiagnosticInformation)))
+            self.logger.info('%s - Clearing all DTCs (group mask : 0xFFFFFF%s)' % (self.service_log_prefix(services.ClearDiagnosticInformation), memys_str))
         else:
-            self.logger.info('%s - Clearing DTCs matching group mask : 0x%06x' % (self.service_log_prefix(services.ClearDiagnosticInformation), group))
+            self.logger.info('%s - Clearing DTCs matching group mask : 0x%06x%s' % (self.service_log_prefix(services.ClearDiagnosticInformation), group,memys_str))
 
         response = self.send_request(request)
         if response is None:
