@@ -1118,6 +1118,28 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCByStatusMask, status_mask=status_mask)
 
+    def get_user_defined_memory_dtc_by_status_mask(self, status_mask, memory_selection):
+        """
+        Reads  Diagnostic Trouble Codes that have a status matching the given mask in a user defined memory . 
+        The server will check all of its DTCs inside the user defined memory region and if (Dtc.status & status_mask) != 0, 
+        then the DTCs match the filter and are sent back to the client.
+
+        Introduced in 2020 version of ISO-14229
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc`` ``standard_version``
+
+        :param status_mask: The status mask against which the DTCs are tested. 
+        :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
+
+        :param memory_selection: A 1 byte wide identifier for the memory region. Defined by ECU manufacturer.
+        :type memory_selection: int
+
+        :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
+        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCByStatusMask, status_mask=status_mask, memory_selection=memory_selection)
+
+
     def get_emission_dtc_by_status_mask(self, status_mask):
         """
         Reads the emission-related Diagnostic Trouble Codes that have a status matching the given mask.
@@ -1415,7 +1437,7 @@ class Client:
     # Performs a ReadDiagnsticInformation service request.
     # Many requests are encoded the same way and many responses are encoded the same way. Request grouping and response grouping are independent.
     @standard_error_management
-    def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None, extended_data_size=None):
+    def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None, extended_data_size=None, memory_selection=None):
         if dtc is not None and isinstance(dtc, Dtc):
             dtc = dtc.id
 
@@ -1425,7 +1447,8 @@ class Client:
                 'severity_mask' : severity_mask,
                 'dtc' : dtc,
                 'snapshot_record_number' : snapshot_record_number,
-                'extended_data_record_number' : extended_data_record_number
+                'extended_data_record_number' : extended_data_record_number,
+                'memory_selection' : memory_selection
         }
 
         request = services.ReadDTCInformation.make_request(**request_params)
@@ -1472,9 +1495,10 @@ class Client:
                     if extended_data.record_number != extended_data_record_number :	
                         raise UnexpectedResponseException(response, 'Extended data record number given by the server (0x%02x) does not match the record number requested by the client (0x%02x)' % (extended_data.record_number, extended_data_record_number))
 
-        for dtc in response.service_data.dtcs:
-            if dtc.fault_counter is not None and (dtc.fault_counter >= 0x7F or dtc.fault_counter < 0x01):
-                self.logger.warning('Server returned a fault counter value of 0x%02x for DTC id 0x%06x while value should be between 0x01 and 0x7E.' % (dtc.fault_counter, dtc.id))
+            
+        if subfunction in  [services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCByStatusMask, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber]:
+            if memory_selection is not None and memory_selection != response.service_data.memory_selection_echo:
+                raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation MemorySelection gotten from server(0x%02x) does not match the value in the request (0x%02x)' % (response.service_data.memory_selection_echo, memory_selection))   
 
         if Dtc.Format.get_name(response.service_data.dtc_format) is None:
             self.logger.warning('Unknown DTC Format Identifier 0x%02x. Value should be between 0 and 3' % response.service_data.dtc_format)

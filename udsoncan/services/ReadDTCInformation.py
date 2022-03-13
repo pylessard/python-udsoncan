@@ -35,10 +35,10 @@ class ReadDTCInformation(BaseService):
         reportEmissionsRelatedOBDDTCByStatusMask = 0x13
         reportDTCFaultDetectionCounter = 0x14
         reportDTCWithPermanentStatus = 0x15
+        reportUserDefMemoryDTCByStatusMask = 0x17
 
         #todo
-        reportDTCExtDataRecordByRecordNumber = 0x16
-        reportUserDefMemoryDTCByStatusMask = 0x17
+        reportDTCExtDataRecordByRecordNumber = 0x16        
         reportUserDefMemoryDTCSnapshotRecordByDTCNumber = 0x18
         reportUserDefMemoryDTCExtDataRecordByDTCNumber = 0x19
         reportSupportedDTCExtDataRecord = 0x1A
@@ -58,6 +58,12 @@ class ReadDTCInformation(BaseService):
         if status_mask is None:
             raise ValueError('status_mask must be provided for subfunction 0x%02x' % subfunction)
         ServiceHelper.validate_int(status_mask, min=0, max=0xFF, name='Status mask')
+    
+    @classmethod        
+    def assert_memory_selection(cls, memory_selection, subfunction):
+        if memory_selection is None:
+            raise ValueError('memory_selection must be provided for subfunction 0x%02x' % subfunction)
+        ServiceHelper.validate_int(memory_selection, min=0, max=0xFF, name='Memory Selection')
 
     @classmethod	
     def assert_dtc(cls, dtc, subfunction):
@@ -87,9 +93,21 @@ class ReadDTCInformation(BaseService):
     def pack_dtc(cls, dtcid):
         return struct.pack('BBB', (dtcid >> 16) & 0xFF, (dtcid >> 8) & 0xFF, (dtcid >> 0) & 0xFF)
 
+    @classmethod
+    def check_subfunction_valid(cls, subfunction):
+        ServiceHelper.validate_int(subfunction, min=1, max=0xFF, name='Subfunction')
+        vlist = vars(cls)
+        ok = True
+        for v in vlist:
+            if isinstance(v, int) and v == subfunction:
+                ok = False
+                break
+        if not ok:
+            raise ValueError('Unknown subfunction : 0x%02x', subfunction)
+
 
     @classmethod
-    def make_request(cls, subfunction, status_mask=None, severity_mask=None, dtc=None, snapshot_record_number=None, extended_data_record_number=None):
+    def make_request(cls, subfunction, status_mask=None, severity_mask=None, dtc=None, snapshot_record_number=None, extended_data_record_number=None, memory_selection=None):
         """
         Generates a request for ReadDTCInformation. 
         Each subfunction uses a subset of parameters. 
@@ -111,6 +129,10 @@ class ReadDTCInformation(BaseService):
 
         :param extended_data_record_number: Extended data record number
         :type extended_data_record_number: int
+        
+        :param memory_selection: Memory selection for user defined memory DTC
+        :type memory_selection: int
+        
 
         :raises ValueError: If parameters are out of range, missing or wrong type
         """	
@@ -165,8 +187,12 @@ class ReadDTCInformation(BaseService):
                 ReadDTCInformation.Subfunction.reportSeverityInformationOfDTC		
                 ]
 
+        request_subfn_status_mask_plus_memory_selection = [
+            ReadDTCInformation.Subfunction.reportUserDefMemoryDTCByStatusMask
+        ]
 
-        ServiceHelper.validate_int(subfunction, min=1, max=0x15, name='Subfunction')
+    
+        cls.check_subfunction_valid(subfunction)
 
         if status_mask is not None and isinstance(status_mask, Dtc.Status):
             status_mask = status_mask.get_byte_as_int()
@@ -208,6 +234,11 @@ class ReadDTCInformation(BaseService):
         elif subfunction in request_subfn_mask_record:
             cls.assert_dtc(dtc, subfunction)
             req.data = cls.pack_dtc(dtc)
+        
+        elif subfunction in request_subfn_status_mask_plus_memory_selection:
+            cls.assert_memory_selection(memory_selection, subfunction)
+            cls.assert_status_mask(status_mask, subfunction)
+            req.data = struct.pack('BB', status_mask, memory_selection)
 
         return req
 
@@ -244,11 +275,12 @@ class ReadDTCInformation(BaseService):
         """	
 
         from udsoncan import Dtc, DidCodec
-        ServiceHelper.validate_int(subfunction, min=1, max=0x15, name='Subfunction')
+        cls.check_subfunction_valid(subfunction)
 
         # Response grouping for responses that are encoded the same way
         response_subfn_dtc_availability_mask_plus_dtc_record = [
                 ReadDTCInformation.Subfunction.reportDTCByStatusMask,
+                ReadDTCInformation.Subfunction.reportUserDefMemoryDTCByStatusMask,
                 ReadDTCInformation.Subfunction.reportSupportedDTCs,
                 ReadDTCInformation.Subfunction.reportFirstTestFailedDTC,
                 ReadDTCInformation.Subfunction.reportFirstConfirmedDTC,
@@ -293,6 +325,15 @@ class ReadDTCInformation(BaseService):
         ]
 
 
+        subfunctions_with_memory_selection = [
+            ReadDTCInformation.Subfunction.reportUserDefMemoryDTCByStatusMask,
+            ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber,
+            ReadDTCInformation.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber
+        ]
+
+
+        firstbyte_is_memory_selection_echo = (subfunction in subfunctions_with_memory_selection)
+
         response.service_data = cls.ResponseData()	# what will be returned 
 
         if len(response.data) < 1:
@@ -308,12 +349,20 @@ class ReadDTCInformation(BaseService):
             elif subfunction in response_subfn_dtc_availability_mask_plus_dtc_record_with_severity:
                 dtc_size = 6	# DTC ID (3) + Status (1) + Severity (1) + FunctionalUnit (1)
 
-            if len(response.data) < 2:
-                raise InvalidResponseException(response, 'Response must be at least 2 byte long (echo of subfunction and DTCStatusAvailabilityMask)')
+            if firstbyte_is_memory_selection_echo:
+                if len(response.data) < 3:
+                    raise InvalidResponseException(response, 'Response must be at least 3 bytes long (echo of subfunction, echo of MemorySelection and DTCStatusAvailabilityMask)')
+                response.service_data.memory_selection_echo = int(response.data[1])
+                actual_byte = 2
+            else:
+                if len(response.data) < 2:
+                    raise InvalidResponseException(response, 'Response must be at least 2 byte long (echo of subfunction and DTCStatusAvailabilityMask)')
+                actual_byte = 1
 
-            response.service_data.status_availability = Dtc.Status.from_byte(response.data[1])
+            response.service_data.status_availability = Dtc.Status.from_byte(response.data[actual_byte])
 
-            actual_byte = 2	# Increasing index
+            actual_byte +=1
+
             while True:	# Loop until we have read all dtcs
                 if len(response.data) <= actual_byte:
                     break	# done
@@ -459,7 +508,7 @@ class ReadDTCInformation(BaseService):
                     didconfig = ServiceHelper.check_did_config(did, didconfig)
                     codec = DidCodec.from_config(didconfig[did])
 
-                    data_offset =  dtc_snapshot_did_size;
+                    data_offset =  dtc_snapshot_did_size
                     if len(remaining_data[data_offset:]) < len(codec):
                         raise InvalidResponseException(response, 'Incomplete response. Data for DID 0x%04x is only %d bytes while %d bytes is expected' % (did, len(remaining_data[data_offset:]), len(codec)))
 
@@ -478,7 +527,7 @@ class ReadDTCInformation(BaseService):
         # Similar to previous subfunction group, but order of information is changed.
 
         # <RecordNumber1, DTC1,NumberOfDid_X,DID1,DID2,...DIDX, RecordNumber2,DTC2, NumberOfDid_Y,DID1,DID2,...DIDY, etc>
-        elif subfunction in response_sbfn_dtc_status_snapshots_records_record_first :
+        elif subfunction in response_sbfn_dtc_status_snapshots_records_record_first:
             ServiceHelper.validate_int(dtc_snapshot_did_size, min=1, max=8, name='dtc_snapshot_did_size')
 
             if len(response.data) < 2:
@@ -541,7 +590,7 @@ class ReadDTCInformation(BaseService):
                     didconfig = ServiceHelper.check_did_config(did, didconfig)
                     codec = DidCodec.from_config(didconfig[did])
 
-                    data_offset =  dtc_snapshot_did_size;
+                    data_offset =  dtc_snapshot_did_size
                     if len(remaining_data[data_offset:]) < len(codec):
                         raise InvalidResponseException(response, 'Incomplete response. Data for DID 0x%04x is only %d bytes while %d bytes is expected' % (did, len(remaining_data[data_offset:]), len(codec)))
 
@@ -576,7 +625,7 @@ class ReadDTCInformation(BaseService):
                     else:
                         raise InvalidResponseException(response, 'Extended data record number given by the server is 0 but this value is a reserved value.')
 
-                actual_byte +=1
+                actual_byte += 1
                 remaining_data = response.data[actual_byte:]
 
                 if len(remaining_data) < extended_data_size:
@@ -588,7 +637,7 @@ class ReadDTCInformation(BaseService):
 
                 dtc.extended_data.append(exdata)
 
-                actual_byte+= extended_data_size
+                actual_byte += extended_data_size
 
             response.service_data.dtcs.append(dtc)
             response.service_data.dtc_count = len(response.service_data.dtcs)
@@ -619,6 +668,10 @@ class ReadDTCInformation(BaseService):
 
                 List of bytes containing the DTC extended data
 
+        .. data:: memory_selection_echo
+
+                Echo of the memory selection byte                
+
         """			
         def __init__(self):
             super().__init__(ReadDTCInformation)
@@ -628,3 +681,4 @@ class ReadDTCInformation(BaseService):
             self.dtc_format = None
             self.status_availability = None
             self.extended_data = []	
+            self.memory_selection_echo = None

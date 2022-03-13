@@ -1,5 +1,4 @@
-from udsoncan.client import Client
-from udsoncan import services, DidCodec
+from udsoncan import DidCodec
 from udsoncan.exceptions import *
 
 from test.ClientServerTest import ClientServerTest
@@ -2581,3 +2580,275 @@ class TestReportDTCWithPermanentStatus(ClientServerTest,GenericTestNoParamReques
         ClientServerTest.__init__(self, *args, **kwargs)
         GenericTestNoParamRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x15, client_function = 'get_dtc_with_permanent_status')
 
+
+
+
+
+class TestReportUserDefMemoryDTCByStatusMask(ClientServerTest): # Subfn = 0x17
+    # Almost identical copy of duplicate of GenericTestStatusMaskRequest_DtcAndStatusMaskResponse
+    sb = struct.pack('B', 0x17)
+    badsb = struct.pack('B', 0x17+1)
+
+
+    def client_assert_response(self, response, expect_all_zero_third_dtc=False):
+        self.assertEqual(response.service_data.status_availability.get_byte_as_int(), 0xFB)
+        number_of_dtc = 3 if expect_all_zero_third_dtc else 2
+
+        self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
+        self.assertEqual(response.service_data.dtc_count, number_of_dtc)
+        self.assertEqual(response.service_data.memory_selection_echo, 0x99)
+
+        self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+        self.assertEqual(response.service_data.dtcs[0].status.get_byte_as_int(), 0x20)
+        self.assertEqual(response.service_data.dtcs[0].severity.get_byte_as_int(), 0x00)
+
+        self.assertEqual(response.service_data.dtcs[1].id, 0x123457)
+        self.assertEqual(response.service_data.dtcs[1].status.get_byte_as_int(), 0x60)
+        self.assertEqual(response.service_data.dtcs[1].severity.get_byte_as_int(), 0x00)
+
+        if expect_all_zero_third_dtc:
+            self.assertEqual(response.service_data.dtcs[2].id, 0)
+            self.assertEqual(response.service_data.dtcs[2].status.get_byte_as_int(), 0x00)
+            self.assertEqual(response.service_data.dtcs[2].severity.get_byte_as_int(), 0x00)
+
+    def test_normal_behaviour(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x19"+self.sb+b"\x5A\x99")
+        self.conn.fromuserqueue.put(b"\x59"+self.sb+b"\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60")    
+
+    def _test_normal_behaviour(self):
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.client_assert_response(response)
+
+    def test_dtc_duplicate(self):
+        self.wait_request_and_respond(b"\x59"+self.sb+b"\x99\xFB\x12\x34\x56\x20\x12\x34\x56\x60")
+
+    def _test_dtc_duplicate(self):
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertEqual(len(response.service_data.dtcs), 2)    # We want both of them. Server should avoid duplicate
+
+        self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+        self.assertEqual(response.service_data.dtcs[0].status.get_byte_as_int(), 0x20)
+
+        self.assertEqual(response.service_data.dtcs[1].id, 0x123456)
+        self.assertEqual(response.service_data.dtcs[1].status.get_byte_as_int(), 0x60)
+
+    def test_normal_behaviour_param_instance(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x19"+self.sb+b"\x5A\x99")
+        self.conn.fromuserqueue.put(b"\x59"+self.sb+b"\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60")    
+
+    def _test_normal_behaviour_param_instance(self):
+        satus_mask = Dtc.Status(test_failed_this_operation_cycle = True, confirmed = True, test_not_completed_since_last_clear = True, test_not_completed_this_operation_cycle = True)
+        self.udsclient.get_user_defined_memory_dtc_by_status_mask(satus_mask, 0x99)
+
+    def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
+        self.udsclient.config['tolerate_zero_padding'] = True
+        self.udsclient.config['ignore_all_zero_dtc'] = True
+
+        for i in range(5):
+            response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            self.client_assert_response(response, expect_all_zero_third_dtc=False)
+
+    def test_normal_behaviour_zeropadding_ok_consider_allzero(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_ok_consider_allzero(self):
+        self.udsclient.config['tolerate_zero_padding'] = True
+        self.udsclient.config['ignore_all_zero_dtc'] = False
+
+        expect_all_zero_third_dtc_values = [False, False, False, True, True]
+        for i in range(5):
+            response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            self.client_assert_response(response, expect_all_zero_third_dtc=expect_all_zero_third_dtc_values[i])
+
+    # Since we ignore all 0 DTC, we consider case number 4 with 4 extra 0 like a valid answer just like these 0 were not ther
+    def test_normal_behaviour_zeropadding_notok_ignore_allzero_exception(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_notok_ignore_allzero_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['ignore_all_zero_dtc'] = True
+
+        exception_values = [True, True, True, False, True]
+        expect_all_zero_third_dtc_values = [None, None, None, False, None]
+
+        for i in range(5):
+            if exception_values[i]:
+                with self.assertRaises(InvalidResponseException):
+                    self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            else:
+                response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+                self.client_assert_response(response, expect_all_zero_third_dtc=expect_all_zero_third_dtc_values[i])
+
+    # Since we ignore all 0 DTC, we consider case number 4 with 4 extra 0 like a valid answer just like these 0 were not ther
+    def test_normal_behaviour_zeropadding_notok_ignore_allzero_no_exception(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_notok_ignore_allzero_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['ignore_all_zero_dtc'] = True
+
+        exception_values = [True, True, True, False, True]
+        expect_all_zero_third_dtc_values = [None, None, None, False, None]
+
+        for i in range(5):
+            response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            if exception_values[i]:
+                self.assertFalse(response.valid)
+            else:
+                self.client_assert_response(response, expect_all_zero_third_dtc=expect_all_zero_third_dtc_values[i])
+
+    # Since we consider all 0 DTC, case number 4 with 4 extra 0 bytes is a valid response where DTC ID=0
+    def test_normal_behaviour_zeropadding_notok_consider_allzero_exception(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_notok_consider_allzero_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['ignore_all_zero_dtc'] = False
+
+        exception_values = [True, True, True, False, True]
+        expect_all_zero_third_dtc_values = [None, None, None, True, None]
+
+        for i in range(5):
+            if exception_values[i]:
+                with self.assertRaises(InvalidResponseException):
+                    self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            else:
+                response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+                self.client_assert_response(response, expect_all_zero_third_dtc=expect_all_zero_third_dtc_values[i])
+
+    # Since we consider all 0 DTC, case number 4 with 4 extra 0 bytes is a valid response where DTC ID=0
+    def test_normal_behaviour_zeropadding_notok_consider_allzero_no_exception(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_notok_consider_allzero_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['ignore_all_zero_dtc'] = False
+
+        error_values = [True, True, True, False, True]
+        expect_all_zero_third_dtc_values = [None, None, None, True, None]
+
+        for i in range(5):
+            response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            if error_values[i]:
+                self.assertFalse(response.valid)
+            else:
+                self.client_assert_response(response, expect_all_zero_third_dtc=expect_all_zero_third_dtc_values[i])
+
+    def test_no_dtc(self):
+        self.wait_request_and_respond(b"\x59"+self.sb+b"\x99\xFB")  
+
+    def _test_no_dtc(self):
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertEqual(len(response.service_data.dtcs), 0)
+
+    def test_bad_response_subfunction_exception(self):
+        self.wait_request_and_respond(b"\x59"+self.badsb+b"\x99\xFB")   
+
+    def _test_bad_response_subfunction_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+
+    def test_bad_response_subfunction_no_exception(self):
+        self.wait_request_and_respond(b"\x59"+self.badsb+b"\x99\xFB")
+
+    def _test_bad_response_subfunction_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_bad_response_service_exception(self):
+        self.wait_request_and_respond(b"\x6F"+self.sb+b"\x99\xFB")  
+
+    def _test_bad_response_service_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)    
+
+    def test_bad_memory_selection_echo(self):
+        self.wait_request_and_respond(b"\x59"+self.sb+b"\x98\xFB")
+
+    def _test_bad_memory_selection_echo(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+
+    def test_bad_memory_selection_echo_no_exception(self):
+        self.wait_request_and_respond(b"\x59"+self.sb+b"\x98\xFB")
+
+    def _test_bad_memory_selection_echo_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False        
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99) 
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_bad_response_service_no_exception(self):
+        self.wait_request_and_respond(b"\x6F"+self.sb+b"\x99\xFB")  
+
+    def _test_bad_response_service_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_bad_response_length_exception(self):
+        self.wait_request_and_respond(b"\x59")
+        self.wait_request_and_respond(b"\x59"+self.sb)  
+
+    def _test_bad_response_length_exception(self):
+        with self.assertRaises(InvalidResponseException):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+
+        with self.assertRaises(InvalidResponseException):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+
+    def test_bad_response_length_no_exception(self):
+        self.wait_request_and_respond(b"\x59")
+        self.wait_request_and_respond(b"\x59"+self.sb)  
+
+    def _test_bad_response_length_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertFalse(response.valid)
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertFalse(response.valid)
+
+    def test_oob_value(self):
+        pass
+
+    def _test_oob_value(self):
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x100,0x12)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(-1,0x12)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask('aaa', 0x12)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x12,0x100)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(-0x12, -1)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x12, 'aaa')

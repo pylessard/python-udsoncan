@@ -379,6 +379,7 @@ Methods by services
 
 
 .. automethod:: udsoncan.client.Client.get_dtc_by_status_mask
+.. automethod:: udsoncan.client.Client.get_user_defined_memory_dtc_by_status_mask
 .. automethod:: udsoncan.client.Client.get_emission_dtc_by_status_mask
 .. automethod:: udsoncan.client.Client.get_mirrormemory_dtc_by_status_mask
 .. automethod:: udsoncan.client.Client.get_dtc_by_status_severity_mask
