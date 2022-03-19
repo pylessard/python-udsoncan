@@ -1437,6 +1437,32 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number,extended_data_size=data_size)
 
+    def get_user_defined_dtc_extended_data_by_dtc_number(self, dtc, memory_selection, record_number=0xFF, data_size = None):
+        """
+        Requests the server for one or many DTC **extended data** by specifying a record number in a user defined memory.
+        The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
+
+        Introduced in 2020 version of ISO-14229
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``extended_data_size`` ``standard_version`` 
+
+        :param dtc: The DTC ID for which we request the extended data. It can be a 3-byte integer or a DTC instance with an ID set.
+        :type dtc: int or :ref:`Dtc<DTC>`
+
+        :param memory_selection: A 1 byte wide identifier for the memory region. Defined by ECU manufacturer.
+        :type memory_selection: int           
+
+        :param record_number: The record number of the extended data to read. If 0xFF is given, then all extended data entries will be read, otherwise, a single entry will be read.
+        :type record_number: int
+
+        :param data_size: The number of bytes of an extended data record. If not specified ``config['extended_data_size'][dtc]`` will be used.
+        :type data_size: int or None
+
+        :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
+        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber, dtc=dtc, memory_selection=memory_selection, extended_data_record_number=record_number,extended_data_size=data_size)
+
     def get_mirrormemory_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
         """
         Requests the server for one or many DTC **extended data** stored in mirror memory by specifying a record number.
@@ -1535,7 +1561,7 @@ class Client:
                     if snapshot.record_number != snapshot_record_number:
                         raise UnexpectedResponseException(response, 'Server returned snapshot with record number 0x%02x while client requested for 0x%02x' % (snapshot.record_number, snapshot_record_number)) 
 
-        if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber]:
+        if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber]:
             if len(response.service_data.dtcs) == 1 and extended_data_record_number < 0xF0: # Standard specifies that values between 0xF0 and 0xFF are for reporting groups (more than one record)
                 for extended_data in response.service_data.dtcs[0].extended_data:
                     if extended_data.record_number != extended_data_record_number :	

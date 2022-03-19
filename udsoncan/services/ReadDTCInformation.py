@@ -198,6 +198,10 @@ class ReadDTCInformation(BaseService):
                 ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber
         ]
 
+        request_subfn_mask_record_plus_extdata_record_number_plus_memory_selection = [
+                ReadDTCInformation.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber,
+        ]
+
         request_subfn_severity_plus_status_mask = [
                 ReadDTCInformation.Subfunction.reportNumberOfDTCBySeverityMaskRecord,
                 ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord
@@ -251,6 +255,12 @@ class ReadDTCInformation(BaseService):
             cls.assert_dtc(dtc, subfunction)
             cls.assert_extended_data_record_number(extended_data_record_number, subfunction)
             req.data = cls.pack_dtc(dtc) + struct.pack('B', extended_data_record_number)
+
+        elif subfunction in request_subfn_mask_record_plus_extdata_record_number_plus_memory_selection:
+            cls.assert_dtc(dtc, subfunction)
+            cls.assert_memory_selection(memory_selection, subfunction)            
+            cls.assert_extended_data_record_number(extended_data_record_number, subfunction)
+            req.data = cls.pack_dtc(dtc) + struct.pack('BB', extended_data_record_number, memory_selection)
 
         elif subfunction in request_subfn_severity_plus_status_mask:
             cls.assert_status_mask(status_mask, subfunction)
@@ -348,7 +358,8 @@ class ReadDTCInformation(BaseService):
 
         response_subfn_mask_record_plus_extdata = [
                 ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber,
-                ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber
+                ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber,
+                ReadDTCInformation.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber
         ]
 
 
@@ -643,13 +654,23 @@ class ReadDTCInformation(BaseService):
         elif subfunction in response_subfn_mask_record_plus_extdata:
             cls.assert_extended_data_size(extended_data_size, subfunction)
 
-            if len(response.data) < 5: 
-                raise InvalidResponseException(response, 'Incomplete response from server. Missing DTCAndStatusRecord')
-            # DTC decoding
-            dtc = Dtc(struct.unpack('>L', b'\x00' + response.data[1:4])[0])
-            dtc.status.set_byte(response.data[4])
+            minlength = 5 if not firstbyte_is_memory_selection_echo else 6
 
-            actual_byte = 5	# Increasing index
+            if len(response.data) < minlength: 
+                missing_data = 'MemorySelection and DTCAndStatusRecord' if firstbyte_is_memory_selection_echo else 'DTCAndStatusRecord'
+                raise InvalidResponseException(response, 'Incomplete response from server. Missing %s' % missing_data)
+            
+            if firstbyte_is_memory_selection_echo:
+                response.service_data.memory_selection_echo = response.data[1]
+                actual_byte = 2
+            else:
+                actual_byte = 1
+
+            # DTC decoding
+            dtc = Dtc(struct.unpack('>L', b'\x00' + response.data[actual_byte:(actual_byte+3)])[0])
+            dtc.status.set_byte(response.data[actual_byte+3])
+
+            actual_byte = actual_byte+4	# Increasing index
             while actual_byte < len(response.data):	# Loop through data
                 remaining_data = response.data[actual_byte:]
                 record_number = remaining_data[0]
