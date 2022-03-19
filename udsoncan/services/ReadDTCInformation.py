@@ -1,6 +1,7 @@
 from . import *
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
+from udsoncan.configs import latest_standard
 import struct
 
 class ReadDTCInformation(BaseService):
@@ -36,10 +37,10 @@ class ReadDTCInformation(BaseService):
         reportDTCFaultDetectionCounter = 0x14
         reportDTCWithPermanentStatus = 0x15
         reportUserDefMemoryDTCByStatusMask = 0x17
+        reportUserDefMemoryDTCSnapshotRecordByDTCNumber = 0x18
 
         #todo
         reportDTCExtDataRecordByRecordNumber = 0x16        
-        reportUserDefMemoryDTCSnapshotRecordByDTCNumber = 0x18
         reportUserDefMemoryDTCExtDataRecordByDTCNumber = 0x19
         reportSupportedDTCExtDataRecord = 0x1A
         reportWWHOBDDTCByMaskRecord = 0x42
@@ -94,7 +95,7 @@ class ReadDTCInformation(BaseService):
         return struct.pack('BBB', (dtcid >> 16) & 0xFF, (dtcid >> 8) & 0xFF, (dtcid >> 0) & 0xFF)
 
     @classmethod
-    def check_subfunction_valid(cls, subfunction):
+    def check_subfunction_valid(cls, subfunction, standard_version=latest_standard):
         ServiceHelper.validate_int(subfunction, min=1, max=0xFF, name='Subfunction')
         vlist = vars(cls)
         ok = True
@@ -105,9 +106,24 @@ class ReadDTCInformation(BaseService):
         if not ok:
             raise ValueError('Unknown subfunction : 0x%02x', subfunction)
 
+        # These subfunction have been added in the 2020 version of the standard
+        subfunction2020 = [        
+            cls.Subfunction.reportUserDefMemoryDTCByStatusMask,
+            cls.Subfunction.reportDTCExtDataRecordByRecordNumber,
+            cls.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber,
+            cls.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber,
+            cls.Subfunction.reportSupportedDTCExtDataRecord,
+            cls.Subfunction.reportWWHOBDDTCByMaskRecord,
+            cls.Subfunction.reportWWHOBDDTCWithPermanentStatus,
+            cls.Subfunction.reportDTCInformationByDTCReadinessGroupIdentifier,
+        ]
+
+        if subfunction in subfunction2020 and standard_version < 2020:
+            raise NotImplementedError('The subfunction 0x%02x has been introduced in standard version 2020 but decoding is requested to be done as per %d version' % (subfunction, standard_version))
+
 
     @classmethod
-    def make_request(cls, subfunction, status_mask=None, severity_mask=None, dtc=None, snapshot_record_number=None, extended_data_record_number=None, memory_selection=None):
+    def make_request(cls, subfunction, status_mask=None, severity_mask=None, dtc=None, snapshot_record_number=None, extended_data_record_number=None, memory_selection=None, standard_version=latest_standard):
         """
         Generates a request for ReadDTCInformation. 
         Each subfunction uses a subset of parameters. 
@@ -169,6 +185,10 @@ class ReadDTCInformation(BaseService):
                 ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber
         ]
 
+        request_subfn_mask_record_plus_snapshot_record_number_plus_memory_selection = [
+                ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber
+        ]
+
         request_subfn_snapshot_record_number = [
                 ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber
         ]
@@ -192,7 +212,7 @@ class ReadDTCInformation(BaseService):
         ]
 
     
-        cls.check_subfunction_valid(subfunction)
+        cls.check_subfunction_valid(subfunction, standard_version)
 
         if status_mask is not None and isinstance(status_mask, Dtc.Status):
             status_mask = status_mask.get_byte_as_int()
@@ -216,6 +236,12 @@ class ReadDTCInformation(BaseService):
             cls.assert_dtc(dtc, subfunction)
             cls.assert_snapshot_record_number(snapshot_record_number, subfunction)
             req.data = cls.pack_dtc(dtc) + struct.pack('B', snapshot_record_number)
+
+        elif subfunction in request_subfn_mask_record_plus_snapshot_record_number_plus_memory_selection:
+            cls.assert_dtc(dtc, subfunction)
+            cls.assert_snapshot_record_number(snapshot_record_number, subfunction)
+            cls.assert_memory_selection(memory_selection, subfunction)
+            req.data = cls.pack_dtc(dtc) + struct.pack('BB', snapshot_record_number, memory_selection)
 
         elif subfunction in request_subfn_snapshot_record_number:
             cls.assert_snapshot_record_number(snapshot_record_number, subfunction)
@@ -243,7 +269,7 @@ class ReadDTCInformation(BaseService):
         return req
 
     @classmethod
-    def interpret_response(cls, response, subfunction,  extended_data_size=None, tolerate_zero_padding=True, ignore_all_zero_dtc=True, dtc_snapshot_did_size=2, didconfig=None):
+    def interpret_response(cls, response, subfunction,  extended_data_size=None, tolerate_zero_padding=True, ignore_all_zero_dtc=True, dtc_snapshot_did_size=2, didconfig=None, standard_version=latest_standard):
         """
         Populates the response ``service_data`` property with an instance of :class:`ReadDTCInformation.ResponseData<udsoncan.services.ReadDTCInformation.ResponseData>`
 
@@ -275,7 +301,7 @@ class ReadDTCInformation(BaseService):
         """	
 
         from udsoncan import Dtc, DidCodec
-        cls.check_subfunction_valid(subfunction)
+        cls.check_subfunction_valid(subfunction, standard_version)
 
         # Response grouping for responses that are encoded the same way
         response_subfn_dtc_availability_mask_plus_dtc_record = [
@@ -312,7 +338,8 @@ class ReadDTCInformation(BaseService):
         ]
 
         response_sbfn_dtc_status_snapshots_records = [
-                ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber
+                ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber,
+                ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber
         ]
 
         response_sbfn_dtc_status_snapshots_records_record_first = [
@@ -462,12 +489,20 @@ class ReadDTCInformation(BaseService):
         # We create one Dtc.Snapshot for each DID. That'll be easier to work with.
         # <DTC,RecordNumber1,NumberOfDid_X,DID1,DID2,...DIDX, RecordNumber2,NumberOfDid_Y,DID1,DID2,...DIDY, etc>
         elif subfunction in  response_sbfn_dtc_status_snapshots_records:
-            if len(response.data) < 5:
-                raise InvalidResponseException(response, 'Response must be at least 5 bytes long ')
 
-            dtc = Dtc(struct.unpack('>L', b'\x00' + response.data[1:4])[0])
-            dtc.status.set_byte(response.data[4])
-            actual_byte = 5		# Increasing index
+            minlength = 5 if not firstbyte_is_memory_selection_echo else 6
+            if len(response.data) < minlength:
+                raise InvalidResponseException(response, 'Response must be at least %d bytes long' % minlength)
+
+            if firstbyte_is_memory_selection_echo:
+                response.service_data.memory_selection_echo = response.data[1]
+                actual_byte = 2
+            else:
+                actual_byte = 1
+
+            dtc = Dtc(struct.unpack('>L', b'\x00' + response.data[actual_byte:(actual_byte+3)])[0])
+            dtc.status.set_byte(response.data[actual_byte+3])
+            actual_byte+=4		# Increasing index
 
             ServiceHelper.validate_int(dtc_snapshot_did_size, min=1, max=8, name='dtc_snapshot_did_size')
 

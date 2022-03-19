@@ -397,6 +397,7 @@ Methods by services
 .. automethod:: udsoncan.client.Client.get_dtc_fault_counter
 .. automethod:: udsoncan.client.Client.get_dtc_snapshot_identification
 .. automethod:: udsoncan.client.Client.get_dtc_snapshot_by_dtc_number
+.. automethod:: udsoncan.client.Client.get_user_defined_dtc_snapshot_by_dtc_number
 .. automethod:: udsoncan.client.Client.get_dtc_snapshot_by_record_number
 .. automethod:: udsoncan.client.Client.get_dtc_extended_data_by_dtc_number
 .. automethod:: udsoncan.client.Client.get_mirrormemory_dtc_extended_data_by_dtc_number

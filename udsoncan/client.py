@@ -1374,6 +1374,31 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber, dtc=dtc, snapshot_record_number=record_number)
 
+
+    def get_user_defined_dtc_snapshot_by_dtc_number(self, dtc, memory_selection, record_number=0xFF):
+        """
+        Requests the server for one or many specific DTC snapshots associated with a single DTC in a user defined memory.
+        Each snapshot has a data identifier associated with it. The data will be decoded using the associated :ref:`DidCodec<DidCodec>` defined in ``config['data_identifiers']``.
+
+        Introduced in 2020 version of ISO-14229
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc`` ``dtc_snapshot_did_size`` ``standard_version`` 
+
+        :param dtc: The DTC ID for which we request the snapshot data. It can be a 3-byte integer or a DTC instance with an ID set.
+        :type dtc: int or :ref:`Dtc<DTC>`
+
+        :param record_number: The record number of the snapshot data to read. If 0xFF is given, then all snapshots will be read, otherwise, a single snapshot will be read.
+        :type record_number: int
+
+        :param memory_selection: A 1 byte wide identifier for the memory region. Defined by ECU manufacturer.
+        :type memory_selection: int      
+
+        :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
+        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber, dtc=dtc, snapshot_record_number=record_number, memory_selection=memory_selection)
+
+
     def get_dtc_snapshot_by_record_number(self, record_number=0xFF):
         """
         Requests the server for one or many DTC snapshots by specifying a record number. This functionality can exist only if the server assigns globally unique record_numbers to DTC snapshots, regardless of the DTC ID.
@@ -1448,7 +1473,8 @@ class Client:
                 'dtc' : dtc,
                 'snapshot_record_number' : snapshot_record_number,
                 'extended_data_record_number' : extended_data_record_number,
-                'memory_selection' : memory_selection
+                'memory_selection' : memory_selection,
+                'standard_version' : self.config['standard_version']
         }
 
         request = services.ReadDTCInformation.make_request(**request_params)
@@ -1465,7 +1491,8 @@ class Client:
                 'ignore_all_zero_dtc' : self.config['ignore_all_zero_dtc'],
                 'dtc_snapshot_did_size' : self.config['dtc_snapshot_did_size'],
                 'didconfig' : self.config['data_identifiers'] if 'data_identifiers' in self.config else None,
-                'extended_data_size' : extended_data_size
+                'extended_data_size' : extended_data_size,
+                'standard_version' : self.config['standard_version']
         }
 
         if extended_data_size is None:
@@ -1473,17 +1500,36 @@ class Client:
                 if dtc is not None and dtc in self.config['extended_data_size']:
                     response_params['extended_data_size'] = self.config['extended_data_size'][dtc]
 
-        services.ReadDTCInformation.interpret_response(response, **response_params)
+        # So, if subfunction is a mismatch, chances are that the response won't be decoded properly because we use the 
+        # request subfunction to select the decoding algorithm, not the received one. 
+        # We want to report the subfunction mismatch as a primary cause. 
+        error = None
+        try:
+            services.ReadDTCInformation.interpret_response(response, **response_params)
+        except Exception as e:
+            error  = e
 
+        # If nothing can be checked, raise the rror right away
+        if isinstance(error, InvalidResponseException):
+            if response.service_data.subfunction_echo is None:
+                raise error
+
+        # We can report a subfunction mismatch before decoding error.
         if response.service_data.subfunction_echo != subfunction:
-            raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation subfunction gotten from server(0x%02x) does not match the value in the request subfunction (0x%02x)' % (response.service_data.subfunction_echo, subfunction))	
+            received_subfn_echo = 'None' if response.service_data.subfunction_echo is None else '%02x' % response.service_data.subfunction_echo
+            raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation subfunction gotten from server (%s) does not match the value in the request subfunction (0x%02x)' % (received_subfn_echo, subfunction))	
 
-        if subfunction == services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber:
+        # Nothing else to check, report the real error.
+        if error:
+            raise error
+
+
+        if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber]:
             if len(response.service_data.dtcs) == 1:
                 if dtc != response.service_data.dtcs[0].id:
                     raise UnexpectedResponseException(response, 'Server returned snapshot with DTC ID 0x%06x while client requested for 0x%06x' % (response.service_data.dtcs[0].id, dtc))
 
-        if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber, services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber]:
+        if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber, services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber]:
             if len(response.service_data.dtcs) == 1 and snapshot_record_number != 0xFF:
                 for snapshot in response.service_data.dtcs[0].snapshots:
                     if snapshot.record_number != snapshot_record_number:
@@ -1498,7 +1544,8 @@ class Client:
             
         if subfunction in  [services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCByStatusMask, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber]:
             if memory_selection is not None and memory_selection != response.service_data.memory_selection_echo:
-                raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation MemorySelection gotten from server(0x%02x) does not match the value in the request (0x%02x)' % (response.service_data.memory_selection_echo, memory_selection))   
+                received_ms_echo = 'None' if response.service_data.memory_selection_echo is None else '%02x' % response.service_data.memory_selection_echo
+                raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation MemorySelection gotten from server (%s) does not match the value in the request (0x%02x)' % (received_ms_echo, memory_selection))   
 
         if Dtc.Format.get_name(response.service_data.dtc_format) is None:
             self.logger.warning('Unknown DTC Format Identifier 0x%02x. Value should be between 0 and 3' % response.service_data.dtc_format)
