@@ -1105,6 +1105,8 @@ class Client:
 # ====  ReadDTCInformation
     def get_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCByStatusMask``
+
         Reads all the Diagnostic Trouble Codes that have a status matching the given mask. 
         The server will check all of its DTCs and if (Dtc.status & status_mask) != 0, then the DTCs match the filter and are sent back to the client.
 
@@ -1120,6 +1122,8 @@ class Client:
 
     def get_user_defined_memory_dtc_by_status_mask(self, status_mask, memory_selection):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportUserDefMemoryDTCByStatusMask``
+
         Reads  Diagnostic Trouble Codes that have a status matching the given mask in a user defined memory . 
         The server will check all of its DTCs inside the user defined memory region and if (Dtc.status & status_mask) != 0, 
         then the DTCs match the filter and are sent back to the client.
@@ -1142,6 +1146,8 @@ class Client:
 
     def get_emission_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportEmissionsRelatedOBDDTCByStatusMask``
+
         Reads the emission-related Diagnostic Trouble Codes that have a status matching the given mask.
         The server will check its emission-related DTCs and if (Dtc.status & status_mask) != 0, then the DTCs match the filter and are sent back to the client.
 
@@ -1157,6 +1163,8 @@ class Client:
 
     def get_mirrormemory_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportMirrorMemoryDTCByStatusMask``
+
         Reads all the Diagnostic Trouble Codes stored in mirror memory that have a status matching the given mask. 
         The server will check all of its DTCs and if (Dtc.status & status_mask) != 0, then the DTCs match the filter and are sent back to the client.
 
@@ -1172,6 +1180,8 @@ class Client:
 
     def get_dtc_by_status_severity_mask(self, status_mask, severity_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCBySeverityMaskRecord``
+
         Reads all the Diagnostic Trouble Codes that have a status and a severity matching the given masks. 
         The server will check all of its DTCs and if ( (Dtc.status & status_mask) != 0 && (Dtc.severity & severity) !=0), then the DTCs match the filter and are sent back to the client.
 
@@ -1190,6 +1200,8 @@ class Client:
 
     def get_number_of_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfDTCByStatusMask``
+
         Gets the number of DTCs that match the specified status mask.
 
         :Effective configuration: ``exception_on_<type>_response``
@@ -1204,6 +1216,8 @@ class Client:
 
     def get_mirrormemory_number_of_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfMirrorMemoryDTCByStatusMask``
+
         Gets the number of DTCs that match the specified status mask in mirror memory.
 
         :Effective configuration: ``exception_on_<type>_response``
@@ -1218,6 +1232,8 @@ class Client:
 
     def get_number_of_emission_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfEmissionsRelatedOBDDTCByStatusMask``
+
         Gets the number of emission-related DTCs that match the specified status mask.
 
         :Effective configuration: ``exception_on_<type>_response``
@@ -1232,6 +1248,8 @@ class Client:
 
     def get_number_of_dtc_by_status_severity_mask(self, status_mask, severity_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfDTCBySeverityMaskRecord``
+
         Gets the number of DTCs that match the specified status mask and severity mask.
 
         :Effective configuration: ``exception_on_<type>_response``
@@ -1249,6 +1267,8 @@ class Client:
 
     def get_dtc_severity(self, dtc):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportSeverityInformationOfDTC``
+
         Requests the server for a specific DTC severity level.
 
         :Effective configuration: ``exception_on_<type>_response``
@@ -1263,6 +1283,8 @@ class Client:
 
     def get_supported_dtc(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportSupportedDTCs``
+
         Requests the list of supported DTCs by the server.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1274,6 +1296,8 @@ class Client:
 
     def get_first_test_failed_dtc(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportFirstTestFailedDTC``
+
         Reads a single DTC. Requests the server for the first DTC that set its ``Dtc.Status.test_failed`` bit.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1285,6 +1309,8 @@ class Client:
 
     def get_first_confirmed_dtc(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportFirstConfirmedDTC``
+
         Reads a single DTC. Requests the server for the first DTC that set its ``Dtc.Status.confirmed`` bit.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1296,6 +1322,8 @@ class Client:
 
     def get_most_recent_test_failed_dtc(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportMostRecentTestFailedDTC``
+
         Reads a single DTC. Requests the server for the last DTC that set its ``Dtc.Status.test_failed`` bit.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1307,6 +1335,8 @@ class Client:
 
     def get_most_recent_confirmed_dtc(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportMostRecentConfirmedDTC``
+
         Reads a single DTC. Requests the server for the last DTC that set its ``Dtc.Status.confirmed`` bit.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1318,6 +1348,8 @@ class Client:
 
     def get_dtc_with_permanent_status(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCWithPermanentStatus``
+
         Returns all DTCs that the server marked as `permanent`. 
 
         A permanent DTC is a DTC stored in Non-Volatile memory and that cannot be erased by test equipment or by power-cycling the ECU.
@@ -1331,6 +1363,8 @@ class Client:
 
     def get_dtc_fault_counter(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCFaultDetectionCounter``
+
         Requests the server for all DTCs that are `prefailed` along with their fault detection counter. 
 
         A prefailed DTC is a DTC for which the detection condition is met, but has not been identified as `pending` or `confirmed` yet. 
@@ -1347,6 +1381,8 @@ class Client:
 
     def get_dtc_snapshot_identification(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCSnapshotIdentification``
+
         Requests the server to return an index of all the DTC snapshots available. The server will respond with a list of DTCs and a list of snapshot record numbers for each DTC.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1358,6 +1394,8 @@ class Client:
 
     def get_dtc_snapshot_by_dtc_number(self, dtc, record_number=0xFF):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCSnapshotRecordByDTCNumber``
+
         Requests the server for one or many specific DTC snapshots associated with a single DTC.
         Each snapshot has a data identifier associated with it. The data will be decoded using the associated :ref:`DidCodec<DidCodec>` defined in ``config['data_identifiers']``.
 
@@ -1377,6 +1415,8 @@ class Client:
 
     def get_user_defined_dtc_snapshot_by_dtc_number(self, dtc, memory_selection, record_number=0xFF):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportUserDefMemoryDTCSnapshotRecordByDTCNumber``
+
         Requests the server for one or many specific DTC snapshots associated with a single DTC in a user defined memory.
         Each snapshot has a data identifier associated with it. The data will be decoded using the associated :ref:`DidCodec<DidCodec>` defined in ``config['data_identifiers']``.
 
@@ -1401,6 +1441,8 @@ class Client:
 
     def get_dtc_snapshot_by_record_number(self, record_number=0xFF):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCSnapshotRecordByRecordNumber``
+
         Requests the server for one or many DTC snapshots by specifying a record number. This functionality can exist only if the server assigns globally unique record_numbers to DTC snapshots, regardless of the DTC ID.
 
         Each snapshot has a data identifier associated with it. The data will be decoded using the associated :ref:`DidCodec<DidCodec>` defined in ``config['data_identifiers']``.
@@ -1417,6 +1459,8 @@ class Client:
 
     def get_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCExtendedDataRecordByDTCNumber``
+
         Requests the server for one or many DTC **extended data** by specifying a DTC and an record number. This mehtod may return a single DTC containing multiple records of extended data
 
         The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
@@ -1440,6 +1484,8 @@ class Client:
 
     def get_dtc_extended_data_by_record_number(self, record_number, data_size = None):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCExtDataRecordByRecordNumber``
+
         Requests the server for one or many DTC **extended data** by specifying a record number only. This method may return multiple DTC containing each a single record of extended data.
 
         The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
@@ -1465,6 +1511,8 @@ class Client:
 
     def get_user_defined_dtc_extended_data_by_dtc_number(self, dtc, memory_selection, record_number=0xFF, data_size = None):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportUserDefMemoryDTCExtDataRecordByDTCNumber``
+
         Requests the server for one or many DTC **extended data** by specifying a DTC and an optional record number in a user defined memory.
         This mehtod may return a single DTC containing multiple records of extended data
         The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
@@ -1492,6 +1540,8 @@ class Client:
 
     def get_mirrormemory_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportMirrorMemoryDTCExtendedDataRecordByDTCNumber``
+
         Requests the server for one or many DTC **extended data** stored in mirror memory by specifying a record number.
 
         The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``

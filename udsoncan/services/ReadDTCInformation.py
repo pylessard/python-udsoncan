@@ -36,10 +36,10 @@ class ReadDTCInformation(BaseService):
         reportEmissionsRelatedOBDDTCByStatusMask = 0x13
         reportDTCFaultDetectionCounter = 0x14
         reportDTCWithPermanentStatus = 0x15
+        reportDTCExtDataRecordByRecordNumber = 0x16        
         reportUserDefMemoryDTCByStatusMask = 0x17
         reportUserDefMemoryDTCSnapshotRecordByDTCNumber = 0x18
         reportUserDefMemoryDTCExtDataRecordByDTCNumber = 0x19
-        reportDTCExtDataRecordByRecordNumber = 0x16        
 
         #todo
         reportSupportedDTCExtDataRecord = 0x1A
