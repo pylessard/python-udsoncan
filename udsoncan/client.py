@@ -1417,7 +1417,7 @@ class Client:
 
     def get_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
         """
-        Requests the server for one or many DTC **extended data** by specifying a record number.
+        Requests the server for one or many DTC **extended data** by specifying a DTC and an record number. This mehtod may return a single DTC containing multiple records of extended data
 
         The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
 
@@ -1437,9 +1437,36 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number,extended_data_size=data_size)
 
+
+    def get_dtc_extended_data_by_record_number(self, record_number, data_size = None):
+        """
+        Requests the server for one or many DTC **extended data** by specifying a record number only. This method may return multiple DTC containing each a single record of extended data.
+
+        The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
+
+        Introduced in 2020 version of ISO-14229
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc`` ``extended_data_size`` ``standard_version``
+
+        :param record_number: The record number of the extended data to read. Value must range between 0x00 and 0xEF. 0xFF (all) cannot be used.
+        :type record_number: int
+
+        :param data_size: The number of bytes of each extended data record. If not specified ``config['extended_data_size']`` will be used. 
+        Since this method can return data for multiple DTCs and data size might be different for each DTC, it is possible to pass a dictionary 
+        with a size for each DTC id (just like ``extended_data_size`` configuration). Example : size = {0x123456 : 5, 0x112233 : 10}
+        :type data_size: int, dict or None
+
+        :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
+
+        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCExtDataRecordByRecordNumber, extended_data_record_number=record_number, extended_data_size=data_size)
+
+
     def get_user_defined_dtc_extended_data_by_dtc_number(self, dtc, memory_selection, record_number=0xFF, data_size = None):
         """
-        Requests the server for one or many DTC **extended data** by specifying a record number in a user defined memory.
+        Requests the server for one or many DTC **extended data** by specifying a DTC and an optional record number in a user defined memory.
+        This mehtod may return a single DTC containing multiple records of extended data
         The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
 
         Introduced in 2020 version of ISO-14229
@@ -1521,10 +1548,9 @@ class Client:
                 'standard_version' : self.config['standard_version']
         }
 
-        if extended_data_size is None:
+        if extended_data_size is None: 
             if 'extended_data_size' in self.config:
-                if dtc is not None and dtc in self.config['extended_data_size']:
-                    response_params['extended_data_size'] = self.config['extended_data_size'][dtc]
+                response_params['extended_data_size'] = self.config['extended_data_size']
 
         # So, if subfunction is a mismatch, chances are that the response won't be decoded properly because we use the 
         # request subfunction to select the decoding algorithm, not the received one. 
@@ -1572,6 +1598,14 @@ class Client:
             if memory_selection is not None and memory_selection != response.service_data.memory_selection_echo:
                 received_ms_echo = 'None' if response.service_data.memory_selection_echo is None else '%02x' % response.service_data.memory_selection_echo
                 raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation MemorySelection gotten from server (%s) does not match the value in the request (0x%02x)' % (received_ms_echo, memory_selection))   
+
+        if subfunction == services.ReadDTCInformation.Subfunction.reportDTCExtDataRecordByRecordNumber:
+            if extended_data_record_number is not None:
+                for dtc in response.service_data.dtcs:
+                    for extended_data in dtc.extended_data:
+                        if extended_data.record_number != extended_data_record_number:
+                            raise UnexpectedResponseException(response, 'Extended data record number given by the server for DTC 0x%06X has a value of %d but requested record number was %d', (dtc.id, extended_data.record_number, extended_data_record_number))
+
 
         if Dtc.Format.get_name(response.service_data.dtc_format) is None:
             self.logger.warning('Unknown DTC Format Identifier 0x%02x. Value should be between 0 and 3' % response.service_data.dtc_format)
