@@ -717,6 +717,8 @@ class ReadDTCInformation(BaseService):
                 raise InvalidResponseException(response, 'Incomplete response from server. Missing DTCExtDataRecordNumber')
 
             record_number = int(response.data[1])
+            if record_number > 0xEF:
+                raise InvalidResponseException(response, 'Server returned a RecordNumber of %d which is out of range (00-EF) according to ISO-14229:2020', record_number)
             
             actual_byte = 2
             received_dtcs = set()

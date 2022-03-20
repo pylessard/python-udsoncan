@@ -1,8 +1,9 @@
 from udsoncan import DidCodec
 from udsoncan.exceptions import *
+from udsoncan.services import ReadDTCInformation
 
 from test.ClientServerTest import ClientServerTest
-from udsoncan import Dtc
+from udsoncan import Dtc, Response
 import struct
 from udsoncan.configs import latest_standard
 
@@ -1092,7 +1093,7 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
             self.wait_request_and_respond(data + b'\x00' * (i + 2))
 
     def _test_single_snapshot_zeropadding_notok_exception(self):
-        for i in range (6):
+        for i in range(6):
             with self.assertRaises(InvalidResponseException):
                 self.udsclient.get_dtc_snapshot_by_record_number(record_number=0)
 
@@ -1106,7 +1107,7 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
 
     def _test_single_snapshot_zeropadding_notok_no_exception(self):
         self.udsclient.config['exception_on_invalid_response'] = False
-        for i in range (6):
+        for i in range(6):
             response = self.udsclient.get_dtc_snapshot_by_record_number(record_number=0)
             self.assertFalse(response.valid)
 
@@ -1186,11 +1187,11 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
             with self.assertRaises(InvalidResponseException):
                 self.udsclient.get_dtc_snapshot_by_record_number(record_number=0x02)
 
-    def test_invalid_length_incomplete_dtc_exception(self):
+    def test_invalid_length_incomplete_dtc_no_exception(self):
         self.wait_request_and_respond(b'\x59\x05\x02\x12')
         self.wait_request_and_respond(b'\x59\x05\x02\x12\x34')
 
-    def _test_invalid_length_incomplete_dtc_exception(self):
+    def _test_invalid_length_incomplete_dtc_no_exception(self):
         self.udsclient.config['exception_on_invalid_response'] = False
         for i in range(2):
             response = self.udsclient.get_dtc_snapshot_by_record_number(record_number=0x02)
@@ -2848,6 +2849,16 @@ class TestreportDTCExtDataRecordByRecordNumber(ClientServerTest):   # Subfn = 0x
     def _test_wrong_record_number_response_exception(self):
         with self.assertRaises(UnexpectedResponseException):
             self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5, 0x789abc : 3})
+
+    def test_record_number_out_of_range_response_exception(self):
+        pass
+
+    def _test_record_number_out_of_range_response_exception(self):
+        response = Response(service = ReadDTCInformation, code = Response.Code.PositiveResponse, data = self.sb + b'\xF0\x12\x34\x56\x20\x01\x02\x03\x04\x05')
+        
+        with self.assertRaises(InvalidResponseException):  
+            # Do not go thourgh the client because out of range would raised at request time.
+            ReadDTCInformation.interpret_response(response, ReadDTCInformation.Subfunction.reportDTCExtDataRecordByRecordNumber, extended_data_size={0x123456 : 5})
 
     def test_duplicate_dtc(self):
         self.wait_request_and_respond(b'\x59' + self.sb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04\x05\x12\x34\x56\x20\x01\x02\x03\x04\x05')
