@@ -1794,7 +1794,8 @@ class Client:
                         using_p2_star = True
                         self.logger.debug("Server requested to wait with response code %s (0x%02x), single request timeout is now set to P2* (%.3f seconds)" % (response.code_name, response.code, single_request_timeout))
                 else:
-                    raise NegativeResponseException(response)
+                    if self.config['exception_on_negative_response']:
+                        raise NegativeResponseException(response)
 
         self.logger.info('Received positive response for service %s (0x%02x) from server.' % (response.service.get_name(), response.service.request_id()))
         return response
