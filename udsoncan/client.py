@@ -688,7 +688,7 @@ class Client:
 
         self.logger.info('%s - AccessType=0x%02x (%s) - Sending request with record payload of %d bytes' % (self.service_log_prefix(services.AccessTimingParameter), access_type, services.AccessTimingParameter.AccessType.get_name(access_type), payload_length))
         if timing_param_record is not None:
-            self.logger.debug("Payload data : %s" % binascii.hexlify(data))
+            self.logger.debug("Payload data : %s" % binascii.hexlify(timing_param_record))
 
         response = self.send_request(request)
         if response is None:
