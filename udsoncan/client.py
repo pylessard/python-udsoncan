@@ -1,11 +1,8 @@
 from udsoncan import Response, Request, services, DidCodec, Routine, IOMasks, Dtc, DataIdentifier, MemoryLocation, DynamicDidDefinition
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
-import struct
 import logging
-import math
 import binascii
-import traceback
 import functools
 import time
 
@@ -480,11 +477,11 @@ class Client:
         return response
 
     @standard_error_management 
-    def clear_dtc(self, group=0xFFFFFF):
+    def clear_dtc(self, group=0xFFFFFF, memory_selection=None):
         """
         Requests the server to clear its active Diagnostic Trouble Codes with the :ref:`ClearDiagnosticInformation<ClearDiagnosticInformation>` service.
 
-        :Effective configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response``. ``standard_version``
 
         :param group: The group of DTCs to clear. It may refer to Powertrain DTCs, Chassis DTCs, etc. Values are defined by the ECU manufacturer except for two specific values
 
@@ -492,16 +489,23 @@ class Client:
                 - ``0xFFFFFF`` : All DTCs
         :type group: int
 
+        :param memory_selection: MemorySelection byte (0-0xFF). This value is user defined and introduced in 2020 version of ISO-14229-1. 
+        Only added to the request payload when different from None. Default : None
+        :type memory_selection: int
+
         :return: The server response parsed by :meth:`ClearDiagnosticInformation.interpret_response<udsoncan.services.ClearDiagnosticInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
 
         """
 
-        request = services.ClearDiagnosticInformation.make_request(group)
+        request = services.ClearDiagnosticInformation.make_request(group, memory_selection=memory_selection, standard_version=self.config['standard_version'])
+        memys_str = ''
+        if memory_selection is not None:
+            memys_str = ' , MemorySelection : %d' % memory_selection
         if group == 0xFFFFFF:
-            self.logger.info('%s - Clearing all DTCs (group mask : 0xFFFFFF)' % (self.service_log_prefix(services.ClearDiagnosticInformation)))
+            self.logger.info('%s - Clearing all DTCs (group mask : 0xFFFFFF%s)' % (self.service_log_prefix(services.ClearDiagnosticInformation), memys_str))
         else:
-            self.logger.info('%s - Clearing DTCs matching group mask : 0x%06x' % (self.service_log_prefix(services.ClearDiagnosticInformation), group))
+            self.logger.info('%s - Clearing DTCs matching group mask : 0x%06x%s' % (self.service_log_prefix(services.ClearDiagnosticInformation), group,memys_str))
 
         response = self.send_request(request)
         if response is None:
@@ -1101,6 +1105,8 @@ class Client:
 # ====  ReadDTCInformation
     def get_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCByStatusMask``
+
         Reads all the Diagnostic Trouble Codes that have a status matching the given mask. 
         The server will check all of its DTCs and if (Dtc.status & status_mask) != 0, then the DTCs match the filter and are sent back to the client.
 
@@ -1114,8 +1120,34 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCByStatusMask, status_mask=status_mask)
 
+    def get_user_defined_memory_dtc_by_status_mask(self, status_mask, memory_selection):
+        """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportUserDefMemoryDTCByStatusMask``
+
+        Reads  Diagnostic Trouble Codes that have a status matching the given mask in a user defined memory . 
+        The server will check all of its DTCs inside the user defined memory region and if (Dtc.status & status_mask) != 0, 
+        then the DTCs match the filter and are sent back to the client.
+
+        Introduced in 2020 version of ISO-14229
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc`` ``standard_version``
+
+        :param status_mask: The status mask against which the DTCs are tested. 
+        :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
+
+        :param memory_selection: A 1 byte wide identifier for the memory region. Defined by ECU manufacturer.
+        :type memory_selection: int
+
+        :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
+        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCByStatusMask, status_mask=status_mask, memory_selection=memory_selection)
+
+
     def get_emission_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportEmissionsRelatedOBDDTCByStatusMask``
+
         Reads the emission-related Diagnostic Trouble Codes that have a status matching the given mask.
         The server will check its emission-related DTCs and if (Dtc.status & status_mask) != 0, then the DTCs match the filter and are sent back to the client.
 
@@ -1131,6 +1163,8 @@ class Client:
 
     def get_mirrormemory_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportMirrorMemoryDTCByStatusMask``
+
         Reads all the Diagnostic Trouble Codes stored in mirror memory that have a status matching the given mask. 
         The server will check all of its DTCs and if (Dtc.status & status_mask) != 0, then the DTCs match the filter and are sent back to the client.
 
@@ -1146,6 +1180,8 @@ class Client:
 
     def get_dtc_by_status_severity_mask(self, status_mask, severity_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCBySeverityMaskRecord``
+
         Reads all the Diagnostic Trouble Codes that have a status and a severity matching the given masks. 
         The server will check all of its DTCs and if ( (Dtc.status & status_mask) != 0 && (Dtc.severity & severity) !=0), then the DTCs match the filter and are sent back to the client.
 
@@ -1164,6 +1200,8 @@ class Client:
 
     def get_number_of_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfDTCByStatusMask``
+
         Gets the number of DTCs that match the specified status mask.
 
         :Effective configuration: ``exception_on_<type>_response``
@@ -1178,6 +1216,8 @@ class Client:
 
     def get_mirrormemory_number_of_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfMirrorMemoryDTCByStatusMask``
+
         Gets the number of DTCs that match the specified status mask in mirror memory.
 
         :Effective configuration: ``exception_on_<type>_response``
@@ -1192,6 +1232,8 @@ class Client:
 
     def get_number_of_emission_dtc_by_status_mask(self, status_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfEmissionsRelatedOBDDTCByStatusMask``
+
         Gets the number of emission-related DTCs that match the specified status mask.
 
         :Effective configuration: ``exception_on_<type>_response``
@@ -1206,6 +1248,8 @@ class Client:
 
     def get_number_of_dtc_by_status_severity_mask(self, status_mask, severity_mask):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfDTCBySeverityMaskRecord``
+
         Gets the number of DTCs that match the specified status mask and severity mask.
 
         :Effective configuration: ``exception_on_<type>_response``
@@ -1223,6 +1267,8 @@ class Client:
 
     def get_dtc_severity(self, dtc):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportSeverityInformationOfDTC``
+
         Requests the server for a specific DTC severity level.
 
         :Effective configuration: ``exception_on_<type>_response``
@@ -1237,6 +1283,8 @@ class Client:
 
     def get_supported_dtc(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportSupportedDTCs``
+
         Requests the list of supported DTCs by the server.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1248,6 +1296,8 @@ class Client:
 
     def get_first_test_failed_dtc(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportFirstTestFailedDTC``
+
         Reads a single DTC. Requests the server for the first DTC that set its ``Dtc.Status.test_failed`` bit.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1259,6 +1309,8 @@ class Client:
 
     def get_first_confirmed_dtc(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportFirstConfirmedDTC``
+
         Reads a single DTC. Requests the server for the first DTC that set its ``Dtc.Status.confirmed`` bit.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1270,6 +1322,8 @@ class Client:
 
     def get_most_recent_test_failed_dtc(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportMostRecentTestFailedDTC``
+
         Reads a single DTC. Requests the server for the last DTC that set its ``Dtc.Status.test_failed`` bit.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1281,6 +1335,8 @@ class Client:
 
     def get_most_recent_confirmed_dtc(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportMostRecentConfirmedDTC``
+
         Reads a single DTC. Requests the server for the last DTC that set its ``Dtc.Status.confirmed`` bit.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1292,6 +1348,8 @@ class Client:
 
     def get_dtc_with_permanent_status(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCWithPermanentStatus``
+
         Returns all DTCs that the server marked as `permanent`. 
 
         A permanent DTC is a DTC stored in Non-Volatile memory and that cannot be erased by test equipment or by power-cycling the ECU.
@@ -1305,6 +1363,8 @@ class Client:
 
     def get_dtc_fault_counter(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCFaultDetectionCounter``
+
         Requests the server for all DTCs that are `prefailed` along with their fault detection counter. 
 
         A prefailed DTC is a DTC for which the detection condition is met, but has not been identified as `pending` or `confirmed` yet. 
@@ -1321,6 +1381,8 @@ class Client:
 
     def get_dtc_snapshot_identification(self):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCSnapshotIdentification``
+
         Requests the server to return an index of all the DTC snapshots available. The server will respond with a list of DTCs and a list of snapshot record numbers for each DTC.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
@@ -1332,6 +1394,8 @@ class Client:
 
     def get_dtc_snapshot_by_dtc_number(self, dtc, record_number=0xFF):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCSnapshotRecordByDTCNumber``
+
         Requests the server for one or many specific DTC snapshots associated with a single DTC.
         Each snapshot has a data identifier associated with it. The data will be decoded using the associated :ref:`DidCodec<DidCodec>` defined in ``config['data_identifiers']``.
 
@@ -1348,8 +1412,37 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber, dtc=dtc, snapshot_record_number=record_number)
 
+
+    def get_user_defined_dtc_snapshot_by_dtc_number(self, dtc, memory_selection, record_number=0xFF):
+        """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportUserDefMemoryDTCSnapshotRecordByDTCNumber``
+
+        Requests the server for one or many specific DTC snapshots associated with a single DTC in a user defined memory.
+        Each snapshot has a data identifier associated with it. The data will be decoded using the associated :ref:`DidCodec<DidCodec>` defined in ``config['data_identifiers']``.
+
+        Introduced in 2020 version of ISO-14229
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc`` ``dtc_snapshot_did_size`` ``standard_version`` 
+
+        :param dtc: The DTC ID for which we request the snapshot data. It can be a 3-byte integer or a DTC instance with an ID set.
+        :type dtc: int or :ref:`Dtc<DTC>`
+
+        :param record_number: The record number of the snapshot data to read. If 0xFF is given, then all snapshots will be read, otherwise, a single snapshot will be read.
+        :type record_number: int
+
+        :param memory_selection: A 1 byte wide identifier for the memory region. Defined by ECU manufacturer.
+        :type memory_selection: int      
+
+        :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
+        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber, dtc=dtc, snapshot_record_number=record_number, memory_selection=memory_selection)
+
+
     def get_dtc_snapshot_by_record_number(self, record_number=0xFF):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCSnapshotRecordByRecordNumber``
+
         Requests the server for one or many DTC snapshots by specifying a record number. This functionality can exist only if the server assigns globally unique record_numbers to DTC snapshots, regardless of the DTC ID.
 
         Each snapshot has a data identifier associated with it. The data will be decoded using the associated :ref:`DidCodec<DidCodec>` defined in ``config['data_identifiers']``.
@@ -1366,7 +1459,9 @@ class Client:
 
     def get_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
         """
-        Requests the server for one or many DTC **extended data** by specifying a record number.
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCExtendedDataRecordByDTCNumber``
+
+        Requests the server for one or many DTC **extended data** by specifying a DTC and an record number. This mehtod may return a single DTC containing multiple records of extended data
 
         The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
 
@@ -1386,8 +1481,67 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, dtc=dtc, extended_data_record_number=record_number,extended_data_size=data_size)
 
+
+    def get_dtc_extended_data_by_record_number(self, record_number, data_size = None):
+        """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCExtDataRecordByRecordNumber``
+
+        Requests the server for one or many DTC **extended data** by specifying a record number only. This method may return multiple DTC containing each a single record of extended data.
+
+        The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
+
+        Introduced in 2020 version of ISO-14229
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc`` ``extended_data_size`` ``standard_version``
+
+        :param record_number: The record number of the extended data to read. Value must range between 0x00 and 0xEF. 0xFF (all) cannot be used.
+        :type record_number: int
+
+        :param data_size: The number of bytes of each extended data record. If not specified ``config['extended_data_size']`` will be used. 
+        Since this method can return data for multiple DTCs and data size might be different for each DTC, it is possible to pass a dictionary 
+        with a size for each DTC id (just like ``extended_data_size`` configuration). Example : size = {0x123456 : 5, 0x112233 : 10}
+        :type data_size: int, dict or None
+
+        :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
+
+        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCExtDataRecordByRecordNumber, extended_data_record_number=record_number, extended_data_size=data_size)
+
+
+    def get_user_defined_dtc_extended_data_by_dtc_number(self, dtc, memory_selection, record_number=0xFF, data_size = None):
+        """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportUserDefMemoryDTCExtDataRecordByDTCNumber``
+
+        Requests the server for one or many DTC **extended data** by specifying a DTC and an optional record number in a user defined memory.
+        This mehtod may return a single DTC containing multiple records of extended data
+        The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
+
+        Introduced in 2020 version of ISO-14229
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``extended_data_size`` ``standard_version`` 
+
+        :param dtc: The DTC ID for which we request the extended data. It can be a 3-byte integer or a DTC instance with an ID set.
+        :type dtc: int or :ref:`Dtc<DTC>`
+
+        :param memory_selection: A 1 byte wide identifier for the memory region. Defined by ECU manufacturer.
+        :type memory_selection: int           
+
+        :param record_number: The record number of the extended data to read. If 0xFF is given, then all extended data entries will be read, otherwise, a single entry will be read.
+        :type record_number: int
+
+        :param data_size: The number of bytes of an extended data record. If not specified ``config['extended_data_size'][dtc]`` will be used.
+        :type data_size: int or None
+
+        :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
+        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber, dtc=dtc, memory_selection=memory_selection, extended_data_record_number=record_number,extended_data_size=data_size)
+
     def get_mirrormemory_dtc_extended_data_by_dtc_number(self, dtc, record_number=0xFF, data_size = None):
         """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportMirrorMemoryDTCExtendedDataRecordByDTCNumber``
+
         Requests the server for one or many DTC **extended data** stored in mirror memory by specifying a record number.
 
         The DTC extended data is an ECU specific set of data that is not associated with a data identifier. Given as ``bytes``
@@ -1411,7 +1565,7 @@ class Client:
     # Performs a ReadDiagnsticInformation service request.
     # Many requests are encoded the same way and many responses are encoded the same way. Request grouping and response grouping are independent.
     @standard_error_management
-    def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None, extended_data_size=None):
+    def read_dtc_information(self, subfunction, status_mask=None, severity_mask=None,  dtc=None, snapshot_record_number=None, extended_data_record_number=None, extended_data_size=None, memory_selection=None):
         if dtc is not None and isinstance(dtc, Dtc):
             dtc = dtc.id
 
@@ -1421,7 +1575,9 @@ class Client:
                 'severity_mask' : severity_mask,
                 'dtc' : dtc,
                 'snapshot_record_number' : snapshot_record_number,
-                'extended_data_record_number' : extended_data_record_number
+                'extended_data_record_number' : extended_data_record_number,
+                'memory_selection' : memory_selection,
+                'standard_version' : self.config['standard_version']
         }
 
         request = services.ReadDTCInformation.make_request(**request_params)
@@ -1438,39 +1594,68 @@ class Client:
                 'ignore_all_zero_dtc' : self.config['ignore_all_zero_dtc'],
                 'dtc_snapshot_did_size' : self.config['dtc_snapshot_did_size'],
                 'didconfig' : self.config['data_identifiers'] if 'data_identifiers' in self.config else None,
-                'extended_data_size' : extended_data_size
+                'extended_data_size' : extended_data_size,
+                'standard_version' : self.config['standard_version']
         }
 
-        if extended_data_size is None:
+        if extended_data_size is None: 
             if 'extended_data_size' in self.config:
-                if dtc is not None and dtc in self.config['extended_data_size']:
-                    response_params['extended_data_size'] = self.config['extended_data_size'][dtc]
+                response_params['extended_data_size'] = self.config['extended_data_size']
 
-        services.ReadDTCInformation.interpret_response(response, **response_params)
+        # So, if subfunction is a mismatch, chances are that the response won't be decoded properly because we use the 
+        # request subfunction to select the decoding algorithm, not the received one. 
+        # We want to report the subfunction mismatch as a primary cause. 
+        error = None
+        try:
+            services.ReadDTCInformation.interpret_response(response, **response_params)
+        except Exception as e:
+            error  = e
 
+        # If nothing can be checked, raise the rror right away
+        if isinstance(error, InvalidResponseException):
+            if response.service_data.subfunction_echo is None:
+                raise error
+
+        # We can report a subfunction mismatch before decoding error.
         if response.service_data.subfunction_echo != subfunction:
-            raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation subfunction gotten from server(0x%02x) does not match the value in the request subfunction (0x%02x)' % (response.service_data.subfunction_echo, subfunction))	
+            received_subfn_echo = 'None' if response.service_data.subfunction_echo is None else '%02x' % response.service_data.subfunction_echo
+            raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation subfunction gotten from server (%s) does not match the value in the request subfunction (0x%02x)' % (received_subfn_echo, subfunction))	
 
-        if subfunction == services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber:
+        # Nothing else to check, report the real error.
+        if error:
+            raise error
+
+
+        if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber]:
             if len(response.service_data.dtcs) == 1:
                 if dtc != response.service_data.dtcs[0].id:
                     raise UnexpectedResponseException(response, 'Server returned snapshot with DTC ID 0x%06x while client requested for 0x%06x' % (response.service_data.dtcs[0].id, dtc))
 
-        if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber, services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber]:
+        if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByRecordNumber, services.ReadDTCInformation.Subfunction.reportDTCSnapshotRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber]:
             if len(response.service_data.dtcs) == 1 and snapshot_record_number != 0xFF:
                 for snapshot in response.service_data.dtcs[0].snapshots:
                     if snapshot.record_number != snapshot_record_number:
                         raise UnexpectedResponseException(response, 'Server returned snapshot with record number 0x%02x while client requested for 0x%02x' % (snapshot.record_number, snapshot_record_number)) 
 
-        if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber]:
+        if subfunction in [services.ReadDTCInformation.Subfunction.reportDTCExtendedDataRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportMirrorMemoryDTCExtendedDataRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber]:
             if len(response.service_data.dtcs) == 1 and extended_data_record_number < 0xF0: # Standard specifies that values between 0xF0 and 0xFF are for reporting groups (more than one record)
                 for extended_data in response.service_data.dtcs[0].extended_data:
                     if extended_data.record_number != extended_data_record_number :	
                         raise UnexpectedResponseException(response, 'Extended data record number given by the server (0x%02x) does not match the record number requested by the client (0x%02x)' % (extended_data.record_number, extended_data_record_number))
 
-        for dtc in response.service_data.dtcs:
-            if dtc.fault_counter is not None and (dtc.fault_counter >= 0x7F or dtc.fault_counter < 0x01):
-                self.logger.warning('Server returned a fault counter value of 0x%02x for DTC id 0x%06x while value should be between 0x01 and 0x7E.' % (dtc.fault_counter, dtc.id))
+            
+        if subfunction in  [services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCByStatusMask, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber, services.ReadDTCInformation.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber]:
+            if memory_selection is not None and memory_selection != response.service_data.memory_selection_echo:
+                received_ms_echo = 'None' if response.service_data.memory_selection_echo is None else '%02x' % response.service_data.memory_selection_echo
+                raise UnexpectedResponseException(response, 'Echo of ReadDTCInformation MemorySelection gotten from server (%s) does not match the value in the request (0x%02x)' % (received_ms_echo, memory_selection))   
+
+        if subfunction == services.ReadDTCInformation.Subfunction.reportDTCExtDataRecordByRecordNumber:
+            if extended_data_record_number is not None:
+                for dtc in response.service_data.dtcs:
+                    for extended_data in dtc.extended_data:
+                        if extended_data.record_number != extended_data_record_number:
+                            raise UnexpectedResponseException(response, 'Extended data record number given by the server for DTC 0x%06X has a value of %d but requested record number was %d', (dtc.id, extended_data.record_number, extended_data_record_number))
+
 
         if Dtc.Format.get_name(response.service_data.dtc_format) is None:
             self.logger.warning('Unknown DTC Format Identifier 0x%02x. Value should be between 0 and 3' % response.service_data.dtc_format)

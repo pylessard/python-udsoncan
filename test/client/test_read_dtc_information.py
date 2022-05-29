@@ -1,10 +1,11 @@
-from udsoncan.client import Client
-from udsoncan import services, DidCodec
+from udsoncan import DidCodec
 from udsoncan.exceptions import *
+from udsoncan.services import ReadDTCInformation
 
 from test.ClientServerTest import ClientServerTest
-from udsoncan import Dtc
+from udsoncan import Dtc, Response
 import struct
+from udsoncan.configs import latest_standard
 
 class GenericTest_RequestStatusMask_ResponseNumberOfDTC():	
 
@@ -1092,7 +1093,7 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
             self.wait_request_and_respond(data + b'\x00' * (i + 2))
 
     def _test_single_snapshot_zeropadding_notok_exception(self):
-        for i in range (6):
+        for i in range(6):
             with self.assertRaises(InvalidResponseException):
                 self.udsclient.get_dtc_snapshot_by_record_number(record_number=0)
 
@@ -1106,7 +1107,7 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
 
     def _test_single_snapshot_zeropadding_notok_no_exception(self):
         self.udsclient.config['exception_on_invalid_response'] = False
-        for i in range (6):
+        for i in range(6):
             response = self.udsclient.get_dtc_snapshot_by_record_number(record_number=0)
             self.assertFalse(response.valid)
 
@@ -1186,11 +1187,11 @@ class TestReportDTCSnapshotRecordByRecordNumber(ClientServerTest):	# Subfn = 0x5
             with self.assertRaises(InvalidResponseException):
                 self.udsclient.get_dtc_snapshot_by_record_number(record_number=0x02)
 
-    def test_invalid_length_incomplete_dtc_exception(self):
+    def test_invalid_length_incomplete_dtc_no_exception(self):
         self.wait_request_and_respond(b'\x59\x05\x02\x12')
         self.wait_request_and_respond(b'\x59\x05\x02\x12\x34')
 
-    def _test_invalid_length_incomplete_dtc_exception(self):
+    def _test_invalid_length_incomplete_dtc_no_exception(self):
         self.udsclient.config['exception_on_invalid_response'] = False
         for i in range(2):
             response = self.udsclient.get_dtc_snapshot_by_record_number(record_number=0x02)
@@ -2581,3 +2582,1380 @@ class TestReportDTCWithPermanentStatus(ClientServerTest,GenericTestNoParamReques
         ClientServerTest.__init__(self, *args, **kwargs)
         GenericTestNoParamRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x15, client_function = 'get_dtc_with_permanent_status')
 
+
+
+
+class TestreportDTCExtDataRecordByRecordNumber(ClientServerTest):   # Subfn = 0x16
+    sb = struct.pack('B', 0x16)
+    badsb = struct.pack('B', 0x16+1)
+
+    def assert_single_data_response(self, response):
+        self.assertEqual(len(response.service_data.dtcs), 1)
+        self.assertEqual(response.service_data.dtc_count, 1)
+
+        dtc = response.service_data.dtcs[0]
+
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
+
+        self.assertEqual(len(dtc.extended_data), 1)
+        extended_data = dtc.extended_data[0]
+
+        self.assertTrue(isinstance(extended_data, Dtc.ExtendedData))
+        self.assertEqual(extended_data.record_number, 0x33) 
+
+        self.assertEqual(extended_data.raw_data, b'\x01\x02\x03\x04\x05')
+
+    def test_single_data(self):
+        for i in range(3):
+            request = self.conn.touserqueue.get(timeout=0.2)
+            self.assertEqual(request, b'\x19' + self.sb + b'\x33')
+            self.conn.fromuserqueue.put(b'\x59'  + self.sb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04\x05')
+
+    def _test_single_data(self):
+        response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = 5)
+        self.assert_single_data_response(response)
+
+        response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5})
+        self.assert_single_data_response(response)
+
+        self.udsclient.config['extended_data_size'] = {0x123456 : 5}
+        response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33)
+        self.assert_single_data_response(response)
+
+    def test_single_data_missing_size(self):
+        for i in range(2):
+            self.wait_request_and_respond(b'\x59'  + self.sb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04\x05')
+
+    def _test_single_data_missing_size(self):
+        with self.assertRaises(ConfigError):
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x111111 : 5})  # 123456 is not there!
+        
+        with self.assertRaises(ConfigError):
+            self.udsclient.config['extended_data_size'] = {0x111111 : 5}    # 123456 is not there!
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33)
+
+    def test_single_data_zeropadding_ok(self):
+        data = b'\x59'  + self.sb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04\x05'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_single_data_zeropadding_ok(self):
+        self.udsclient.config['tolerate_zero_padding'] = True
+        for i in range(8):
+            response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5})
+            self.assert_single_data_response(response)
+
+    def test_single_data_zeropadding_notok_exception(self):
+        data = b'\x59'  + self.sb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04\x05'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_single_data_zeropadding_notok_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        for i in range(8):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5})
+
+
+    def test_single_data_zeropadding_notok_no_exception(self):
+        data = b'\x59'  + self.sb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04\x05'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_single_data_zeropadding_notok_no_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(8):
+            response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5})
+            self.assertFalse(response.valid)
+
+
+    def test_double_data(self):
+        self.wait_request_and_respond(b'\x59'  + self.sb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04\x05\x78\x9a\xbc\x30\xaa\xbb\xcc')
+
+    def _test_double_data(self):
+        response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5, 0x789abc : 3})
+
+        self.assertEqual(len(response.service_data.dtcs), 2)
+        self.assertEqual(response.service_data.dtc_count, 2)
+
+        dtc = response.service_data.dtcs[0]
+
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
+
+        self.assertEqual(len(dtc.extended_data), 1)
+
+        self.assertTrue(isinstance(dtc.extended_data[0], Dtc.ExtendedData))
+        self.assertEqual(dtc.extended_data[0].record_number, 0x33)  
+        self.assertEqual(dtc.extended_data[0].raw_data, b'\x01\x02\x03\x04\x05')
+
+
+        dtc = response.service_data.dtcs[1]
+
+        self.assertEqual(dtc.id, 0x789abc)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x30)
+
+        self.assertEqual(len(dtc.extended_data), 1)
+
+        self.assertTrue(isinstance(dtc.extended_data[0], Dtc.ExtendedData))
+        self.assertEqual(dtc.extended_data[0].record_number, 0x33)  
+        self.assertEqual(dtc.extended_data[0].raw_data, b'\xaa\xbb\xcc')
+
+
+    def test_no_data(self):
+        self.wait_request_and_respond(b'\x59'  + self.sb + b'\x33\x12\x34\x56\x20')
+
+    def _test_no_data(self):
+        with self.assertRaises(InvalidResponseException):
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5})
+
+    def test_zero_sized_data(self):
+        self.wait_request_and_respond(b'\x59'  + self.sb + b'\x33\x12\x34\x56\x20')
+
+    def _test_zero_sized_data(self):
+        response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 0})
+
+        self.assertEqual(len(response.service_data.dtcs), 1)
+        self.assertEqual(response.service_data.dtc_count, 1)
+        dtc = response.service_data.dtcs[0]
+
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
+        self.assertEqual(len(dtc.extended_data), 1)
+
+        self.assertEqual(len(dtc.extended_data[0].raw_data), 0)
+ 
+    def test_zero_sized_data_zeropadding_ok(self):
+        data = b'\x59'  + self.sb + b'\x33\x12\x34\x56\x20'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1) )
+
+    def _test_zero_sized_data_zeropadding_ok(self):
+        self.udsclient.config['tolerate_zero_padding'] = True
+        for i in range(8):
+            response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 0})
+
+            self.assertEqual(len(response.service_data.dtcs), 1)
+            self.assertEqual(response.service_data.dtc_count, 1)
+            dtc = response.service_data.dtcs[0]
+
+            self.assertEqual(dtc.id, 0x123456)
+            self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
+            self.assertEqual(len(dtc.extended_data), 1)
+
+        self.assertEqual(len(dtc.extended_data[0].raw_data), 0)
+
+    def test_zero_sized_data_zeropadding_not_ok_exception(self):
+        data = b'\x59'  + self.sb + b'\x33\x12\x34\x56\x20'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1) )
+
+    def _test_zero_sized_data_zeropadding_not_ok_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        for i in range(8):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 0})
+
+    def invalid_length_no_response_server_task(self):
+        self.wait_request_and_respond(b'')
+        self.wait_request_and_respond(b'\x59')
+        self.wait_request_and_respond(b'\x59'+ self.sb)
+
+    def test_invalid_length_no_response_exception(self):
+        self.invalid_length_no_response_server_task()
+
+    def _test_invalid_length_no_response_exception(self):
+        for i in range(3):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5, 0x789abc : 3})
+
+    def test_invalid_length_no_response_no_exception(self):
+        self.invalid_length_no_response_server_task()
+
+    def _test_invalid_length_no_response_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(3):
+            response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5, 0x789abc : 3})
+            self.assertFalse(response.valid)
+
+
+    def invalid_length_incomplete_dtc_server_task(self):
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x33\x12')
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x33\x12\x34')
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x33\x12\x34\x56')
+
+    def test_invalid_length_incomplete_dtc_exception(self):
+        self.invalid_length_incomplete_dtc_server_task()
+
+    def _test_invalid_length_incomplete_dtc_exception(self):
+        for i in range(3):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5, 0x789abc : 3})
+
+    def test_invalid_length_incomplete_dtc_no_exception(self):
+        self.invalid_length_incomplete_dtc_server_task()
+
+    def _test_invalid_length_incomplete_dtc_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(3):
+            response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5, 0x789abc : 3})
+            self.assertFalse(response.valid)
+
+    def invalid_length_missing_data_server_task(self):
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x33\x12\x34\x56\x20')
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x33\x12\x34\x56\x20\x01')
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x33\x12\x34\x56\x20\x01\x02')
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x33\x12\x34\x56\x20\x01\x02\x03')
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04')
+
+    def test_invalid_length_missing_data_exception(self):
+        self.invalid_length_missing_data_server_task()
+
+    def _test_invalid_length_missing_data_exception(self):
+        for i in range(5):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5, 0x789abc : 3})
+
+    def test_invalid_length_missing_data_no_exception(self):
+        self.invalid_length_missing_data_server_task()
+
+    def _test_invalid_length_missing_data_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(5):
+            response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5, 0x789abc : 3})
+            self.assertFalse(response.valid)
+
+    def test_wrong_subfn_response_exception(self):
+        self.wait_request_and_respond(b'\x59' + self.badsb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04\x05')
+
+    def _test_wrong_subfn_response_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33)
+
+    def test_wrong_subfn_response_no_exception(self):
+        self.wait_request_and_respond(b'\x59' + self.badsb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04\x05')
+
+    def _test_wrong_subfn_response_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5, 0x789abc : 3})
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_wrong_record_number_response_exception(self):
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x34\x12\x34\x56\x20\x01\x02\x03\x04\x05')
+
+    def _test_wrong_record_number_response_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5, 0x789abc : 3})
+
+    def test_record_number_out_of_range_response_exception(self):
+        pass
+
+    def _test_record_number_out_of_range_response_exception(self):
+        response = Response(service = ReadDTCInformation, code = Response.Code.PositiveResponse, data = self.sb + b'\xF0\x12\x34\x56\x20\x01\x02\x03\x04\x05')
+        
+        with self.assertRaises(InvalidResponseException):  
+            # Do not go thourgh the client because out of range would raised at request time.
+            ReadDTCInformation.interpret_response(response, ReadDTCInformation.Subfunction.reportDTCExtDataRecordByRecordNumber, extended_data_size={0x123456 : 5})
+
+    def test_duplicate_dtc(self):
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04\x05\x12\x34\x56\x20\x01\x02\x03\x04\x05')
+
+    def _test_duplicate_dtc(self):
+        with self.assertRaises(InvalidResponseException):
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33,  data_size = {0x123456 : 5, 0x789abc : 3})        
+
+    def test_wrong_service_response_exception(self):
+        self.wait_request_and_respond(b'\x6F' + self.sb + b'\x33\x12\x34\x56\x20\x01\x02\x03\x04\x05')
+
+    def _test_wrong_service_response_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : 5, 0x789abc : 3})
+
+    def test_oob_values(self):
+        pass
+
+    def _test_oob_values(self):
+        with self.assertRaises(ValueError):
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = -1, data_size=5)
+        
+        with self.assertRaises(ValueError):
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0xF0, data_size=5) # Limited to 0xEF
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 'asd', data_size=5)
+
+        with self.assertRaises(NotImplementedError):
+            self.udsclient.set_config('standard_version', 2013)
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size=5)
+        self.udsclient.set_config('standard_version', latest_standard)    
+
+    def test_oob_values_data_size(self): # validation is made at interpret_response
+        self.wait_request_and_respond(b'\x59'  + self.sb + b'\x12\x34\x56\x20\x99\x01\x02\x03')
+        self.wait_request_and_respond(b'\x59'  + self.sb + b'\x12\x34\x56\x20\x99\x01\x02\x03')
+        self.wait_request_and_respond(b'\x59'  + self.sb + b'\x12\x34\x56\x20\x99\x01\x02\x03')
+
+    def _test_oob_values_data_size(self):
+        with self.assertRaises(ValueError):
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = -1)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size = {0x123456 : -1})
+
+        with self.assertRaises(ValueError):
+            self.udsclient.config['extended_data_size'] = {0x123456 : -1}
+            self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33)
+
+
+class TestReportUserDefMemoryDTCByStatusMask(ClientServerTest): # Subfn = 0x17
+    # Almost identical copy of duplicate of GenericTestStatusMaskRequest_DtcAndStatusMaskResponse
+    sb = struct.pack('B', 0x17)
+    badsb = struct.pack('B', 0x17+1)
+
+
+    def client_assert_response(self, response, expect_all_zero_third_dtc=False):
+        self.assertEqual(response.service_data.status_availability.get_byte_as_int(), 0xFB)
+        number_of_dtc = 3 if expect_all_zero_third_dtc else 2
+
+        self.assertEqual(len(response.service_data.dtcs), number_of_dtc)
+        self.assertEqual(response.service_data.dtc_count, number_of_dtc)
+        self.assertEqual(response.service_data.memory_selection_echo, 0x99)
+
+        self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+        self.assertEqual(response.service_data.dtcs[0].status.get_byte_as_int(), 0x20)
+        self.assertEqual(response.service_data.dtcs[0].severity.get_byte_as_int(), 0x00)
+
+        self.assertEqual(response.service_data.dtcs[1].id, 0x123457)
+        self.assertEqual(response.service_data.dtcs[1].status.get_byte_as_int(), 0x60)
+        self.assertEqual(response.service_data.dtcs[1].severity.get_byte_as_int(), 0x00)
+
+        if expect_all_zero_third_dtc:
+            self.assertEqual(response.service_data.dtcs[2].id, 0)
+            self.assertEqual(response.service_data.dtcs[2].status.get_byte_as_int(), 0x00)
+            self.assertEqual(response.service_data.dtcs[2].severity.get_byte_as_int(), 0x00)
+
+    def test_normal_behaviour(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x19"+self.sb+b"\x5A\x99")
+        self.conn.fromuserqueue.put(b"\x59"+self.sb+b"\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60")    
+
+    def _test_normal_behaviour(self):
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.client_assert_response(response)
+
+    def test_dtc_duplicate(self):
+        self.wait_request_and_respond(b"\x59"+self.sb+b"\x99\xFB\x12\x34\x56\x20\x12\x34\x56\x60")
+
+    def _test_dtc_duplicate(self):
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertEqual(len(response.service_data.dtcs), 2)    # We want both of them. Server should avoid duplicate
+
+        self.assertEqual(response.service_data.dtcs[0].id, 0x123456)
+        self.assertEqual(response.service_data.dtcs[0].status.get_byte_as_int(), 0x20)
+
+        self.assertEqual(response.service_data.dtcs[1].id, 0x123456)
+        self.assertEqual(response.service_data.dtcs[1].status.get_byte_as_int(), 0x60)
+
+    def test_normal_behaviour_param_instance(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x19"+self.sb+b"\x5A\x99")
+        self.conn.fromuserqueue.put(b"\x59"+self.sb+b"\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60")    
+
+    def _test_normal_behaviour_param_instance(self):
+        satus_mask = Dtc.Status(test_failed_this_operation_cycle = True, confirmed = True, test_not_completed_since_last_clear = True, test_not_completed_this_operation_cycle = True)
+        self.udsclient.get_user_defined_memory_dtc_by_status_mask(satus_mask, 0x99)
+
+    def test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_ok_ignore_allzero(self):
+        self.udsclient.config['tolerate_zero_padding'] = True
+        self.udsclient.config['ignore_all_zero_dtc'] = True
+
+        for i in range(5):
+            response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            self.client_assert_response(response, expect_all_zero_third_dtc=False)
+
+    def test_normal_behaviour_zeropadding_ok_consider_allzero(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_ok_consider_allzero(self):
+        self.udsclient.config['tolerate_zero_padding'] = True
+        self.udsclient.config['ignore_all_zero_dtc'] = False
+
+        expect_all_zero_third_dtc_values = [False, False, False, True, True]
+        for i in range(5):
+            response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            self.client_assert_response(response, expect_all_zero_third_dtc=expect_all_zero_third_dtc_values[i])
+
+    # Since we ignore all 0 DTC, we consider case number 4 with 4 extra 0 like a valid answer just like these 0 were not ther
+    def test_normal_behaviour_zeropadding_notok_ignore_allzero_exception(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_notok_ignore_allzero_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['ignore_all_zero_dtc'] = True
+
+        exception_values = [True, True, True, False, True]
+        expect_all_zero_third_dtc_values = [None, None, None, False, None]
+
+        for i in range(5):
+            if exception_values[i]:
+                with self.assertRaises(InvalidResponseException):
+                    self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            else:
+                response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+                self.client_assert_response(response, expect_all_zero_third_dtc=expect_all_zero_third_dtc_values[i])
+
+    # Since we ignore all 0 DTC, we consider case number 4 with 4 extra 0 like a valid answer just like these 0 were not ther
+    def test_normal_behaviour_zeropadding_notok_ignore_allzero_no_exception(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_notok_ignore_allzero_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['ignore_all_zero_dtc'] = True
+
+        exception_values = [True, True, True, False, True]
+        expect_all_zero_third_dtc_values = [None, None, None, False, None]
+
+        for i in range(5):
+            response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            if exception_values[i]:
+                self.assertFalse(response.valid)
+            else:
+                self.client_assert_response(response, expect_all_zero_third_dtc=expect_all_zero_third_dtc_values[i])
+
+    # Since we consider all 0 DTC, case number 4 with 4 extra 0 bytes is a valid response where DTC ID=0
+    def test_normal_behaviour_zeropadding_notok_consider_allzero_exception(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_notok_consider_allzero_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['ignore_all_zero_dtc'] = False
+
+        exception_values = [True, True, True, False, True]
+        expect_all_zero_third_dtc_values = [None, None, None, True, None]
+
+        for i in range(5):
+            if exception_values[i]:
+                with self.assertRaises(InvalidResponseException):
+                    self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            else:
+                response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+                self.client_assert_response(response, expect_all_zero_third_dtc=expect_all_zero_third_dtc_values[i])
+
+    # Since we consider all 0 DTC, case number 4 with 4 extra 0 bytes is a valid response where DTC ID=0
+    def test_normal_behaviour_zeropadding_notok_consider_allzero_no_exception(self):
+        data = b'\x59'+self.sb+b'\x99\xFB\x12\x34\x56\x20\x12\x34\x57\x60'
+        for i in range(5):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_normal_behaviour_zeropadding_notok_consider_allzero_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['ignore_all_zero_dtc'] = False
+
+        error_values = [True, True, True, False, True]
+        expect_all_zero_third_dtc_values = [None, None, None, True, None]
+
+        for i in range(5):
+            response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+            if error_values[i]:
+                self.assertFalse(response.valid)
+            else:
+                self.client_assert_response(response, expect_all_zero_third_dtc=expect_all_zero_third_dtc_values[i])
+
+    def test_no_dtc(self):
+        self.wait_request_and_respond(b"\x59"+self.sb+b"\x99\xFB")  
+
+    def _test_no_dtc(self):
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertEqual(len(response.service_data.dtcs), 0)
+
+    def test_bad_response_subfunction_exception(self):
+        self.wait_request_and_respond(b"\x59"+self.badsb+b"\x99\xFB")   
+
+    def _test_bad_response_subfunction_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+
+    def test_bad_response_subfunction_no_exception(self):
+        self.wait_request_and_respond(b"\x59"+self.badsb+b"\x99\xFB")
+
+    def _test_bad_response_subfunction_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_bad_response_service_exception(self):
+        self.wait_request_and_respond(b"\x6F"+self.sb+b"\x99\xFB")  
+
+    def _test_bad_response_service_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)    
+
+    def test_bad_memory_selection_echo(self):
+        self.wait_request_and_respond(b"\x59"+self.sb+b"\x98\xFB")
+
+    def _test_bad_memory_selection_echo(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+
+    def test_bad_memory_selection_echo_no_exception(self):
+        self.wait_request_and_respond(b"\x59"+self.sb+b"\x98\xFB")
+
+    def _test_bad_memory_selection_echo_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False        
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99) 
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_bad_response_service_no_exception(self):
+        self.wait_request_and_respond(b"\x6F"+self.sb+b"\x99\xFB")  
+
+    def _test_bad_response_service_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_bad_response_length_exception(self):
+        self.wait_request_and_respond(b"\x59")
+        self.wait_request_and_respond(b"\x59"+self.sb)  
+
+    def _test_bad_response_length_exception(self):
+        with self.assertRaises(InvalidResponseException):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+
+        with self.assertRaises(InvalidResponseException):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+
+    def test_bad_response_length_no_exception(self):
+        self.wait_request_and_respond(b"\x59")
+        self.wait_request_and_respond(b"\x59"+self.sb)  
+
+    def _test_bad_response_length_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertFalse(response.valid)
+        response = self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x5A, 0x99)
+        self.assertFalse(response.valid)
+
+    def test_oob_value(self):
+        pass
+
+    def _test_oob_value(self):
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x100,0x12)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(-1,0x12)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask('aaa', 0x12)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x12,0x100)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(-0x12, -1)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x12, 'aaa')
+
+        with self.assertRaises(NotImplementedError):
+            self.udsclient.set_config('standard_version', 2013)
+            self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x10, 0x20)
+        self.udsclient.set_config('standard_version', latest_standard)
+
+
+class TestReportUserDefMemoryDTCSnapshotRecordByDTCNumber(ClientServerTest): # Subfn = 0x18
+
+    class Codec4711(DidCodec):
+        def encode(self, did_value):
+            return struct.pack('>BBHB', did_value['ect'], did_value['tp'], did_value['rpm'], did_value['map'])
+
+        def decode(self, did_payload):
+            v = dict(ect=0, tp=0, rpm=0, map=0)
+            (v['ect'], v['tp'], v['rpm'], v['map']) = struct.unpack('>BBHB', did_payload)
+            return v
+
+        def __len__(self):
+            return 5
+
+    class Codec4455(DidCodec):
+        def encode(self, did_value):
+            return struct.pack('>H', did_value)
+
+        def decode(self, did_payload):
+            return struct.unpack('>H', did_payload)[0]
+
+        def __len__(self):
+            return 2
+
+    def postClientSetUp(self):
+        self.udsclient.config["data_identifiers"] = {
+                0x4455 : self.__class__.Codec4455,
+                0x4711 : self.__class__.Codec4711,
+                0x6789 : 'BBB'
+        }
+
+    def single_snapshot_assert_response(self, response):
+        self.assertEqual(response.service_data.memory_selection_echo, 0x99)
+        self.assertEqual(len(response.service_data.dtcs), 1)
+        self.assertEqual(response.service_data.dtc_count, 1)
+
+        dtc = response.service_data.dtcs[0]
+
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
+
+        self.assertEqual(len(dtc.snapshots), 1)
+        snapshot = dtc.snapshots[0]
+
+        self.assertTrue(isinstance(snapshot, Dtc.Snapshot))
+        self.assertEqual(snapshot.record_number, 0x02)  
+        self.assertEqual(snapshot.did, 0x4711)  
+
+        self.assertEqual(dtc.snapshots[0].data['ect'], 0xA6)    # Engine Coolant Temp
+        self.assertEqual(dtc.snapshots[0].data['tp'], 0x66)     # Throttle Position
+        self.assertEqual(dtc.snapshots[0].data['rpm'], 0x750)   # Engine speed
+        self.assertEqual(dtc.snapshots[0].data['map'], 0x20)    # Manifoled Absolute Value
+
+    def single_snapshot_2_dids_assert_response(self, response):
+        self.assertEqual(response.service_data.memory_selection_echo, 0x99)
+
+        self.assertEqual(len(response.service_data.dtcs), 1)
+        self.assertEqual(response.service_data.dtc_count, 1)
+
+        dtc = response.service_data.dtcs[0]
+
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
+
+        self.assertEqual(len(dtc.snapshots), 2)
+
+        self.assertTrue(isinstance(dtc.snapshots[0], Dtc.Snapshot))
+        self.assertEqual(dtc.snapshots[0].record_number, 0x02)  
+        self.assertEqual(dtc.snapshots[0].did, 0x4711)  
+
+        self.assertTrue(isinstance(dtc.snapshots[1], Dtc.Snapshot))
+        self.assertEqual(dtc.snapshots[1].record_number, 0x02)  
+        self.assertEqual(dtc.snapshots[1].did, 0x6789)  
+
+
+        self.assertEqual(dtc.snapshots[0].data['ect'], 0xA6)    # Engine Coolant Temp
+        self.assertEqual(dtc.snapshots[0].data['tp'], 0x66)     # Throttle Position
+        self.assertEqual(dtc.snapshots[0].data['rpm'], 0x750)   # Engine speed
+        self.assertEqual(dtc.snapshots[0].data['map'], 0x20)    # Manifoled Absolute Value
+
+        self.assertEqual(dtc.snapshots[1].data[0], 0x99)
+        self.assertEqual(dtc.snapshots[1].data[1], 0x88)
+        self.assertEqual(dtc.snapshots[1].data[2], 0x77)
+
+
+    def test_single_snapshot(self): # Example provided in standard
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x19\x18\x12\x34\x56\x02\x99")
+        self.conn.fromuserqueue.put(b"\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20")
+
+    def _test_single_snapshot(self):
+        response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=2, memory_selection = 0x99)
+        self.single_snapshot_assert_response(response)
+
+    def test_single_snapshot_with_instance_param(self): # Example provided in standard
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x19\x18\x12\x34\x56\x02\x99")
+        self.conn.fromuserqueue.put(b"\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20")
+
+    def _test_single_snapshot_with_instance_param(self):
+        response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=Dtc(0x123456), record_number=2, memory_selection = 0x99)
+        self.single_snapshot_assert_response(response)
+
+    def test_single_snapshot_zeropadding_ok(self): # Example provided in standard
+        data = b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20'
+        self.udsclient.config['tolerate_zero_padding'] = True
+        for i in range(7):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_single_snapshot_zeropadding_ok(self):
+        for i in range(7):
+            response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=2, memory_selection = 0x99)
+            self.single_snapshot_assert_response(response)
+
+    def test_single_snapshot_zeropadding_notok_exception(self): # Example provided in standard
+        data = b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20'
+        for i in range(7):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_single_snapshot_zeropadding_notok_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        for i in range(7):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=2, memory_selection = 0x99)
+
+    def test_single_snapshot_zeropadding_notok_no_exception(self): # Example provided in standard
+        data = b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20'
+        for i in range(7):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_single_snapshot_zeropadding_notok_no_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(7):
+            response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=2, memory_selection = 0x99)
+            self.assertFalse(response.valid)
+
+    def test_single_snapshot_2_did(self): # Example provided in standard
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x19\x18\x12\x34\x56\x02\x99")
+        self.conn.fromuserqueue.put(b"\x59\x18\x99\x12\x34\x56\x24\x02\x02\x47\x11\xa6\x66\x07\x50\x20\x67\x89\x99\x88\x77")
+
+    def _test_single_snapshot_2_did(self):
+        response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=2, memory_selection = 0x99)
+        self.single_snapshot_2_dids_assert_response(response)
+
+    def test_multiple_snapshot_multiple_did(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x19\x18\x12\x34\x56\xFF\x99")
+        self.conn.fromuserqueue.put(b"\x59\x18\x99\x12\x34\x56\x24\x02\x02\x47\x11\xa6\x66\x07\x50\x20\x67\x89\x99\x88\x77\x03\x01\x44\x55\x43\x21")
+
+    def _test_multiple_snapshot_multiple_did(self):
+        response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0xFF, memory_selection = 0x99)
+
+        self.assertEqual(response.service_data.memory_selection_echo, 0x99)
+        self.assertEqual(len(response.service_data.dtcs), 1)
+        self.assertEqual(response.service_data.dtc_count, 1)
+
+        dtc = response.service_data.dtcs[0]
+
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
+
+        self.assertEqual(len(dtc.snapshots), 3)
+
+        self.assertTrue(isinstance(dtc.snapshots[0], Dtc.Snapshot))
+        self.assertEqual(dtc.snapshots[0].record_number, 0x02)  
+        self.assertEqual(dtc.snapshots[0].did, 0x4711)  
+
+        self.assertTrue(isinstance(dtc.snapshots[1], Dtc.Snapshot))
+        self.assertEqual(dtc.snapshots[1].record_number, 0x02)  
+        self.assertEqual(dtc.snapshots[1].did, 0x6789)
+
+        self.assertTrue(isinstance(dtc.snapshots[2], Dtc.Snapshot))
+        self.assertEqual(dtc.snapshots[2].record_number, 0x03)  
+        self.assertEqual(dtc.snapshots[2].did, 0x4455)  
+
+        # data
+        self.assertEqual(dtc.snapshots[0].data['ect'], 0xA6)    # Engine Coolant Temp
+        self.assertEqual(dtc.snapshots[0].data['tp'], 0x66)     # Throttle Position
+        self.assertEqual(dtc.snapshots[0].data['rpm'], 0x750)   # Engine speed
+        self.assertEqual(dtc.snapshots[0].data['map'], 0x20)    # Manifoled Absolute Value
+
+        self.assertEqual(dtc.snapshots[1].data[0], 0x99)
+        self.assertEqual(dtc.snapshots[1].data[1], 0x88)
+        self.assertEqual(dtc.snapshots[1].data[2], 0x77)
+
+        self.assertEqual(dtc.snapshots[2].data, 0x4321)
+
+    def test_invalid_length_incomplete_dtc_exception(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34')
+
+    def _test_invalid_length_incomplete_dtc_exception(self):
+        for i in range(2):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+
+    def test_invalid_length_incomplete_dtc_no_exception(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34')
+
+    def _test_invalid_length_incomplete_dtc_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(2):
+            response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+            self.assertFalse(response.valid)
+
+    def test_invalid_length_missing_status_exception(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56')
+
+    def _test_invalid_length_missing_status_exception(self):
+        with self.assertRaises(InvalidResponseException):
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+
+    def test_invalid_length_missing_status_no_exception(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56')
+
+    def _test_invalid_length_missing_status_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+        self.assertFalse(response.valid)
+
+    def test_invalid_length_missing_identifier_number_exception(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03')
+
+    def _test_invalid_length_missing_identifier_number_exception(self):
+        for i in range(2):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+
+    def test_invalid_length_missing_identifier_number_no_exception(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03')
+
+    def _test_invalid_length_missing_identifier_number_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(2):
+            response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+            self.assertFalse(response.valid)
+
+    def invalid_length_missing_did_server_task(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03\x01')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03\x01\x67')
+
+    def test_invalid_length_missing_did_exception(self):
+        self.invalid_length_missing_did_server_task()
+
+    def _test_invalid_length_missing_did_exception(self):
+        for i in range(4):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0xFF, memory_selection = 0x99)
+
+    def test_invalid_length_missing_did_no_exception(self):
+        self.invalid_length_missing_did_server_task()
+
+    def _test_invalid_length_missing_did_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(4):
+            response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0xFF, memory_selection = 0x99)
+            self.assertFalse(response.valid)
+
+    def invalid_length_missing_data_server_task(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03\x01\x67\x89')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03\x01\x67\x89\x99')
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20\x03\x01\x67\x89\x99\x88')
+
+    def test_invalid_length_missing_data_exception(self):
+        self.invalid_length_missing_data_server_task()
+
+    def _test_invalid_length_missing_data_exception(self):
+        for i in range(9):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0xff, memory_selection = 0x99)
+
+    def test_invalid_length_missing_data_no_exception(self):
+        self.invalid_length_missing_data_server_task()
+
+    def _test_invalid_length_missing_data_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(9):
+            response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0xff, memory_selection = 0x99)
+            self.assertFalse(response.valid)
+
+    def test_bad_subfunction_exception(self):
+        self.wait_request_and_respond(b'\x59\x19\x99\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20')
+
+    def _test_bad_subfunction_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+
+    def test_bad_subfunction_no_exception(self):
+        self.wait_request_and_respond(b'\x59\x05\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20')
+
+    def _test_bad_subfunction_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_bad_memory_selection_echo_exception(self):
+        self.wait_request_and_respond(b'\x59\x18\x98\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20')
+
+    def _test_bad_memory_selection_echo_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+
+    def test_bad_memory_selection_echo_no_exception(self):
+        self.wait_request_and_respond(b'\x59\x19\x98\x12\x34\x56\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20')
+
+    def _test_bad_memory_selection_echo_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_bad_dtc_exception(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x57\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20')
+
+    def _test_bad_dtc_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+
+    def test_bad_dtc_no_exception(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x57\x24\x02\x01\x47\x11\xa6\x66\x07\x50\x20')
+
+    def _test_bad_dtc_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_bad_record_number_exception(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x03\x01\x47\x11\xa6\x66\x07\x50\x20')
+
+    def _test_bad_record_number_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+
+    def test_bad_record_number_no_exception(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24\x03\x01\x47\x11\xa6\x66\x07\x50\x20')
+
+    def _test_bad_record_number_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_no_record(self):
+        self.wait_request_and_respond(b'\x59\x18\x99\x12\x34\x56\x24')
+
+    def _test_no_record(self):
+        response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+
+        self.assertEqual(response.service_data.memory_selection_echo, 0x99)
+        self.assertEqual(len(response.service_data.dtcs), 1)
+        self.assertEqual(response.service_data.dtc_count, 1)
+        dtc = response.service_data.dtcs[0]
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
+        self.assertEqual(len(dtc.snapshots), 0)
+
+    def test_no_record_zero_padding_ok(self):
+        data = b'\x59\x18\x99\x12\x34\x56\x24'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_no_record_zero_padding_ok(self):
+        self.udsclient.config['tolerate_zero_padding'] = True
+        for i in range(8):
+            response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+
+            self.assertEqual(response.service_data.memory_selection_echo, 0x99)
+            self.assertEqual(len(response.service_data.dtcs), 1)
+            self.assertEqual(response.service_data.dtc_count, 1)
+            dtc = response.service_data.dtcs[0]
+            self.assertEqual(dtc.id, 0x123456)
+            self.assertEqual(dtc.status.get_byte_as_int(), 0x24)
+            self.assertEqual(len(dtc.snapshots), 0)
+
+    def test_no_record_zero_padding_not_ok_exception(self):
+        data = b'\x59\x18\x19\x12\x34\x56\x24'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_no_record_zero_padding_not_ok_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        for i in range(8):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+
+    def test_no_record_zero_padding_not_ok_no_exception(self):
+        data = b'\x59\x18\x19\x12\x34\x56\x24'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_no_record_zero_padding_not_ok_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        self.udsclient.config['tolerate_zero_padding'] = False
+        for i in range(8):
+            response = self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+            self.assertFalse(response.valid)
+
+    def test_oob_values(self):
+        pass
+
+    def _test_oob_values(self):
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=-1, record_number=0x02, memory_selection = 0x99)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x1000000, record_number=0x02, memory_selection = 0x99)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=-1, memory_selection = 0x99)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x100, memory_selection = 0x99)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = -1)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x100)
+
+        with self.assertRaises(NotImplementedError):
+            self.udsclient.set_config('standard_version', 2013)
+            self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
+        self.udsclient.set_config('standard_version', latest_standard)
+
+
+class TestTeportUserDefMemoryDTCExtDataRecordByDTCNumber(ClientServerTest): # Subfn = 0x19
+    sb = struct.pack('B', 0x19)
+    badsb = struct.pack('B', 0x19+1)
+
+    def assert_single_data_response(self, response):
+        self.assertEqual(response.service_data.memory_selection_echo, 0x88)
+        self.assertEqual(len(response.service_data.dtcs), 1)
+        self.assertEqual(response.service_data.dtc_count, 1)
+
+        dtc = response.service_data.dtcs[0]
+
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
+
+        self.assertEqual(len(dtc.extended_data), 1)
+        extended_data = dtc.extended_data[0]
+
+        self.assertTrue(isinstance(extended_data, Dtc.ExtendedData))
+        self.assertEqual(extended_data.record_number, 0x99) 
+
+        self.assertEqual(extended_data.raw_data, b'\x01\x02\x03\x04\x05')
+
+    def test_single_data(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b'\x19' + self.sb + b'\x12\x34\x56\x99\x88')
+        self.conn.fromuserqueue.put(b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20\x99\x01\x02\x03\x04\x05')
+
+    def _test_single_data(self):
+
+        response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, record_number=0x99, data_size=5, memory_selection=0x88)
+        self.assert_single_data_response(response)
+
+    def test_single_data_instance_param(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b'\x19' + self.sb + b'\x12\x34\x56\x99\x88')
+        self.conn.fromuserqueue.put(b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20\x99\x01\x02\x03\x04\x05')
+
+    def _test_single_data_instance_param(self):
+        response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=Dtc(0x123456), record_number=0x99, data_size=5, memory_selection=0x88)
+        self.assert_single_data_response(response)
+
+    def test_single_data_config_size(self):
+        self.wait_request_and_respond(b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20\x99\x01\x02\x03\x04\x05')
+
+    def _test_single_data_config_size(self):
+        self.udsclient.config['extended_data_size'] = {0x123456 : 5}
+        response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, record_number=0x99, memory_selection=0x88)
+        self.assert_single_data_response(response)
+
+    def test_single_data_zeropadding_ok(self):
+        data = b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20\x99\x01\x02\x03\x04\x05'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_single_data_zeropadding_ok(self):
+        self.udsclient.config['tolerate_zero_padding'] = True
+        for i in range(8):
+            response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, record_number=0x99, data_size=5, memory_selection=0x88)
+            self.assert_single_data_response(response)
+
+    def test_single_data_zeropadding_notok_exception(self):
+        data = b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20\x99\x01\x02\x03\x04\x05'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_single_data_zeropadding_notok_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        for i in range(8):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, record_number=0x99, data_size=5, memory_selection=0x88)
+
+    def test_single_data_zeropadding_notok_no_exception(self):
+        data = b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20\x99\x01\x02\x03\x04\x05'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1))
+
+    def _test_single_data_zeropadding_notok_no_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(8):
+            response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, record_number=0x99, data_size=5, memory_selection=0x88)
+            self.assertFalse(response.valid)
+
+    def test_double_data(self):
+        self.wait_request_and_respond(b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20\x10\x01\x02\x03\x11\x04\x05\x06')
+
+    def _test_double_data(self):
+        response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, memory_selection=0x88)
+
+        self.assertEqual(response.service_data.memory_selection_echo, 0x88)
+        self.assertEqual(len(response.service_data.dtcs), 1)
+        self.assertEqual(response.service_data.dtc_count, 1)
+
+        dtc = response.service_data.dtcs[0]
+
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
+
+        self.assertEqual(len(dtc.extended_data), 2)
+
+        self.assertTrue(isinstance(dtc.extended_data[0], Dtc.ExtendedData))
+        self.assertEqual(dtc.extended_data[0].record_number, 0x10)  
+        self.assertEqual(dtc.extended_data[0].raw_data, b'\x01\x02\x03')
+
+        self.assertTrue(isinstance(dtc.extended_data[1], Dtc.ExtendedData))
+        self.assertEqual(dtc.extended_data[1].record_number, 0x11)  
+        self.assertEqual(dtc.extended_data[1].raw_data, b'\x04\x05\x06')
+
+
+    def test_no_data(self):
+        self.wait_request_and_respond(b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20')
+
+    def _test_no_data(self):
+        response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, memory_selection=0x88)
+
+        self.assertEqual(len(response.service_data.dtcs), 1)
+        self.assertEqual(response.service_data.dtc_count, 1)
+        dtc = response.service_data.dtcs[0]
+
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
+        self.assertEqual(len(dtc.extended_data), 0)
+
+    def test_no_data_zeropadding_ok(self):
+        data = b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1) )
+
+    def _test_no_data_zeropadding_ok(self):
+        self.udsclient.config['tolerate_zero_padding'] = True
+        for i in range(8):
+            response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, memory_selection=0x88)
+
+            self.assertEqual(response.service_data.memory_selection_echo, 0x88)
+            self.assertEqual(len(response.service_data.dtcs), 1)
+            self.assertEqual(response.service_data.dtc_count, 1)
+            dtc = response.service_data.dtcs[0]
+
+            self.assertEqual(dtc.id, 0x123456)
+            self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
+            self.assertEqual(len(dtc.extended_data), 0)
+
+    def test_no_data_zeropadding_not_ok_exception(self):
+        data = b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1) )
+
+    def _test_no_data_zeropadding_not_ok_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        for i in range(8):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, memory_selection=0x88)
+
+    def test_no_data_zeropadding_not_ok_no_exception(self):
+        data = b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20'
+        for i in range(8):
+            self.wait_request_and_respond(data + b'\x00' * (i+1) )
+
+    def _test_no_data_zeropadding_not_ok_no_exception(self):
+        self.udsclient.config['tolerate_zero_padding'] = False
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(8):
+            response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, memory_selection=0x88)
+            self.assertFalse(response.valid)
+
+    def invalid_length_no_response_server_task(self):
+        self.wait_request_and_respond(b'')
+        self.wait_request_and_respond(b'\x59')
+
+    def test_invalid_length_no_response_exception(self):
+        self.invalid_length_no_response_server_task()
+
+    def _test_invalid_length_no_response_exception(self):
+        for i in range(2):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+
+    def test_invalid_length_no_response_no_exception(self):
+        self.invalid_length_no_response_server_task()
+
+    def _test_invalid_length_no_response_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(2):
+            response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+            self.assertFalse(response.valid)
+
+    def invalid_length_incomplete_dtc_server_task(self):
+        self.wait_request_and_respond(b'\x59' + self.sb)
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x88')
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x88\x12')
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x88\x12\x34')
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x88\x12\x34\x56')
+
+    def test_invalid_length_incomplete_dtc_exception(self):
+        self.invalid_length_incomplete_dtc_server_task()
+
+    def _test_invalid_length_incomplete_dtc_exception(self):
+        for i in range(5):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+
+    def test_invalid_length_incomplete_dtc_no_exception(self):
+        self.invalid_length_incomplete_dtc_server_task()
+
+    def _test_invalid_length_incomplete_dtc_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(5):
+            response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+            self.assertFalse(response.valid)
+
+    def invalid_length_missing_data_server_task(self):
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x88\x12\x34\x56\x20\x99')
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x88\x12\x34\x56\x20\x99\x01')
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x88\x12\x34\x56\x20\x99\x01\x02')
+
+    def test_invalid_length_missing_data_exception(self):
+        self.invalid_length_missing_data_server_task()
+
+    def _test_invalid_length_missing_data_exception(self):
+        for i in range(3):
+            with self.assertRaises(InvalidResponseException):
+                self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+
+    def test_invalid_length_missing_data_no_exception(self):
+        self.invalid_length_missing_data_server_task()
+
+    def _test_invalid_length_missing_data_no_exception(self):
+        self.udsclient.config['exception_on_invalid_response'] = False
+        for i in range(3):
+            response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+            self.assertFalse(response.valid)
+
+    def test_wrong_subfn_response_exception(self):
+        self.wait_request_and_respond(b'\x59' + self.badsb + b'\x88\x12\x34\x56\x20\x99\x01\x02\x03')
+
+    def _test_wrong_subfn_response_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+
+    def test_wrong_subfn_response_no_exception(self):
+        self.wait_request_and_respond(b'\x59' + self.badsb + b'\x88\x12\x34\x56\x20\x99\x01\x02\x03')
+
+    def _test_wrong_subfn_response_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_wrong_memory_selection_response_exception(self):
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x89\x12\x34\x56\x20\x99\x01\x02\x03')
+
+    def _test_wrong_memory_selection_response_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+
+    def test_wrong_memory_selection_response_no_exception(self):
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x89\x12\x34\x56\x20\x99\x01\x02\x03')
+
+    def _test_wrong_memory_selection_response_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_wrong_record_number_response_exception(self):
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x88\x12\x34\x56\x20\x98\x01\x02\x03')
+
+    def _test_wrong_record_number_response_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+
+    def test_wrong_record_number_response_no_exception(self):
+        self.wait_request_and_respond(b'\x59' + self.sb + b'\x88\x12\x34\x56\x20\x98\x01\x02\x03')
+
+    def _test_wrong_record_number_response_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_wrong_service_response_exception(self):
+        self.wait_request_and_respond(b'\x6F' + self.sb + b'\x88\x12\x34\x56\x20\x98\x01\x02\x03')
+
+    def _test_wrong_service_response_exception(self):
+        with self.assertRaises(UnexpectedResponseException):
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+
+    def test_wrong_service_response_no_exception(self):
+        self.wait_request_and_respond(b'\x6F' + self.sb + b'\x88\x12\x34\x56\x20\x98\x01\x02\x03')
+
+    def _test_wrong_service_response_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_oob_values(self):
+        pass
+
+    def _test_oob_values(self):
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=-1, data_size=3, record_number=0x99, memory_selection=0x88)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x1000000, data_size=3, record_number=0x99, memory_selection=0x88)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=-1, memory_selection=0x88)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x100, memory_selection=0x88)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=-1)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x100)  
+
+
+        with self.assertRaises(NotImplementedError):
+            self.udsclient.set_config('standard_version', 2013)
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)  
+        self.udsclient.set_config('standard_version', latest_standard)          
+
+    def test_oob_values_data_size(self): # validation is made at interpret_response
+        self.wait_request_and_respond(b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20\x99\x01\x02\x03')
+        self.wait_request_and_respond(b'\x59'  + self.sb + b'\x88\x12\x34\x56\x20\x99\x01\x02\x03')
+
+    def _test_oob_values_data_size(self):
+        with self.assertRaises(ValueError):
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=-1, record_number=0x99, memory_selection=0x88)
+
+        with self.assertRaises(ValueError):
+            self.udsclient.config['extended_data_size'] = {0x123456 : -1}
+            self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, record_number=0x99, memory_selection=0x88)

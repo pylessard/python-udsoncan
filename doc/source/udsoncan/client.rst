@@ -379,6 +379,7 @@ Methods by services
 
 
 .. automethod:: udsoncan.client.Client.get_dtc_by_status_mask
+.. automethod:: udsoncan.client.Client.get_user_defined_memory_dtc_by_status_mask
 .. automethod:: udsoncan.client.Client.get_emission_dtc_by_status_mask
 .. automethod:: udsoncan.client.Client.get_mirrormemory_dtc_by_status_mask
 .. automethod:: udsoncan.client.Client.get_dtc_by_status_severity_mask
@@ -396,8 +397,11 @@ Methods by services
 .. automethod:: udsoncan.client.Client.get_dtc_fault_counter
 .. automethod:: udsoncan.client.Client.get_dtc_snapshot_identification
 .. automethod:: udsoncan.client.Client.get_dtc_snapshot_by_dtc_number
+.. automethod:: udsoncan.client.Client.get_user_defined_dtc_snapshot_by_dtc_number
 .. automethod:: udsoncan.client.Client.get_dtc_snapshot_by_record_number
 .. automethod:: udsoncan.client.Client.get_dtc_extended_data_by_dtc_number
+.. automethod:: udsoncan.client.Client.get_dtc_extended_data_by_record_number
+.. automethod:: udsoncan.client.Client.get_user_defined_dtc_extended_data_by_dtc_number
 .. automethod:: udsoncan.client.Client.get_mirrormemory_dtc_extended_data_by_dtc_number
 
 
