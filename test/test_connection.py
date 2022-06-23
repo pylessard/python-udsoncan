@@ -233,4 +233,4 @@ class TestSyncAioIsotpConnection(UdsTest):
                 conn0.send(tx_data)
 
                 rx_data = conn1.wait_frame()
-                assert tx_data == rx_data
+                self.assertTrue(tx_data == rx_data)
