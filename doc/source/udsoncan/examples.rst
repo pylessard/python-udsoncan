@@ -106,7 +106,7 @@ Note that, in order to run this code, both ``python-can`` and ``can-isotp`` must
 Using UDS over aioisotp
 -------------------------
 
-In this example, we show how to use :class:`PythonIsoTpConnection<udsoncan.connections.SyncAioIsotpConnection>` with a virtual can interface.
+In this example, we show how to use :class:`SyncAioIsotpConnection<udsoncan.connections.SyncAioIsotpConnection>` with a virtual can interface.
 Note that, in order to run this code, both ``python-can`` and ``aioisotp`` must be installed.
 
 .. code-block:: python
