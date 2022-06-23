@@ -27,7 +27,11 @@ try:
 except Exception as e:
     _import_j2534_err = e
 
-
+try:
+    from aioisotp.sync import SyncISOTPNetwork
+    _import_aioisotp_err = None
+except Exception as e:
+    _import_aioisotp_err = e
 
 from udsoncan.Request import Request
 from udsoncan.Response import Response
@@ -709,5 +713,70 @@ class FakeConnection(BaseConnection):
         while not self.rxqueue.empty():
             self.rxqueue.get()
 
-    
+class SyncAioIsotpConnection(BaseConnection):
+    """
+    A wrapper for aioisotp sync variant
 
+    `aioisotp <https://github.com/christiansandberg/aioisotp>`_ must be installed in order to use this connection.
+
+    See an :ref:`example<example_using_aioisotp>`
+
+    :param rxid: The reception CAN id
+    :type rxid: int
+
+    :param txid: The transmission CAN id
+    :type txid: int
+
+    :param name: This name is included in the logger name so that its output can be redirected. The logger name will be ``Connection[<name>]``
+    :type name: string
+
+    :param args: Optional parameters list passed to aioisotp binding method.
+    :type args: list
+
+    :param kwargs: Optional parameters dictionary passed to aioisotp binding method.
+    :type kwargs: dict
+    """
+    def __init__(self, rx_id, tx_id, name=None, *args, **kwargs):
+        BaseConnection.__init__(self, name)
+        self.network = SyncISOTPNetwork(*args, **kwargs)
+        self.opened = False
+        self.rx_id = rx_id
+        self.tx_id = tx_id
+
+    def specific_send(self, payload):
+        self.conn.send(payload)
+
+    def specific_wait_frame(self, timeout=2):
+        if not self.opened:
+            raise RuntimeError("Connection is not open")
+
+        frame = self.conn.recv(timeout)
+
+        if frame is None and timeout:
+            raise TimeoutException("Did not received frame in time (timeout=%s sec)" % timeout)
+
+        return frame
+
+    def open(self):
+        self.network.open()
+        self.conn = self.network.create_sync_connection(self.rx_id, self.tx_id)
+        self.opened = True
+        self.logger.info("Connection opened")
+        return self
+
+    def close(self):
+        self.network.close()
+        self.opened = False
+        self.logger.info("Connection closed")
+
+    def empty_rxqueue(self):
+        self.conn.empty()
+
+    def is_open(self):
+        return self.opened
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
