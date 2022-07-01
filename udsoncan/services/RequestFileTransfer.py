@@ -26,6 +26,7 @@ class RequestFileTransfer(BaseService):
         ReplaceFile = 3
         ReadFile = 4
         ReadDir = 5
+        ResumeFile = 6
 
     @classmethod
     def normalize_data_format_identifier(cls, dfi):
@@ -43,25 +44,25 @@ class RequestFileTransfer(BaseService):
         """
         Generates a request for RequestFileTransfer
 
-        :param moop: Mode of operation. Can be AddFile(1), DeleteFile(2), ReplaceFile(3), ReadFile(4), ReadDir(5). See :class:`RequestFileTransfer.ModeOfOperation<udsoncan.services.RequestFileTransfer.ModeOfOperation>`
+        :param moop: Mode of operation. Can be AddFile(1), DeleteFile(2), ReplaceFile(3), ReadFile(4), ReadDir(5), ReadDir(6). See :class:`RequestFileTransfer.ModeOfOperation<udsoncan.services.RequestFileTransfer.ModeOfOperation>`
         :type moop: int
 
         :param path: String representing the path to the target file or directory.
         :type path: string
 
-        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data. 
-                If not specified, the default value of 00 will be used, specifying no encryption and no compression. 
-                This value is only used when ModeOfOperation is : ``AddFile``, ``ReplaceFile``, ``ReadFile``
+        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data.
+                If not specified, the default value of 00 will be used, specifying no encryption and no compression.
+                This value is only used when ModeOfOperation is : ``AddFile``, ``ReplaceFile``, ``ReadFile``, ``ResumeFile``
         :type dfi: :ref:`DataFormatIdentifier<DataFormatIdentifier>`
 
-        :param filesize: The filesize of the file to write when ModeOfOperation is ``AddFile`` or ``ReplaceFile``. 
+        :param filesize: The filesize of the file to write when ModeOfOperation is ``AddFile``, ``ReplaceFile`` or ``ResumeFile``.
             If filesize is an object of type :ref:`Filesize<Filesize>`, the uncompressed size and compressed size will be encoded on
             the minimum amount of bytes necessary, unless a ``width`` is explicitly defined. If no compressed size is given or filesize is an ``int``,
             then the compressed size will be set equal to the uncompressed size or the integer value given as specified by ISO-14229
         :type filesize: :ref:`Filesize<Filesize>` or int
 
         :raises ValueError: If parameters are out of range, missing or wrong type
-        """             
+        """
         from udsoncan import Request, Filesize
         if not isinstance(moop, int):
             raise ValueError('Mode of operation must be an integer')
@@ -70,7 +71,8 @@ class RequestFileTransfer(BaseService):
                             cls.ModeOfOperation.DeleteFile,
                             cls.ModeOfOperation.ReplaceFile,
                             cls.ModeOfOperation.ReadFile,
-                            cls.ModeOfOperation.ReadDir]:
+                            cls.ModeOfOperation.ReadDir,
+                            cls.ModeOfOperation.ResumeFile]:
             raise ValueError("Mode of operation of %d is not a known mode" % moop)
 
         if not isinstance(path, str):
@@ -83,16 +85,16 @@ class RequestFileTransfer(BaseService):
         if len(path_ascii) > 0xFFFF:
             raise ValueError('Path length must be smaller or equal than 65535  bytes (16 bits) when encoded in ASCII')
 
-        use_dfi = moop in [cls.ModeOfOperation.AddFile, cls.ModeOfOperation.ReplaceFile, cls.ModeOfOperation.ReadFile]
-        use_filesize = moop in [cls.ModeOfOperation.AddFile, cls.ModeOfOperation.ReplaceFile]
-       
+        use_dfi = moop in [cls.ModeOfOperation.AddFile, cls.ModeOfOperation.ReplaceFile, cls.ModeOfOperation.ReadFile, cls.ModeOfOperation.ResumeFile]
+        use_filesize = moop in [cls.ModeOfOperation.AddFile, cls.ModeOfOperation.ReplaceFile, cls.ModeOfOperation.ResumeFile]
+
         if use_dfi:
             dfi = cls.normalize_data_format_identifier(dfi)
         else:
             if dfi is not None:
                 raise ValueError('DataFormatIdentifier is not needed with ModeOfOperation=%d' % moop)
-        
-        if use_filesize:  
+
+        if use_filesize:
             if filesize is None:
                 raise ValueError('A filesize must be given for this mode of operation')
 
@@ -100,7 +102,7 @@ class RequestFileTransfer(BaseService):
                 filesize = Filesize(filesize)
 
             if not isinstance(filesize, Filesize):
-                raise ValueError('Given filesize must be a valid Filesize object or an integer') 
+                raise ValueError('Given filesize must be a valid Filesize object or an integer')
 
             if filesize.uncompressed is None:
                 raise ValueError('Filesize needs at least an Uncompressed file size')
@@ -109,7 +111,7 @@ class RequestFileTransfer(BaseService):
                 filesize = Filesize(uncompressed=filesize.uncompressed, compressed=filesize.uncompressed, width=filesize.get_width())
         else:
             if filesize is not None:
-                raise ValueError('Filesize is not needed with ModeOfOperation=%d' % moop)               
+                raise ValueError('Filesize is not needed with ModeOfOperation=%d' % moop)
 
         data = moop.to_bytes(1, 'big')
         data += len(path_ascii).to_bytes(2, 'big')
@@ -136,18 +138,19 @@ class RequestFileTransfer(BaseService):
 
         :raises InvalidResponseException: If length of ``response.data`` is too short or payload does not respect ISO-14229 specifications
         :raises NotImplementedError: If the MaxNumberOfBlock or fileSizeUncompressedOrDirInfoLength value is encoded over more than 8 bytes.
-        """         
+        """
         from udsoncan import Filesize, DataFormatIdentifier
         response.service_data = cls.ResponseData()
         if len(response.data) < 1:
             raise InvalidResponseException(response, 'Response payload must be at least 1 byte long')
         response.service_data.moop_echo = int(response.data[0])
 
-        has_lfid                    = response.service_data.moop_echo in [cls.ModeOfOperation.AddFile, cls.ModeOfOperation.ReplaceFile, cls.ModeOfOperation.ReadFile, cls.ModeOfOperation.ReadDir]
-        has_dfi                     = response.service_data.moop_echo in [cls.ModeOfOperation.AddFile, cls.ModeOfOperation.ReplaceFile, cls.ModeOfOperation.ReadFile, cls.ModeOfOperation.ReadDir]
+        has_lfid                    = response.service_data.moop_echo in [cls.ModeOfOperation.AddFile, cls.ModeOfOperation.ResumeFile, cls.ModeOfOperation.ReplaceFile, cls.ModeOfOperation.ReadFile, cls.ModeOfOperation.ReadDir]
+        has_dfi                     = response.service_data.moop_echo in [cls.ModeOfOperation.AddFile, cls.ModeOfOperation.ResumeFile, cls.ModeOfOperation.ReplaceFile, cls.ModeOfOperation.ReadFile, cls.ModeOfOperation.ReadDir]
         has_filesize_length         = response.service_data.moop_echo in [cls.ModeOfOperation.ReadFile, cls.ModeOfOperation.ReadDir]
         has_uncompressed_filesize   = response.service_data.moop_echo in [cls.ModeOfOperation.ReadFile, cls.ModeOfOperation.ReadDir]
         has_compressed_filesize     = response.service_data.moop_echo in [cls.ModeOfOperation.ReadFile]
+        has_fileposition            = response.service_data.moop_echo in [cls.ModeOfOperation.ResumeFile]
 
         cursor = 1
         if has_lfid:
@@ -170,7 +173,7 @@ class RequestFileTransfer(BaseService):
                 todecode[-i] = response.data[cursor+lfid-i]
             response.service_data.max_length = struct.unpack('>q', todecode)[0]
             cursor += lfid
-        
+
         if has_dfi:
             if len(response.data) < cursor+1:
                 raise InvalidResponseException(response, 'Missing DataFormatIdentifier in received response')
@@ -178,7 +181,7 @@ class RequestFileTransfer(BaseService):
             response.service_data.dfi = DataFormatIdentifier.from_byte(response.data[cursor])
             cursor += 1
             dfi = response.service_data.dfi.get_byte_as_int()
-            
+
             if response.service_data.moop_echo == cls.ModeOfOperation.ReadDir and dfi != 0:
                 raise InvalidResponseException(response, 'DataFormatIdentifier for ReadDir can only be 0x00 as per ISO-14229, but its value was set to 0x%02x' % (dfi))
 
@@ -223,6 +226,18 @@ class RequestFileTransfer(BaseService):
         else:
             if has_uncompressed_filesize or has_compressed_filesize:
                 response.service_data.filesize=Filesize(uncompressed = uncompressed_size, compressed=compressed_size)
+
+        if has_fileposition :
+            fposl = 8 # standard has hardcoded number of bytes to 8
+            if len(response.data) < cursor+fposl:
+                raise InvalidResponseException(response, 'Missing or incomplete Fileposition in received response')
+
+            todecode = bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00')
+            for i in range(1,fposl+1):
+                todecode[-i] = response.data[cursor+fposl-i]
+
+            response.service_data.fileposition = struct.unpack('>q', todecode)[0]
+            cursor += fposl
 
         if len(response.data) > cursor:
             if response.data[cursor:] == b'\x00' * (len(response.data) - cursor) and tolerate_zero_padding:
