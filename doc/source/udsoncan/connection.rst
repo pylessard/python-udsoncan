@@ -38,6 +38,15 @@ PythonIsoTpConnection
 
 .. autoclass:: udsoncan.connections.PythonIsoTpConnection
 
+SyncAioIsotpConnection
+######################
+
+.. autoclass:: udsoncan.connections.SyncAioIsotpConnection
+
+.. warning:: This connection is based on `aioisotp <https://github.com/christiansandberg/aioisotp>`_ which is no longer actively maintained by its author.
+    The protocol uses streams rather than datagrams and it still has some `issues <https://github.com/christiansandberg/aioisotp/issues>`_. However, it has
+    good performance on Windows.
+
 SocketConnection
 ################
 
