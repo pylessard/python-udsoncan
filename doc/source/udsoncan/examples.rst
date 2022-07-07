@@ -101,6 +101,30 @@ Note that, in order to run this code, both ``python-can`` and ``can-isotp`` must
 
 -----
 
+.. _example_using_aioisotp:
+
+Using UDS over aioisotp
+-------------------------
+
+In this example, we show how to use :class:`SyncAioIsotpConnection<udsoncan.connections.SyncAioIsotpConnection>` with a virtual can interface.
+Note that, in order to run this code, both ``python-can`` and ``aioisotp`` must be installed.
+
+.. code-block:: python
+
+   from udsoncan.connections import SyncAioIsotpConnection
+   from udsoncan.client import Client
+   import logging
+
+   logging.basicConfig(level=logging.DEBUG)
+
+   conn = SyncAioIsotpConnection(interface="virtual", channel=0, bitrate=500000, rx_id=0x123, tx_id=0x456)
+   with Client(conn) as client:
+      with client.suppress_positive_response:
+         client.change_session(3)
+         # ...
+
+-----
+
 .. _example_default_memloc_format:
 
 Server default address and size format

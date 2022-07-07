@@ -208,3 +208,29 @@ class TestPythonIsoTpConnection(UdsTest):
         self.conn.close()
         self.vcan0_bus.shutdown()
 
+class TestSyncAioIsotpConnection(UdsTest):
+
+    def test_open(self):
+        conn0 = SyncAioIsotpConnection(interface="virtual", channel=0, bitrate=500000, rx_id=0x123, tx_id=0x456, name="unittest")
+
+        conn0.open()
+        self.assertTrue(conn0.is_open())
+        conn0.close()
+        self.assertFalse(conn0.is_open())
+
+        conn0.open()
+        self.assertTrue(conn0.is_open())
+        conn0.close()
+        self.assertFalse(conn0.is_open())
+
+    def test_transmit(self):
+        conn0 = SyncAioIsotpConnection(interface="virtual", channel=0, bitrate=500000, rx_id=0x123, tx_id=0x456, name="unittest")
+        conn1 = SyncAioIsotpConnection(interface="virtual", channel=0, bitrate=500000, rx_id=0x456, tx_id=0x123, name="unittest")
+    
+        with conn0.open():
+            with conn1.open():
+                tx_data = bytes([i for i in range(256)])
+                conn0.send(tx_data)
+
+                rx_data = conn1.wait_frame()
+                self.assertTrue(tx_data == rx_data)
