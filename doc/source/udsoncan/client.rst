@@ -496,3 +496,4 @@ Methods by services
 .. automethod:: udsoncan.client.Client.replace_file
 .. automethod:: udsoncan.client.Client.read_file
 .. automethod:: udsoncan.client.Client.read_dir
+.. automethod:: udsoncan.client.Client.resume_file

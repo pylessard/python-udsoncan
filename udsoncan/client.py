@@ -1689,7 +1689,7 @@ class Client:
 
     def resume_file(self, filename, dfi=None, filesize=None):
         """
-        Sends a RequestFileTransfer request with ModeOfOperation=AddFile(1).
+        Sends a RequestFileTransfer request with ModeOfOperation=ResumeFile(6).
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding``
 
