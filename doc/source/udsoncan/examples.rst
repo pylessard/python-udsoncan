@@ -94,6 +94,7 @@ Note that, in order to run this code, both ``python-can`` and ``can-isotp`` must
    bus = VectorBus(channel=0, bitrate=500000)                                          # Link Layer (CAN protocol)
    tp_addr = isotp.Address(isotp.AddressingMode.Normal_11bits, txid=0x123, rxid=0x456) # Network layer addressing scheme
    stack = isotp.CanStack(bus=bus, address=tp_addr, params=isotp_params)               # Network/Transport layer (IsoTP protocol)
+   stack.set_sleep_timing(0, 0)                                                        # Speed First (do not sleep)
    conn = PythonIsoTpConnection(stack)                                                 # interface between Application and Transport layer
    with Client(conn, request_timeout=1) as client:                                     # Application layer (UDS protocol)
       client.change_session(1)   
