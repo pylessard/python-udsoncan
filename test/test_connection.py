@@ -19,6 +19,12 @@ except Exception as e:
     _STACK_UNVAILABLE_REASON = str(e)
     _STACK_POSSIBLE = False
 
+try:
+    from aioisotp.sync import SyncISOTPNetwork
+    _AISOTP_POSSIBLE = True
+except Exception as e:
+    _AISOTP_POSSIBLE = False
+
 class TestIsoTPSocketConnection(UdsTest):
 
     def setUp(self):
@@ -105,7 +111,6 @@ class TestSocketConnection(UdsTest):
                 conn1.send(payload1)
                 payload2 = conn2.wait_frame(timeout=1, exception=True)
                 self.assertEqual(payload1, payload2)
-
 
 class TestQueueConnection(UdsTest):
     def setUp(self):
@@ -208,6 +213,7 @@ class TestPythonIsoTpConnection(UdsTest):
         self.conn.close()
         self.vcan0_bus.shutdown()
 
+@unittest.skipIf(_AISOTP_POSSIBLE == False, "aisotp module is not present.")
 class TestSyncAioIsotpConnection(UdsTest):
 
     def test_open(self):

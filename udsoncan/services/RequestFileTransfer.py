@@ -11,8 +11,10 @@ class RequestFileTransfer(BaseService):
                                         Response.Code.IncorrectMessageLengthOrInvalidFormat,
                                         Response.Code.ConditionsNotCorrect,
                                         Response.Code.RequestOutOfRange,
-                                        Response.Code.UploadDownloadNotAccepted
+                                        Response.Code.UploadDownloadNotAccepted,
+                                        Response.Code.RequestSequenceError  # ResumeFile only
                                         ]
+                                        
     class ModeOfOperation(BaseSubfunction): # Not really a subfunction, but we wantto inherit the helpers in BaseSubfunction class
         """
         RequestFileTransfer Mode Of Operation (MOOP). Represent the action that can be done on the server filesystem.
@@ -44,7 +46,7 @@ class RequestFileTransfer(BaseService):
         """
         Generates a request for RequestFileTransfer
 
-        :param moop: Mode of operation. Can be AddFile(1), DeleteFile(2), ReplaceFile(3), ReadFile(4), ReadDir(5), ReadDir(6). See :class:`RequestFileTransfer.ModeOfOperation<udsoncan.services.RequestFileTransfer.ModeOfOperation>`
+        :param moop: Mode of operation. Can be AddFile(1), DeleteFile(2), ReplaceFile(3), ReadFile(4), ReadDir(5), ResumeFile(6). See :class:`RequestFileTransfer.ModeOfOperation<udsoncan.services.RequestFileTransfer.ModeOfOperation>`
         :type moop: int
 
         :param path: String representing the path to the target file or directory.
@@ -279,8 +281,14 @@ class RequestFileTransfer(BaseService):
 
                 Only set when performing a ``ReadDir`` request
 
+        .. data:: fileposition (int)
+
+                Defines the position of the at which the tester will resume downloading after an initial download is suspended.
+
+                Only set when performing a ``ResumeFile`` request
+
         """ 
-        __slots__ = 'moop_echo', 'max_length', 'dfi', 'filesize', 'dirinfo_length'
+        __slots__ = 'moop_echo', 'max_length', 'dfi', 'filesize', 'dirinfo_length', 'fileposition'
         
         def __init__(self):
             super().__init__(RequestFileTransfer)
@@ -289,3 +297,4 @@ class RequestFileTransfer(BaseService):
             self.dfi            = None
             self.filesize       = None
             self.dirinfo_length = None
+            self.fileposition   = None
