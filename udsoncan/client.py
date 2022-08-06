@@ -1687,6 +1687,30 @@ class Client:
         """
         return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.AddFile, path=filename, dfi=dfi, filesize=filesize)
 
+    def resume_file(self, filename, dfi=None, filesize=None):
+        """
+        Sends a RequestFileTransfer request with ModeOfOperation=ResumeFile(6).
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding``
+
+        :param filename: The name of the file to create, limited to ASCII characters.
+        :type filename: str
+
+        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data.
+                If not specified, the default value of 00 will be used, specifying no encryption and no compression.
+        :type dfi: :ref:`DataFormatIdentifier<DataFormatIdentifier>`
+
+        :param filesize: The filesize of the file to write.
+            If filesize is an object of type :ref:`Filesize<Filesize>`, the uncompressed size and compressed size will be encoded on
+            the minimum amount of bytes necessary, unless a ``width`` is explicitly defined. If no compressed size is given or filesize is an ``int``,
+            then the compressed size will be set equal to the uncompressed size or the integer value given as specified by ISO-14229
+        :type filesize: :ref:`Filesize<Filesize>` or int
+
+        :return: The server response parsed by :meth:`RequestFileTransfer.interpret_response<udsoncan.services.RequestFileTransfer.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
+        return self.request_file_transfer(moop=services.RequestFileTransfer.ModeOfOperation.ResumeFile, path=filename, dfi=dfi, filesize=filesize)
+
     def delete_file(self, filename):
         """
         Sends a RequestFileTransfer request with ModeOfOperation=DeleteFile(2).
