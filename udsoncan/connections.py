@@ -21,8 +21,7 @@ except Exception as e:
     _import_isotp_err = e
 
 try:
-    from udsoncan.j2534 import J2534
-    from udsoncan.j2534 import Protocol_ID
+    from udsoncan.j2534 import J2534, Protocol_ID, Ioctl_ID, Ioctl_Flags
     _import_j2534_err = None
 except Exception as e:
     _import_j2534_err = e
@@ -475,7 +474,8 @@ class PythonIsoTpConnection(BaseConnection):
         self.empty_rxqueue()
         self.empty_txqueue()
         self.exit_requested=True
-        self.rxthread.join()
+        if self.rxthread:
+            self.rxthread.join()
         self.isotp_layer.reset()
         self.opened = False
         self.logger.info('Connection closed')	

@@ -59,6 +59,7 @@ class Client:
 
 
     def __init__(self, conn, config=default_client_config, request_timeout=None):
+        super().__init__()
         self.conn = conn
         self.config = dict(config) # Makes a copy of given configuration
 
