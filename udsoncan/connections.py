@@ -199,7 +199,8 @@ class SocketConnection(BaseConnection):
 
     def close(self):
         self.exit_requested = True
-        self.rxthread.join()
+        if self.rxthread:
+            self.rxthread.join()
         self.opened = False
         self.logger.info('Connection closed')
 
@@ -306,7 +307,8 @@ class IsoTPSocketConnection(BaseConnection):
 
     def close(self):
         self.exit_requested = True
-        self.rxthread.join()
+        if self.rxthread:
+            self.rxthread.join()
         self.tpsock.close()
         self.opened = False
         self.logger.info('Connection closed')
@@ -478,7 +480,14 @@ class PythonIsoTpConnection(BaseConnection):
             self.rxthread.join()
         self.isotp_layer.reset()
         self.opened = False
-        self.logger.info('Connection closed')	
+        self.logger.info('Connection closed')
+
+    def send(self, data, target_address_type=None):
+        if target_address_type:
+            self.isotp_layer.params.default_target_address_type = target_address_type
+        else:
+            self.isotp_layer.params.default_target_address_type = isotp.address.TargetAddressType.Physical
+        return super().send(data)
 
     def specific_send(self, payload):
         if self.mtu is not None:
@@ -622,7 +631,8 @@ class J2534Connection(BaseConnection):
 
     def close(self):
         self.exit_requested = True
-        self.rxthread.join()
+        if self.rxthread:
+            self.rxthread.join()
         result = self.interface.PassThruDisconnect(self.channelID)
         self.opened = False
         self.logger.info('J2534 Connection closed')
