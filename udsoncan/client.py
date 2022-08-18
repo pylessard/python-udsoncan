@@ -573,7 +573,7 @@ class Client:
 
     # Performs a RoutineControl Service request
     @standard_error_management
-    def routine_control(self, routine_id, control_type, data=None, target_address_type=None):
+    def routine_control(self, routine_id, control_type, data=None):
         """
         Sends a generic request for the :ref:`RoutineControl<RoutineControl>` service with custom subfunction (control_type).
 
@@ -968,7 +968,7 @@ class Client:
         return response
 
     @standard_error_management
-    def control_dtc_setting(self, setting_type, target_address_type=None, data=None):
+    def control_dtc_setting(self, setting_type, data=None, target_address_type=None):
         """
         Controls some settings related to the Diagnostic Trouble Codes by sending a :ref:`ControlDTCSetting<ControlDTCSetting>` service request. 
         It can enable/disable some DTCs or perform some ECU specific configuration.
