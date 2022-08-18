@@ -167,7 +167,7 @@ class Client:
         return "%s<0x%02x>" % (service.get_name(), service.request_id())
 
     @standard_error_management
-    def change_session(self, newsession):
+    def change_session(self, newsession, target_address_type=None):
         """ 
         Requests the server to change the diagnostic session with a :ref:`DiagnosticSessionControl<DiagnosticSessionControl>` service request
 
@@ -184,7 +184,7 @@ class Client:
         named_newsession = '%s (0x%02x)' % (services.DiagnosticSessionControl.Session.get_name(newsession), newsession)
         self.logger.info('%s - Switching session to %s' % (self.service_log_prefix(services.DiagnosticSessionControl), named_newsession))
 
-        response = self.send_request(req)
+        response = self.send_request(req, target_address_type)
         if response is None:
             return 
 
@@ -573,7 +573,7 @@ class Client:
 
     # Performs a RoutineControl Service request
     @standard_error_management
-    def routine_control(self, routine_id, control_type, data=None):
+    def routine_control(self, routine_id, control_type, data=None, target_address_type=None):
         """
         Sends a generic request for the :ref:`RoutineControl<RoutineControl>` service with custom subfunction (control_type).
 
@@ -605,7 +605,7 @@ class Client:
         if data is not None:
             self.logger.debug("\tPayload data : %s" % binascii.hexlify(data))
 
-        response = self.send_request(request)
+        response = self.send_request(request, target_address_type)
         if response is None:
             return
         services.RoutineControl.interpret_response(response)
@@ -715,7 +715,7 @@ class Client:
         return response
 
     @standard_error_management
-    def communication_control(self, control_type, communication_type):
+    def communication_control(self, control_type, communication_type, target_address_type=None):
         """
         Switches the transmission or reception of certain messages on/off with :ref:`CommunicationControl<CommunicationControl>` service.
 
@@ -736,7 +736,7 @@ class Client:
         request = services.CommunicationControl.make_request(control_type, communication_type)
         self.logger.info('%s - ControlType=0x%02x (%s) - Sending request with a CommunicationType byte of 0x%02x (%s)' % (self.service_log_prefix(services.CommunicationControl), control_type, services.CommunicationControl.ControlType.get_name(control_type), communication_type.get_byte_as_int(), str(communication_type)))
 
-        response = self.send_request(request)
+        response = self.send_request(request, target_address_type)
         if response is None:
             return
 
@@ -968,7 +968,7 @@ class Client:
         return response
 
     @standard_error_management
-    def control_dtc_setting(self, setting_type, data=None):
+    def control_dtc_setting(self, setting_type, target_address_type=None, data=None):
         """
         Controls some settings related to the Diagnostic Trouble Codes by sending a :ref:`ControlDTCSetting<ControlDTCSetting>` service request. 
         It can enable/disable some DTCs or perform some ECU specific configuration.
@@ -996,7 +996,7 @@ class Client:
         if data is not None:
             self.logger.debug("Payload of data : %s" % binascii.hexlify(data))
 
-        response = self.send_request(request)
+        response = self.send_request(request, target_address_type)
         if response is None:
             return
 
@@ -1916,7 +1916,7 @@ class Client:
 
 
     # Basic transmission of requests. This will need to be improved
-    def send_request(self, request, timeout=-1):
+    def send_request(self, request, target_address_type=None, timeout=-1):
         if timeout < 0:
             # Timeout not provided by user: defaults to Client request_timeout value
             overall_timeout = self.config['request_timeout']
@@ -1948,7 +1948,7 @@ class Client:
         if self.suppress_positive_response.enabled and not request.service.use_subfunction():
             self.logger.warning('SuppressPositiveResponse cannot be used for service %s. Ignoring' % (request.service.get_name()))
 
-        self.conn.send(payload)
+        self.conn.send(payload, target_address_type)
 
         if request.suppress_positive_response  or override_suppress_positive_response:
             return
