@@ -171,7 +171,7 @@ class SocketConnection(BaseConnection):
 
     def open(self):
         self.exit_requested = False
-        self.rxthread = threading.Thread(target=self.rxthread_task)
+        self.rxthread = threading.Thread(target=self.rxthread_task, daemon=True)
         self.rxthread.start()
         self.opened = True
         self.logger.info('Connection opened')
@@ -278,7 +278,7 @@ class IsoTPSocketConnection(BaseConnection):
     def open(self):
         self.tpsock.bind(self.interface, rxid=self.rxid, txid=self.txid, *self.tpsock_bind_args, **self.tpsock_bind_kwargs)
         self.exit_requested = False
-        self.rxthread = threading.Thread(target=self.rxthread_task)
+        self.rxthread = threading.Thread(target=self.rxthread_task, daemon=True)
         self.rxthread.start()
         self.opened = True
         self.logger.info('Connection opened')
@@ -456,7 +456,7 @@ class PythonIsoTpConnection(BaseConnection):
             self.isotp_layer.set_bus(bus)
 
         self.exit_requested = False
-        self.rxthread = threading.Thread(target=self.rxthread_task)
+        self.rxthread = threading.Thread(target=self.rxthread_task, daemon=True)
         self.rxthread.start()
         self.opened = True
         self.logger.info('Connection opened')
@@ -590,8 +590,7 @@ class J2534Connection(BaseConnection):
 
     def open(self):
         self.exit_requested = False
-        self.rxthread = threading.Thread(target=self.rxthread_task)
-        self.rxthread.daemon = True
+        self.rxthread = threading.Thread(target=self.rxthread_task, daemon=True)
         self.rxthread.start()
         self.opened = True
         self.logger.info('J2534 Connection opened')
