@@ -573,7 +573,7 @@ class Client:
 
     # Performs a RoutineControl Service request
     @standard_error_management
-    def routine_control(self, routine_id, control_type, data=None):
+    def routine_control(self, routine_id, control_type, data=None, target_address_type=None):
         """
         Sends a generic request for the :ref:`RoutineControl<RoutineControl>` service with custom subfunction (control_type).
 
@@ -842,7 +842,7 @@ class Client:
         if data is not None:
             self.logger.debug('Data to transfer : %s' % binascii.hexlify(data))
 
-        response = self.send_request(request)
+        response = self.send_request(request, timeout=5)
         if response is None:
             return
         services.TransferData.interpret_response(response)
@@ -1920,7 +1920,8 @@ class Client:
         if timeout < 0:
             # Timeout not provided by user: defaults to Client request_timeout value
             overall_timeout = self.config['request_timeout']
-            p2 = self.config['p2_timeout'] if self.session_timing['p2_server_max'] is None else self.session_timing['p2_server_max']
+            # p2 = self.config['p2_timeout'] if self.session_timing['p2_server_max'] is None else self.session_timing['p2_server_max']
+            p2 = self.config['p2_timeout'] if self.session_timing['p2_server_max'] is None else (self.session_timing['p2_server_max'] + 1)
             if overall_timeout is not None:
                 single_request_timeout = min(overall_timeout, p2)
             else:
@@ -1955,23 +1956,36 @@ class Client:
 
         done_receiving = False
         if respect_overall_timeout:
-            overall_timeout_time = time.time() + overall_timeout
+            # overall_timeout_time = time.time() + overall_timeout
+            overall_timeout_time = overall_timeout
+        # if not respect_overall_timeout or (respect_overall_timeout and time.time() + single_request_timeout < overall_timeout_time):
+        if not respect_overall_timeout or (respect_overall_timeout and single_request_timeout < overall_timeout_time):
+            timeout_type_used 	= 'single_request'
+            timeout_value 		= single_request_timeout
+        else:
+            timeout_type_used 	= 'overall'
+            # timeout_value 		= max(overall_timeout_time - time.time(), 0)
+            timeout_value 		= max(overall_timeout_time, 0)
+
+        p2_star = None
+        timeout_name_to_report = None
         while not done_receiving:
-            done_receiving = True
             self.logger.debug("Waiting for server response")
 
             try:
-                if not respect_overall_timeout or (respect_overall_timeout and time.time() + single_request_timeout < overall_timeout_time):
-                    timeout_type_used 	= 'single_request'
-                    timeout_value 		= single_request_timeout
-                else:	
-                    timeout_type_used 	= 'overall'
-                    timeout_value 		= max(overall_timeout_time - time.time(), 0)
-
-                payload = self.conn.wait_frame(timeout=timeout_value, exception=True)	
+                payload = self.conn.wait_frame(timeout=timeout_value, exception=True)
+                done_receiving = True
             except TimeoutException:
                 if timeout_type_used == 'single_request':
-                    timeout_name_to_report = 'P2* timeout' if using_p2_star else 'P2 timeout'
+                    if using_p2_star:
+                        timeout_value = p2_star
+                        using_p2_star = False
+                        done_receiving = False
+                        timeout_name_to_report = 'P2* timeout'
+                        continue
+                    else:
+                        if not timeout_name_to_report:
+                            timeout_name_to_report = 'P2 timeout'
                 elif timeout_type_used == 'overall':
                     timeout_name_to_report = 'Global request timeout'
                 else:	# Shouldn't go here.
