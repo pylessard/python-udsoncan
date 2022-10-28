@@ -819,7 +819,7 @@ class Client:
         return response
 
     @standard_error_management
-    def transfer_data(self, sequence_number, data=None):
+    def transfer_data(self, sequence_number, data=None, timeout=5):
         """
         Transfer a block of data to/from the client to/from the server by sending a :ref:`TransferData<TransferData>` service request and returning the server response.
 
@@ -842,7 +842,7 @@ class Client:
         if data is not None:
             self.logger.debug('Data to transfer : %s' % binascii.hexlify(data))
 
-        response = self.send_request(request, timeout=5)
+        response = self.send_request(request, timeout=timeout)
         if response is None:
             return
         services.TransferData.interpret_response(response)
