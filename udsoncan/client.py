@@ -315,7 +315,7 @@ class Client:
 
 
     @standard_error_management
-    def tester_present(self):
+    def tester_present(self, subfunction, target_address_type=None, timeout=-1):
         """
         Sends a TesterPresent request to keep the session active.
 
@@ -324,10 +324,10 @@ class Client:
         :return: The server response parsed by :meth:`TesterPresent.interpret_response<udsoncan.services.TesterPresent.interpret_response>`
         :rtype: :ref:`Response<Response>`
         """
-        req = services.TesterPresent.make_request()
+        req = services.TesterPresent.make_request(subfunction)
 
         self.logger.info('%s - Sending TesterPresent request' % (self.service_log_prefix(services.TesterPresent)))
-        response = self.send_request(req)
+        response = self.send_request(req, target_address_type=target_address_type, timeout=timeout)
         if response is None:
             return
 

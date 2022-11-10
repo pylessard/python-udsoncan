@@ -10,12 +10,12 @@ class TesterPresent(BaseService):
                                                     ]	
 
     @classmethod
-    def make_request(cls):
+    def make_request(cls, subfunction):
         """
         Generates a request for TesterPresent
         """		
         from udsoncan import Request
-        return Request(service=cls, subfunction=0)
+        return Request(service=cls, subfunction=subfunction)
 
     @classmethod
     def interpret_response(cls, response):
