@@ -294,7 +294,7 @@ class AddressAndLengthFormatIdentifier:
     This class defines how many bytes of a memorylocation, composed of an address and a memorysize, should be encoded when sent over the underlying protocol.
     Mainly used by :ref:`ReadMemoryByAddress<ReadMemoryByAddress>`, :ref:`WriteMemoryByAddress<WriteMemoryByAddress>`, :ref:`RequestDownload<RequestDownload>` and :ref:`RequestUpload<RequestUpload>` services
 
-    Defined by ISO-14229:2006, Annex G
+    Defined by ISO-14229:2020, Annex H
 
     :param address_format: The number of bits on which an address should be encoded. Possible values are 8, 16, 24, 32, 40, 48, 56, 64
     :type address_format: int
