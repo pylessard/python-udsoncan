@@ -25,7 +25,7 @@ class TestAddressAndLengthFormatIdentifier(UdsTest):
             AddressAndLengthFormatIdentifier(memorysize_format=40, address_format=0)
 
         with self.assertRaises(ValueError):
-            AddressAndLengthFormatIdentifier(memorysize_format=8, address_format=48)
+            AddressAndLengthFormatIdentifier(memorysize_format=8, address_format=65)
 
         with self.assertRaises(ValueError):
             AddressAndLengthFormatIdentifier(memorysize_format='8', address_format=8)

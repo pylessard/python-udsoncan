@@ -296,10 +296,10 @@ class AddressAndLengthFormatIdentifier:
 
     Defined by ISO-14229:2006, Annex G
 
-    :param address_format: The number of bits on which an address should be encoded. Possible values are 8, 16, 24, 32, 40
+    :param address_format: The number of bits on which an address should be encoded. Possible values are 8, 16, 24, 32, 40, 48, 56, 64
     :type address_format: int
 
-    :param memorysize_format: The number of bits on which a memory size should be encoded. Possible values are 8, 16, 24, 32
+    :param memorysize_format: The number of bits on which a memory size should be encoded. Possible values are 8, 16, 24, 32, 40, 48, 56, 64
     :type memorysize_format: int
 
     """
@@ -308,14 +308,21 @@ class AddressAndLengthFormatIdentifier:
             16 	: 2,
             24	: 3,
             32 	: 4,
-            40	: 5
+            40	: 5,
+            48	: 6,
+            56	: 7,
+            64	: 8
     }
 
     memsize_map = {
-            8 : 1,
-            16 : 2,
-            24 : 3,
-            32 : 4
+            8 	: 1,
+            16 	: 2,
+            24	: 3,
+            32 	: 4,
+            40	: 5,
+            48	: 6,
+            56	: 7,
+            64	: 8
     }
 
     def __init__(self, address_format, memorysize_format):
