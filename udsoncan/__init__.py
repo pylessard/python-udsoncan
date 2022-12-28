@@ -404,15 +404,15 @@ class MemoryLocation:
     # Finds the smallest size that fits the address
     def autosize_address(self, val):
         fmt = math.ceil(val.bit_length()/8)*8
-        if fmt > 40:
-            raise ValueError("address size must be smaller or equal than 40 bits")
+        if fmt > 64:
+            raise ValueError("address size must be smaller or equal than 64 bits")
         return fmt
 
     # Finds the smallest size that fits the memory size
     def autosize_memorysize(self, val):
         fmt = math.ceil(val.bit_length()/8)*8
-        if fmt > 32:
-            raise ValueError("memory size must be smaller or equal than 32 bits")
+        if fmt > 64:
+            raise ValueError("memory size must be smaller or equal than 64 bits")
         return fmt
 
     # Gets the address byte in the requested format
