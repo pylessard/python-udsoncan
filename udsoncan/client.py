@@ -666,7 +666,7 @@ class Client:
         :rtype: :ref:`Response<Response>`
 
         """
-        return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToGivenValues, request_record=params)
+        return self.access_timing_parameter(access_type=services.AccessTimingParameter.AccessType.setTimingParametersToGivenValues, timing_param_record=params)
 
 
     @standard_error_management

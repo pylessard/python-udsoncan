@@ -48,12 +48,12 @@ class TestAccessTimingParameter(ClientServerTest):
     def _test_set_params_success(self):
         self.udsclient.set_timing_parameters(params=b"\x11\x22\x33\x44")
 
-    def test_set_params_success(self):
+    def test_set_params_success_default(self):
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b"\x83\x02")
         self.conn.fromuserqueue.put(b"\xC3\x02")	# Positive response
 
-    def _test_set_params_success(self):
+    def _test_set_params_success_default(self):
         self.udsclient.reset_default_timing_parameters()
 
     def test_set_params_denied_exception(self):

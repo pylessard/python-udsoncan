@@ -288,19 +288,19 @@ class TestRequestFileTransfer(ClientServerTest):
         with self.assertRaises(InvalidResponseException):
             self.udsclient.replace_file("my_file.txt", filesize = 0x100)
 
-    def test_replace_file_negative_response(self):
+    def test_replace_file_zerolen_length_negative_response(self):
         self.conn.touserqueue.get(timeout=0.2)
         self.conn.fromuserqueue.put(b"\x7F\x38\x22")    # Condition not correct
 
-    def _test_replace_file_negative_response(self):
+    def _test_replace_file_zerolen_length_negative_response(self):
         with self.assertRaises(NegativeResponseException):
             self.udsclient.replace_file("my_file.txt", filesize=0x100)
 
-    def test_replace_file_negative_response_no_exception(self):
+    def test_replace_file_zerolen_length_negative_response_no_exception(self):
         self.conn.touserqueue.get(timeout=0.2)
         self.conn.fromuserqueue.put(b"\x7F\x38\x22")    # Condition not correct
 
-    def _test_replace_file_negative_response_no_exception(self):
+    def _test_replace_file_zerolen_length_negative_response_no_exception(self):
         self.udsclient.config['exception_on_negative_response'] = False
         response = self.udsclient.replace_file("my_file.txt", filesize=0x100)
         self.assertTrue(response.valid)

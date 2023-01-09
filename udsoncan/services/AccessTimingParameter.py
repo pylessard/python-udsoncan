@@ -46,7 +46,7 @@ class AccessTimingParameter(BaseService):
         if timing_param_record is None and access_type == cls.AccessType.setTimingParametersToGivenValues :
             raise ValueError('A timing_param_record must be provided when access_type is "setTimingParametersToGivenValues"')
 
-        request = Request(service=cls, subfunction=access_type)
+        request = Request(service=cls, subfunction=access_type, data=bytes())
 
         if timing_param_record is not None:
             if not isinstance(timing_param_record, bytes):
