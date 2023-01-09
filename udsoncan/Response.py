@@ -72,9 +72,27 @@ class Response:
         FailurePreventsExecutionOfRequestedAction = 0x26
         RequestOutOfRange = 0x31
         SecurityAccessDenied = 0x33
+        AuthenticationRequired = 0x34
         InvalidKey = 0x35
         ExceedNumberOfAttempts = 0x36
         RequiredTimeDelayNotExpired = 0x37
+        SecureDataTransmissionRequired = 0x38
+        SecureDataTransmissionNotAllowed = 0x39
+        SecureDataVerificationFailed = 0x3A
+        CertificateVerificationFailed_InvalidTimePeriod = 0x50
+        CertificateVerificationFailed_InvalidSignature = 0x51
+        CertificateVerificationFailed_InvalidChainOfTrust = 0x52
+        CertificateVerificationFailed_InvalidType = 0x53
+        CertificateVerificationFailed_InvalidFormat = 0x54
+        CertificateVerificationFailed_InvalidContent = 0x55
+        CertificateVerificationFailed_InvalidScope = 0x56
+        CertificateVerificationFailed_InvalidCertificate = 0x57
+        OwnershipVerificationFailed = 0x58
+        ChallengeCalculationFailed = 0x59
+        SettingAccessRightsFailed = 0x5A
+        SessionKeyCreationDerivationFailed = 0x5B
+        ConfigurationDataUsageFailed = 0x5C
+        DeAuthenticationFailed = 0x5D
         UploadDownloadNotAccepted = 0x70
         TransferDataSuspended = 0x71
         GeneralProgrammingFailure = 0x72
@@ -101,6 +119,7 @@ class Response:
         TorqueConverterClutchLocked = 0x91
         VoltageTooHigh = 0x92
         VoltageTooLow = 0x93
+        ResourceTemporarilyNotAvailable = 0x94
 
         #Defined by ISO-15764. Offset of 0x38 is defined within UDS standard (ISO-14229)
         GeneralSecurityViolation 			= 0x38 + 0
