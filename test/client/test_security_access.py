@@ -201,10 +201,10 @@ class TestSendKey(ClientServerTest):
         with self.assertRaises(UnexpectedResponseException) as handle:
             self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
 
-    def test_send_key_wrongservice_exception(self):
+    def test_send_key_wrongservice_no_exception(self):
         self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
 
-    def _test_send_key_wrongservice_exception(self):
+    def _test_send_key_wrongservice_no_exception(self):
         self.udsclient.config['exception_on_unexpected_response'] = False
         response = self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
         self.assertTrue(response.valid)

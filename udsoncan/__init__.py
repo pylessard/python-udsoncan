@@ -294,12 +294,12 @@ class AddressAndLengthFormatIdentifier:
     This class defines how many bytes of a memorylocation, composed of an address and a memorysize, should be encoded when sent over the underlying protocol.
     Mainly used by :ref:`ReadMemoryByAddress<ReadMemoryByAddress>`, :ref:`WriteMemoryByAddress<WriteMemoryByAddress>`, :ref:`RequestDownload<RequestDownload>` and :ref:`RequestUpload<RequestUpload>` services
 
-    Defined by ISO-14229:2006, Annex G
+    Defined by ISO-14229:2020, Annex H
 
-    :param address_format: The number of bits on which an address should be encoded. Possible values are 8, 16, 24, 32, 40
+    :param address_format: The number of bits on which an address should be encoded. Possible values are 8, 16, 24, 32, 40, 48, 56, 64
     :type address_format: int
 
-    :param memorysize_format: The number of bits on which a memory size should be encoded. Possible values are 8, 16, 24, 32
+    :param memorysize_format: The number of bits on which a memory size should be encoded. Possible values are 8, 16, 24, 32, 40, 48, 56, 64
     :type memorysize_format: int
 
     """
@@ -308,14 +308,21 @@ class AddressAndLengthFormatIdentifier:
             16 	: 2,
             24	: 3,
             32 	: 4,
-            40	: 5
+            40	: 5,
+            48	: 6,
+            56	: 7,
+            64	: 8
     }
 
     memsize_map = {
-            8 : 1,
-            16 : 2,
-            24 : 3,
-            32 : 4
+            8 	: 1,
+            16 	: 2,
+            24	: 3,
+            32 	: 4,
+            40	: 5,
+            48	: 6,
+            56	: 7,
+            64	: 8
     }
 
     def __init__(self, address_format, memorysize_format):
@@ -397,15 +404,15 @@ class MemoryLocation:
     # Finds the smallest size that fits the address
     def autosize_address(self, val):
         fmt = math.ceil(val.bit_length()/8)*8
-        if fmt > 40:
-            raise ValueError("address size must be smaller or equal than 40 bits")
+        if fmt > 64:
+            raise ValueError("address size must be smaller or equal than 64 bits")
         return fmt
 
     # Finds the smallest size that fits the memory size
     def autosize_memorysize(self, val):
         fmt = math.ceil(val.bit_length()/8)*8
-        if fmt > 32:
-            raise ValueError("memory size must be smaller or equal than 32 bits")
+        if fmt > 64:
+            raise ValueError("memory size must be smaller or equal than 64 bits")
         return fmt
 
     # Gets the address byte in the requested format
