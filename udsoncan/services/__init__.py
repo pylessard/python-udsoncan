@@ -122,7 +122,7 @@ class ServiceHelper:
     def check_did_config(didlist, didconfig):
         didlist = [didlist] if not isinstance(didlist, list) else didlist
         if 'data_identifiers' in didconfig:
-            didconfig = config['data_identifiers']
+            didconfig = didconfig['data_identifiers']
 
         for did in didlist:
             if did not in didconfig:
