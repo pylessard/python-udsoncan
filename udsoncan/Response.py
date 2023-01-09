@@ -113,7 +113,6 @@ class Response:
         ThrottlePedalTooLow = 0x8B
         TransmissionRangeNotInNeutral = 0x8C
         TransmissionRangeNotInGear = 0x8D
-        ISOSAEReserved = 0x8E
         BrakeSwitchNotClosed = 0x8F
         ShifterLeverNotInPark = 0x90
         TorqueConverterClutchLocked = 0x91
@@ -131,6 +130,92 @@ class Response:
         SecuredLinkNotSupported 			= 0x38 + 6
         CertificateNotAvailable 			= 0x38 + 7
         AuditTrailInformationNotAvailable 	= 0x38 + 8
+        
+        @classmethod
+        def is_supported_by_standard(cls, code, standard_version):
+            if not isinstance(code, int):
+                raise ValueError("given code must be an integer value, not %s" % (code.__class__.__name__))
+            
+            if not isinstance(standard_version, int):
+                raise ValueError("given standard_version must be an integer value, not %s" % (standard_version.__class__.__name__))
+
+            codes_version = {
+                cls.PositiveResponse : 2006,
+                cls.GeneralReject : 2006,
+                cls.ServiceNotSupported : 2006,
+                cls.SubFunctionNotSupported : 2006,
+                cls.IncorrectMessageLengthOrInvalidFormat : 2006,
+                cls.ResponseTooLong : 2006,
+                cls.BusyRepeatRequest : 2006,
+                cls.ConditionsNotCorrect : 2006,
+                cls.RequestSequenceError : 2006,
+                cls.NoResponseFromSubnetComponent : 2006,
+                cls.FailurePreventsExecutionOfRequestedAction : 2006,
+                cls.RequestOutOfRange : 2006,
+                cls.SecurityAccessDenied : 2006,
+                cls.AuthenticationRequired : 2006,
+                cls.InvalidKey : 2006,
+                cls.ExceedNumberOfAttempts : 2006,
+                cls.RequiredTimeDelayNotExpired : 2006,
+                cls.SecureDataTransmissionRequired : 2020,
+                cls.SecureDataTransmissionNotAllowed : 2020,
+                cls.SecureDataVerificationFailed : 2020,
+                cls.CertificateVerificationFailed_InvalidTimePeriod : 2020,
+                cls.CertificateVerificationFailed_InvalidSignature : 2020,
+                cls.CertificateVerificationFailed_InvalidChainOfTrust : 2020,
+                cls.CertificateVerificationFailed_InvalidType : 2020,
+                cls.CertificateVerificationFailed_InvalidFormat : 2020,
+                cls.CertificateVerificationFailed_InvalidContent : 2020,
+                cls.CertificateVerificationFailed_InvalidScope : 2020,
+                cls.CertificateVerificationFailed_InvalidCertificate : 2020,
+                cls.OwnershipVerificationFailed : 2020,
+                cls.ChallengeCalculationFailed : 2020,
+                cls.SettingAccessRightsFailed : 2020,
+                cls.SessionKeyCreationDerivationFailed : 2020,
+                cls.ConfigurationDataUsageFailed : 2020,
+                cls.DeAuthenticationFailed : 2020,
+                cls.UploadDownloadNotAccepted : 2006,
+                cls.TransferDataSuspended : 2006,
+                cls.GeneralProgrammingFailure : 2006,
+                cls.WrongBlockSequenceCounter : 2006,
+                cls.RequestCorrectlyReceived_ResponsePending : 2006,
+                cls.SubFunctionNotSupportedInActiveSession : 2006,
+                cls.ServiceNotSupportedInActiveSession : 2006,
+                cls.RpmTooHigh : 2006,
+                cls.RpmTooLow : 2006,
+                cls.EngineIsRunning : 2006,
+                cls.EngineIsNotRunning : 2006,
+                cls.EngineRunTimeTooLow : 2006,
+                cls.TemperatureTooHigh : 2006,
+                cls.TemperatureTooLow : 2006,
+                cls.VehicleSpeedTooHigh : 2006,
+                cls.VehicleSpeedTooLow : 2006,
+                cls.ThrottlePedalTooHigh : 2006,
+                cls.ThrottlePedalTooLow : 2006,
+                cls.TransmissionRangeNotInNeutral : 2006,
+                cls.TransmissionRangeNotInGear : 2006,
+                cls.BrakeSwitchNotClosed : 2006,
+                cls.ShifterLeverNotInPark : 2006,
+                cls.TorqueConverterClutchLocked : 2006,
+                cls.VoltageTooHigh : 2006,
+                cls.VoltageTooLow : 2006,
+                cls.ResourceTemporarilyNotAvailable : 2020,
+                cls.GeneralSecurityViolation : 2006,
+                cls.SecuredModeRequested : 2006,
+                cls.InsufficientProtection : 2006,
+                cls.TerminationWithSignatureRequested : 2006,
+                cls.AccessDenied : 2006,
+                cls.VersionNotSupported : 2006,
+                cls.SecuredLinkNotSupported : 2006,
+                cls.CertificateNotAvailable : 2006,
+                cls.AuditTrailInformationNotAvailable : 2006,
+            }
+
+            if code not in codes_version:
+                raise ValueError('Do not know the standard version in which this code has been introduced: %s' % (code))
+            
+            return standard_version >= codes_version[code]
+
 
         #Returns the name of the response code as a string
         @classmethod
@@ -154,7 +239,8 @@ class Response:
                 if isinstance(member[1], int):
                     if member[1] == given_id:
                         return True
-            return False	
+            return False
+        
 
 
     def __init__(self, service = None, code = None, data=None):

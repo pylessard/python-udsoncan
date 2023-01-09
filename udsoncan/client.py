@@ -1991,6 +1991,12 @@ class Client:
                 raise UnexpectedResponseException(response, msg)
 
             if not response.positive:
+                try:
+                    if not Response.Code.is_supported_by_standard(response.code, self.config['standard_version']):
+                        self.logger.warning('Given response code "%s" (0x%02x) is not supported byt the UDS standard version that the clients s enforcing (%s)' % (response.code_name, response.code, self.config['standard_version']))
+                except ValueError:
+                    self.logger.warning('Unkown response code "%s" (0x%02x)', response.code_name, response.code)
+
                 if not request.service.is_supported_negative_response(response.code):
                     self.logger.warning('Given response code "%s" (0x%02x) is not a supported negative response code according to UDS standard.' % (response.code_name, response.code))
 

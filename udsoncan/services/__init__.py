@@ -38,7 +38,8 @@ class BaseService(ABC):
             Response.Code.FailurePreventsExecutionOfRequestedAction,
             Response.Code.SecurityAccessDenied, # ISO-14229:2006 Table A.1:  "Besides the mandatory use of this negative response code as specified in the applicable services within ISO 14229, this negative response code can also be used for any case where security is required and is not yet granted to perform the required service."
             Response.Code.RequestCorrectlyReceived_ResponsePending,
-            Response.Code.ServiceNotSupportedInActiveSession
+            Response.Code.ServiceNotSupportedInActiveSession,
+            Response.Code.ResourceTemporarilyNotAvailable
     ]
 
     @classmethod	# Returns the service ID used for a client request

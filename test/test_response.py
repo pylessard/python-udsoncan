@@ -1,5 +1,6 @@
 from udsoncan import Response, services
 from test.UdsTest import UdsTest
+import inspect
 
 class DummyServiceNormal(services.BaseService):
     _sid = 0x13
@@ -125,3 +126,20 @@ class TestResponse(UdsTest):
         with self.assertRaises(ValueError):
             response = Response(service=DummyServiceNormal(), code = 0x10, data=11)	
 
+    def test_all_response_code_have_version(self):
+        codes = [ member[1] for member in inspect.getmembers(Response.Code) if isinstance(member[1], int) and not member[0].startswith('_')]
+        self.assertGreater(len(codes), 0)
+        for code in codes:
+            # Make sure no exception is raised
+            Response.Code.is_supported_by_standard(code, 2006)
+            Response.Code.is_supported_by_standard(code, 2013)
+            Response.Code.is_supported_by_standard(code, 2020)
+
+        # Case of known code introduced in 2020
+        self.assertFalse(Response.Code.is_supported_by_standard(Response.Code.ResourceTemporarilyNotAvailable , 2006))
+        self.assertFalse(Response.Code.is_supported_by_standard(Response.Code.ResourceTemporarilyNotAvailable , 2013))
+        self.assertTrue(Response.Code.is_supported_by_standard(Response.Code.ResourceTemporarilyNotAvailable , 2020))
+
+        self.assertTrue(Response.Code.is_supported_by_standard(Response.Code.GeneralReject , 2006))
+        self.assertTrue(Response.Code.is_supported_by_standard(Response.Code.GeneralReject , 2013))
+        self.assertTrue(Response.Code.is_supported_by_standard(Response.Code.GeneralReject , 2020))

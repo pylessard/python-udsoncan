@@ -6,17 +6,8 @@ What version of the standard has been used?
 
 .. epigraph::
    
-   The cod ewas originally written based on ISO-14229:2006. Some addition from the 2013 version has been added, but not exhaustively.
+   The code was originally written based on ISO-14229:2006. Some addition from the 2013 and 2020 version has been added, but not exhaustively.
 
-Can we expect an update for the 2020 version?
----------------------------------------------
-
-.. epigraph::
-   
-   Yes, one day, when I'll put my hands on the 2020 document. 
-   Access to ISO standard costs money and this project is 100% voluntary.
-
------
 
 How reliable is this code?
 --------------------------
@@ -27,6 +18,8 @@ How reliable is this code?
    Every service encoding/decoding is unit-tested.
    
    Only a few common services have been tested on a real ECU.
+
+   The project lacks static type check, but it is in the plan to introduce it.
 
 -----
 
@@ -39,6 +32,7 @@ Why is there unimplemented services?
 
       - The actual synchronous client doesn't support it.
       - The ratio of "service usage in the industry" over "the amount of work necessary to implement it" is too poor.
+      - The service has been added in the 2020 version and I haven't taken the time to implement it.
 
    As for the client capabilities, I am aware that the single-request/single-response mechanism of the actual client is limiting. I believe it is enough to handle the majority of today's use-cases. 
    I may work in a future version for a more sophisticated client that will have message queues for each service with callback and everything, therefore allowing asynchronous services such as :ref:`ResponseOnEvent<ResponseOnEvent>` or :ref:`ReadDataByPeriodicIdentifier<ReadDataByPeriodicIdentifier>`
