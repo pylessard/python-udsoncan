@@ -172,7 +172,7 @@ class J2534():
         if not pDeviceID:
             pDeviceID = ctypes.c_ulong()
     
-        result = dllPassThruOpen(byref(ctypes.c_int()), byref(pDeviceID))
+        result = dllPassThruOpen(ctypes.POINTER(ctypes.c_int)(), byref(pDeviceID))
         return Error_ID(hex(result)), pDeviceID
     
     
@@ -233,12 +233,12 @@ class J2534():
         pMsg.Data = Data
         pMsg.DataSize = len(Data)
     
-        result = dllPassThruStartPeriodicMsgMsgs(ChannelID, byref(pMsg), byref(c_ulong(MsgID)), c_ulong(TimeInterval))
+        result = dllPassThruStartPeriodicMsg(ChannelID, byref(pMsg), byref(c_ulong(MsgID)), c_ulong(TimeInterval))
     
         return Error_ID(hex(result))
     
     def PassThruStopPeriodicMsg(self, ChannelID, MsgID):
-        result = dllPassThruStopPeriodicMsgMsgs(ChannelID, MsgID)
+        result = dllPassThruStopPeriodicMsg(ChannelID, MsgID)
     
         return Error_ID(hex(result))
 

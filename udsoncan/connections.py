@@ -22,7 +22,7 @@ except Exception as e:
 
 try:
     from udsoncan.j2534 import J2534
-    from udsoncan.j2534 import Protocol_ID
+    from udsoncan.j2534 import Protocol_ID, Ioctl_Flags, Ioctl_ID
     _import_j2534_err = None
 except Exception as e:
     _import_j2534_err = e
