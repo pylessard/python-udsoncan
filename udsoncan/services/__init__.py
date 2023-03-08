@@ -50,20 +50,32 @@ class BaseService(ABC):
     def response_id(cls):
         return cls._sid + 0x40
 
+    @staticmethod
+    def __get_all_subclasses(cls):
+        # this gets all subclasses and returns a list where the "most original" subclasses are listed in front of the other subclasses
+        # This enables subclasses of any BaseService outside of udsoncan.services to be available, enabling specialization of calls in 
+        # cases where a CAN message is similar to one found in official UDS documentation but has a different service ID
+        # This also allows for custom UDS service creation where a nonstandard extension is more easily played ontop of the protocol
+        lst = []
+        lst.extend(cls.__subclasses__())
+        for x in cls.__subclasses__():
+            subclasses = BaseService.__get_all_subclasses(x)
+            if len(subclasses) > 0:
+                lst.extend(subclasses)
+        return lst
     @classmethod	# Returns an instance of the service identified by the service ID (Request)
     def from_request_id(cls, given_id):
-        for name, obj in inspect.getmembers(sys.modules[__name__]):
-            if hasattr(obj, "__bases__") and cls in obj.__bases__:
-                if obj.request_id() == given_id:
-                    return obj
+        classes = BaseService.__get_all_subclasses(cls)
+        for obj in classes:
+            if obj.request_id() == given_id:
+                return obj
 
     @classmethod	# Returns an instance of the service identified by the service ID (Response)
     def from_response_id(cls, given_id):
-
-        for name, obj in inspect.getmembers(sys.modules[__name__]):
-            if hasattr(obj, "__bases__") and cls in obj.__bases__:
-                if obj.response_id() == int(given_id):
-                    return obj
+        classes = BaseService.__get_all_subclasses(cls)
+        for obj in classes:
+            if obj.response_id() == int(given_id):
+                return obj
 
     #Default subfunction ID for service that does not implement subfunction_id().
     def subfunction_id(self):
