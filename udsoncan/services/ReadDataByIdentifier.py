@@ -50,7 +50,7 @@ class ReadDataByIdentifier(BaseService):
         didlist = cls.validate_didlist_input(didlist)
 
         req = Request(cls)
-        ServiceHelper.check_did_config(didlist, didconfig)
+        didconfig = ServiceHelper.check_did_config(didlist, didconfig)
 
         did_reading_all_data = None
         for did in didlist:
