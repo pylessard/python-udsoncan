@@ -1,18 +1,19 @@
-from udsoncan import Response, services
+from udsoncan import Response
+from udsoncan.BaseService import BaseService
 from test.UdsTest import UdsTest
 import inspect
 
-class DummyServiceNormal(services.BaseService):
+class DummyServiceNormal(BaseService):
     _sid = 0x13
 
     def subfunction_id(self):
         return 0x44
 
-class DummyServiceNoSubunction(services.BaseService):
+class DummyServiceNoSubunction(BaseService):
     _sid = 0x13
     _use_subfunction = False
 
-class DummyServiceNoResponseData(services.BaseService):
+class DummyServiceNoResponseData(BaseService):
     _sid = 0x13
     _no_response_data = True
 

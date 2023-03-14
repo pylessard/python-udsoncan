@@ -1,24 +1,29 @@
-from . import *
-from udsoncan.Response import Response
+from udsoncan import Request, Response
 from udsoncan.exceptions import *
+from udsoncan.BaseService import BaseService, BaseResponseData
+from udsoncan.ResponseCode import ResponseCode
+
 
 class ReadDataByPeriodicIdentifier(BaseService):
     _sid = 0x2A
 
-    supported_negative_response = [	 Response.Code.IncorrectMessageLengthOrInvalidFormat,
-                                                    Response.Code.ConditionsNotCorrect,
-                                                    Response.Code.RequestOutOfRange,
-                                                    Response.Code.SecurityAccessDenied
-                                                    ]
+    supported_negative_response = [ResponseCode.IncorrectMessageLengthOrInvalidFormat,
+                                   ResponseCode.ConditionsNotCorrect,
+                                   ResponseCode.RequestOutOfRange,
+                                   ResponseCode.SecurityAccessDenied
+                                   ]
 
-    @classmethod
-    def make_request(cls):
-        raise NotImplementedError('Service is not implemented')
-
-    @classmethod
-    def interpret_response(cls, response):
-        raise NotImplementedError('Service is not implemented')
-
-    class ResponseData(BaseResponseData):	
+    class ResponseData(BaseResponseData):
         def __init__(self):
             super().__init__(ReadDataByPeriodicIdentifier)
+
+    class InterpretedResponse(Response):
+        service_data: "ReadDataByPeriodicIdentifier.ResponseData"
+
+    @classmethod
+    def make_request(cls) -> Request:
+        raise NotImplementedError('Service is not implemented')
+
+    @classmethod
+    def interpret_response(cls, response: Response) -> InterpretedResponse:
+        raise NotImplementedError('Service is not implemented')

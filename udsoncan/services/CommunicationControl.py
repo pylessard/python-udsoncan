@@ -1,6 +1,11 @@
-from . import *
-from udsoncan.Response import Response
+from udsoncan import Request, Response, CommunicationType
 from udsoncan.exceptions import *
+from udsoncan.BaseService import BaseService, BaseSubfunction, BaseResponseData
+from udsoncan.ResponseCode import ResponseCode
+import udsoncan.tools as tools
+
+from typing import cast, Union
+
 
 class CommunicationControl(BaseService):
     _sid = 0x28
@@ -8,24 +13,37 @@ class CommunicationControl(BaseService):
     class ControlType(BaseSubfunction):
         """
         CommunicationControl defined subfunctions
-        """		
-        __pretty_name__ = 'control type' 
+        """
+        __pretty_name__ = 'control type'
 
         enableRxAndTx = 0
         enableRxAndDisableTx = 1
         disableRxAndEnableTx = 2
         disableRxAndTx = 3
 
-    supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
-                                                    Response.Code.IncorrectMessageLengthOrInvalidFormat,
-                                                    Response.Code.ConditionsNotCorrect,
-                                                    Response.Code.RequestOutOfRange
-                                                    ]
+    supported_negative_response = [ResponseCode.SubFunctionNotSupported,
+                                   ResponseCode.IncorrectMessageLengthOrInvalidFormat,
+                                   ResponseCode.ConditionsNotCorrect,
+                                   ResponseCode.RequestOutOfRange
+                                   ]
+
+    class ResponseData(BaseResponseData):
+        """
+        .. data:: control_type_echo
+
+                Request subfunction echoed back by the server
+        """
+        control_type_echo: int
+
+        def __init__(self, control_type_echo: int):
+            super().__init__(CommunicationControl)
+            self.control_type_echo = control_type_echo
+
+    class InterpretedResponse(Response):
+        service_data: "CommunicationControl.ResponseData"
 
     @classmethod
-    def normalize_communication_type(self, communication_type):
-        from udsoncan import CommunicationType
-
+    def normalize_communication_type(self, communication_type: Union[int, bytes, CommunicationType]) -> CommunicationType:
         if not isinstance(communication_type, CommunicationType) and not isinstance(communication_type, int) and not isinstance(communication_type, bytes):
             raise ValueError('communication_type must either be a CommunicationType object or an integer')
 
@@ -35,7 +53,7 @@ class CommunicationControl(BaseService):
         return communication_type
 
     @classmethod
-    def make_request(cls, control_type, communication_type):
+    def make_request(cls, control_type: int, communication_type: CommunicationType) -> Request:
         """
         Generates a request for CommunicationControl
 
@@ -46,10 +64,8 @@ class CommunicationControl(BaseService):
         :type communication_type: :ref:`CommunicationType <CommunicationType>`, int, bytes
 
         :raises ValueError: If parameters are out of range, missing or wrong type
-        """		
-        from udsoncan import Request
-
-        ServiceHelper.validate_int(control_type, min=0, max=0x7F, name='Control type')
+        """
+        tools.validate_int(control_type, min=0, max=0x7F, name='Control type')
 
         communication_type = cls.normalize_communication_type(communication_type)
         request = Request(service=cls, subfunction=control_type)
@@ -58,7 +74,7 @@ class CommunicationControl(BaseService):
         return request
 
     @classmethod
-    def interpret_response(cls, response):
+    def interpret_response(cls, response: Response) -> InterpretedResponse:
         """
         Populates the response ``service_data`` property with an instance of :class:`CommunicationControl.ResponseData<udsoncan.services.CommunicationControl.ResponseData>`
 
@@ -66,19 +82,15 @@ class CommunicationControl(BaseService):
         :type response: :ref:`Response<Response>`
 
         :raises InvalidResponseException: If length of ``response.data`` is too short
-        """		
-        if len(response.data) < 1: 	
+        """
+        if response.data is None:
+            raise InvalidResponseException(response, "No data in response")
+ 
+        if len(response.data) < 1:
             raise InvalidResponseException(response, "Response data must be at least 1 byte")
 
-        response.service_data = cls.ResponseData()
-        response.service_data.control_type_echo = response.data[0]
+        response.service_data = cls.ResponseData(
+            control_type_echo=response.data[0]
+        )
 
-    class ResponseData(BaseResponseData):
-        """
-        .. data:: control_type_echo
-
-                Request subfunction echoed back by the server
-        """		
-        def __init__(self):
-            super().__init__(CommunicationControl)
-            self.control_type_echo = None
+        return cast(CommunicationControl.InterpretedResponse, response)

@@ -283,7 +283,7 @@ Note, this connection has been written to plug in where a standard IsoTPSocketCo
 
    from udsoncan.connections import J2534Connection
    
-   conn = J2434Connection(windll='C:\Program Files (x86)\OpenECU\OpenPort 2.0\drivers\openport 2.0\op20pt32.dll',
+   conn = J2534Connection(windll='C:\Program Files (x86)\OpenECU\OpenPort 2.0\drivers\openport 2.0\op20pt32.dll',
            rxid=0x7E8, txid=0x7E0)                                                     # Define the connection using the absolute path to the DLL, rxid and txid's for isotp
            
    conn.send(b'\x22\xf2\x00')                                                          # Mode 22 request for DID F200

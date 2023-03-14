@@ -1,4 +1,3 @@
-from udsoncan.client import Client
 from udsoncan import services, MemoryLocation, DataFormatIdentifier, DynamicDidDefinition
 from udsoncan.exceptions import *
 

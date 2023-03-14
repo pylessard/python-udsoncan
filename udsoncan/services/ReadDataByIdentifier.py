@@ -1,37 +1,57 @@
-from . import *
-from udsoncan.Response import Response
-from udsoncan.exceptions import *
 import struct
+
+from udsoncan import Request, Response, DidCodec, check_did_config, make_did_codec_from_config, DIDConfig
+from udsoncan.exceptions import *
+from udsoncan.BaseService import BaseService, BaseResponseData
+from udsoncan.ResponseCode import ResponseCode
+import udsoncan.tools as tools
+
+from typing import Dict, Any, Union, List, cast
 
 
 class ReadDataByIdentifier(BaseService):
     _sid = 0x22
     _use_subfunction = False
 
+    supported_negative_response = [ResponseCode.IncorrectMessageLengthOrInvalidFormat,
+                                   ResponseCode.ConditionsNotCorrect,
+                                   ResponseCode.RequestOutOfRange,
+                                   ResponseCode.SecurityAccessDenied
+                                   ]
 
-    supported_negative_response = [	 Response.Code.IncorrectMessageLengthOrInvalidFormat,
-                                                    Response.Code.ConditionsNotCorrect,
-                                                    Response.Code.RequestOutOfRange,
-                                                    Response.Code.SecurityAccessDenied
-                                                    ]	
+    class ResponseData(BaseResponseData):
+        """
+        .. data:: values
+
+                Dictionary mapping the DID (int) with the value returned by the associated :ref:`DidCodec<DidCodec>`.decode method
+        """
+
+        values: Dict[int, Any]
+
+        def __init__(self, values: Dict[int, Any]):
+            super().__init__(ReadDataByIdentifier)
+
+            self.values = values
+
+    class InterpretedResponse(Response):
+        service_data: "ReadDataByIdentifier.ResponseData"
 
     @classmethod
-    def validate_didlist_input(cls, dids):
+    def validate_didlist_input(cls, dids: Union[int, List[int]]) -> List[int]:
         if not isinstance(dids, int) and not isinstance(dids, list):
             raise ValueError("Data Identifier must either be an integer or a list of integer")
 
         if isinstance(dids, int):
-            ServiceHelper.validate_int(dids, min=0, max=0xFFFF, name='Data Identifier')
+            tools.validate_int(dids, min=0, max=0xFFFF, name='Data Identifier')
 
         if isinstance(dids, list):
             for did in dids:
-                ServiceHelper.validate_int(did, min=0, max=0xFFFF, name='Data Identifier')
-
+                tools.validate_int(did, min=0, max=0xFFFF, name='Data Identifier')
 
         return [dids] if not isinstance(dids, list) else dids
 
     @classmethod
-    def make_request(cls, didlist, didconfig):
+    def make_request(cls, didlist: Union[int, List[int]], didconfig: DIDConfig) -> Request:
         """
         Generates a request for ReadDataByIdentifier
 
@@ -43,36 +63,41 @@ class ReadDataByIdentifier(BaseService):
 
         :raises ValueError: If parameters are out of range, missing or wrong type
         :raises ConfigError: If didlist contains a DID not defined in didconfig
-        """		
-        from udsoncan import Request
-        from udsoncan import DidCodec
+        """
 
         didlist = cls.validate_didlist_input(didlist)
 
         req = Request(cls)
-        didconfig = ServiceHelper.check_did_config(didlist, didconfig)
+        didconfig = check_did_config(didlist, didconfig)
 
         did_reading_all_data = None
         for did in didlist:
             if did not in didconfig:    # Already checked in check_did_config. Paranoid check
                 raise ConfigError(key=did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
-                
-            codec = DidCodec.from_config(didconfig[did])
+
+            codec = make_did_codec_from_config(didconfig[did])  # Make sure the config is good before sending the request. This method can raise.
+
             try:
-                length = len(codec)
+                len(codec)  # Validate the length function. May raise
                 if did_reading_all_data is not None:
-                    raise ValueError('Did 0x%04X is configured to read the rest of the payload (__len__ raisong ReadAllRemainingData), but a subsequent DID is requested (0x%04x)' % (did_reading_all_data, did))
+                    raise ValueError('Did 0x%04X is configured to read the rest of the payload (__len__ raisong ReadAllRemainingData), but a subsequent DID is requested (0x%04x)' % (
+                        did_reading_all_data, did))
             except DidCodec.ReadAllRemainingData:
                 if did_reading_all_data is not None:
-                    raise ValueError('It is impossible to read 2 DIDs configured to read the rest of the payload (__len__ raising ReadAllRemainingData). Dids are : 0x%04X and 0x%04X' % (did_reading_all_data, did))
+                    raise ValueError('It is impossible to read 2 DIDs configured to read the rest of the payload (__len__ raising ReadAllRemainingData). Dids are : 0x%04X and 0x%04X' % (
+                        did_reading_all_data, did))
                 did_reading_all_data = did
 
-        req.data = struct.pack('>'+'H'*len(didlist), *didlist) #Encode list of DID
+        req.data = struct.pack('>' + 'H' * len(didlist), *didlist)  # Encode list of DID
 
         return req
 
     @classmethod
-    def interpret_response(cls, response, didlist, didconfig, tolerate_zero_padding=True):
+    def interpret_response(cls,
+                           response: Response,
+                           didlist: Union[int, List[int]],
+                           didconfig: DIDConfig,
+                           tolerate_zero_padding: bool = True) -> InterpretedResponse:
         """
         Populates the response ``service_data`` property with an instance of :class:`ReadDataByIdentifier.ResponseData<udsoncan.services.ReadDataByIdentifier.ResponseData>`
 
@@ -91,59 +116,51 @@ class ReadDataByIdentifier(BaseService):
         :raises ValueError: If parameters are out of range, missing or wrong type
         :raises ConfigError: If ``didlist`` parameter or response contains a DID not defined in ``didconfig``.
         :raises InvalidResponseException: If response data is incomplete or if DID data does not match codec length.
-        """	
-        from udsoncan import DidCodec
+        """
+        if response.data is None:
+            raise InvalidResponseException(response, "No data in response")
 
         didlist = cls.validate_didlist_input(didlist)
-        didconfig = ServiceHelper.check_did_config(didlist, didconfig)
+        didconfig = check_did_config(didlist, didconfig)
 
-        response.service_data = cls.ResponseData()
-        response.service_data.values = {}
+        response.service_data = cls.ResponseData(
+            values={}
+        )
 
         # Parsing algorithm to extract DID value
         offset = 0
         while True:
             if len(response.data) <= offset:
-                break	# Done
+                break  # Done
 
-            if len(response.data) <= offset +1:
-                if tolerate_zero_padding and response.data[-1] == 0:	# One extra byte, but it's a 0 and we accept that. So we're done
+            if len(response.data) <= offset + 1:
+                if tolerate_zero_padding and response.data[-1] == 0:  # One extra byte, but it's a 0 and we accept that. So we're done
                     break
                 raise InvalidResponseException(response, "Response given by server is incomplete.")
 
-            did = struct.unpack('>H', response.data[offset:offset+2])[0]	# Get the DID number
-            if did == 0 and did not in didconfig and tolerate_zero_padding: # We read two zeros and that is not a DID bu we accept that. So we're done.
+            did = struct.unpack('>H', response.data[offset:offset + 2])[0]  # Get the DID number
+            if did == 0 and did not in didconfig and tolerate_zero_padding:  # We read two zeros and that is not a DID bu we accept that. So we're done.
                 if response.data[offset:] == b'\x00' * (len(response.data) - offset):
                     break
 
-            if did not in didconfig:	# Already checked in check_did_config. Paranoid check
+            if did not in didconfig:  # Already checked in check_did_config. Paranoid check
                 raise ConfigError(key=did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
 
-            codec = DidCodec.from_config(didconfig[did])
-            offset+=2
+            codec = make_did_codec_from_config(didconfig[did])
+            offset += 2
 
             try:
                 payload_size = len(codec)
             except DidCodec.ReadAllRemainingData:
                 payload_size = len(response.data) - offset
 
-            if len(response.data) < offset+payload_size:
-                raise InvalidResponseException(response, "Value for data identifier 0x%04x was incomplete according to definition in configuration" % did)
+            if len(response.data) < offset + payload_size:
+                raise InvalidResponseException(
+                    response, "Value for data identifier 0x%04x was incomplete according to definition in configuration" % did)
 
-            subpayload = response.data[offset:offset+payload_size]
-            offset += payload_size	# Codec must define a __len__ function that matches the encoded payload length.
+            subpayload = response.data[offset:offset + payload_size]
+            offset += payload_size  # Codec must define a __len__ function that matches the encoded payload length.
             val = codec.decode(subpayload)
             response.service_data.values[did] = val
 
-        return response
-
-    class ResponseData(BaseResponseData):
-        """
-        .. data:: values
-
-                Dictionary mapping the DID (int) with the value returned by the associated :ref:`DidCodec<DidCodec>`.decode method
-        """				
-        def __init__(self):
-            super().__init__(ReadDataByIdentifier)
-
-            self.values = None
+        return cast(ReadDataByIdentifier.InterpretedResponse, response)

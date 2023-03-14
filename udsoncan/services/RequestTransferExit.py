@@ -1,18 +1,38 @@
-from . import *
-from udsoncan.Response import Response
+from udsoncan import Request, Response
+from udsoncan.BaseService import BaseService, BaseResponseData
+from udsoncan.ResponseCode import ResponseCode
 from udsoncan.exceptions import *
+
+from typing import Optional, cast
+
 
 class RequestTransferExit(BaseService):
     _sid = 0x37
     _use_subfunction = False
     _no_response_data = True
 
-    supported_negative_response = [	 Response.Code.IncorrectMessageLengthOrInvalidFormat,
-                                                    Response.Code.RequestSequenceError
-                                                    ]
+    supported_negative_response = [ResponseCode.IncorrectMessageLengthOrInvalidFormat,
+                                   ResponseCode.RequestSequenceError
+                                   ]
+
+    class ResponseData(BaseResponseData):
+        """
+        .. data:: parameter_records
+
+                bytes object containing optional data provided by the server
+        """
+
+        parameter_records: bytes
+
+        def __init__(self, parameter_records: bytes):
+            super().__init__(RequestTransferExit)
+            self.parameter_records = parameter_records
+
+    class InterpretedResponse(Response):
+        service_data: "RequestTransferExit.ResponseData"
 
     @classmethod
-    def make_request(cls, data=None):
+    def make_request(cls, data: Optional[bytes] = None) -> Request:
         """
         Generates a request for RequestTransferExit
 
@@ -20,8 +40,7 @@ class RequestTransferExit(BaseService):
         :type data: bytes
 
         :raises ValueError: If parameters are out of range, missing or wrong type
-        """			
-        from udsoncan import Request, MemoryLocation
+        """
 
         if data is not None and not isinstance(data, bytes):
             raise ValueError('data must be a bytes object')
@@ -30,22 +49,15 @@ class RequestTransferExit(BaseService):
         return request
 
     @classmethod
-    def interpret_response(cls, response):
+    def interpret_response(cls, response: Response) -> InterpretedResponse:
         """
         Populates the response ``service_data`` property with an instance of :class:`RequestTransferExit.ResponseData<udsoncan.services.RequestTransferExit.ResponseData>`
 
         :param response: The received response to interpret
         :type response: :ref:`Response<Response>`
-        """				
-        response.service_data = cls.ResponseData()
-        response.service_data.parameter_records = response.data
-
-    class ResponseData(BaseResponseData):
         """
-        .. data:: parameter_records
+        response.service_data = cls.ResponseData(
+            parameter_records=response.data if response.data else bytes()
+        )
 
-                bytes object containing optional data provided by the server
-        """		
-        def __init__(self):
-            super().__init__(RequestTransferExit)
-            self.parameter_records = None
+        return cast(RequestTransferExit.InterpretedResponse, response)

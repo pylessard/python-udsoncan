@@ -5,17 +5,16 @@ import logging
 import binascii
 import sys
 from abc import ABC, abstractmethod
-import functools
 import time
 
 try:
-    import can
+    import can  # type:ignore
     _import_can_err = None
 except Exception as e:
     _import_can_err = e
 
 try:
-    import isotp
+    import isotp    # type:ignore
     _import_isotp_err = None
 except Exception as e:
     _import_isotp_err = e
@@ -28,7 +27,7 @@ except Exception as e:
     _import_j2534_err = e
 
 try:
-    from aioisotp.sync import SyncISOTPNetwork
+    from aioisotp.sync import SyncISOTPNetwork  # type:ignore
     _import_aioisotp_err = None
 except Exception as e:
     _import_aioisotp_err = e
@@ -36,6 +35,7 @@ except Exception as e:
 from udsoncan.Request import Request
 from udsoncan.Response import Response
 from udsoncan.exceptions import TimeoutException
+
 
 class BaseConnection(ABC):
 
@@ -57,11 +57,11 @@ class BaseConnection(ABC):
         """
 
         if isinstance(data, Request) or isinstance(data, Response):
-            payload = data.get_payload()  
-        else :
+            payload = data.get_payload()
+        else:
             payload = data
 
-        self.logger.debug('Sending %d bytes : [%s]' % (len(payload), binascii.hexlify(payload) ))
+        self.logger.debug('Sending %d bytes : [%s]' % (len(payload), binascii.hexlify(payload)))
         self.specific_send(payload)
 
     def wait_frame(self, timeout=2, exception=False):
@@ -88,7 +88,7 @@ class BaseConnection(ABC):
                 frame = None
 
         if frame is not None:
-            self.logger.debug('Received %d bytes : [%s]' % (len(frame), binascii.hexlify(frame) ))
+            self.logger.debug('Received %d bytes : [%s]' % (len(frame), binascii.hexlify(frame)))
         return frame
 
     def __enter__(self):
@@ -131,13 +131,21 @@ class BaseConnection(ABC):
 
         :returns: None
         """
-        pass	
+        pass
 
     @abstractmethod
     def empty_rxqueue(self):
         """ Empty all unread data in the reception buffer.
 
         :returns: None
+        """
+        pass
+
+    @abstractmethod
+    def is_open(self) -> bool:
+        """ Tells if the connection is open.
+
+        :returns: bool
         """
         pass
 
@@ -157,6 +165,7 @@ class SocketConnection(BaseConnection):
     :type name: string
 
     """
+
     def __init__(self, sock, bufsize=4095, name=None):
         BaseConnection.__init__(self, name)
 
@@ -165,9 +174,8 @@ class SocketConnection(BaseConnection):
         self.opened = False
         self.rxthread = None
         self.sock = sock
-        self.sock.settimeout(0.1)	# for recv
-        self.bufsize=bufsize
-
+        self.sock.settimeout(0.1)  # for recv
+        self.bufsize = bufsize
 
     def open(self):
         self.exit_requested = False
@@ -196,7 +204,6 @@ class SocketConnection(BaseConnection):
                 pass
             except Exception:
                 self.exit_requested = True
-
 
     def close(self):
         self.exit_requested = True
@@ -229,7 +236,6 @@ class SocketConnection(BaseConnection):
             self.rxqueue.get()
 
 
-
 class IsoTPSocketConnection(BaseConnection):
     """
     Sends and receives data through an ISO-TP socket. Makes cleaner code than SocketConnection but offers no additional functionality.
@@ -251,13 +257,14 @@ class IsoTPSocketConnection(BaseConnection):
     :type kwargs: dict
 
     """
+
     def __init__(self, interface, rxid, txid, name=None, tpsock=None, *args, **kwargs):
 
         BaseConnection.__init__(self, name)
 
-        self.interface=interface
-        self.rxid=rxid
-        self.txid=txid
+        self.interface = interface
+        self.rxid = rxid
+        self.txid = txid
         self.rxqueue = queue.Queue()
         self.exit_requested = False
         self.opened = False
@@ -273,7 +280,6 @@ class IsoTPSocketConnection(BaseConnection):
             self.tpsock = isotp.socket(timeout=0.1)
         else:
             self.tpsock = tpsock
-
 
     def open(self):
         self.tpsock.bind(self.interface, rxid=self.rxid, txid=self.txid, *self.tpsock_bind_args, **self.tpsock_bind_kwargs)
@@ -303,7 +309,6 @@ class IsoTPSocketConnection(BaseConnection):
                 pass
             except Exception:
                 self.exit_requested = True
-
 
     def close(self):
         self.exit_requested = True
@@ -343,6 +348,7 @@ class IsoTPConnection(IsoTPSocketConnection):
     """
     pass
 
+
 class QueueConnection(BaseConnection):
     """
     Sends and receives data using 2 Python native queues.
@@ -356,11 +362,12 @@ class QueueConnection(BaseConnection):
     :type name: string
 
     """
+
     def __init__(self, name=None, mtu=4095):
         BaseConnection.__init__(self, name)
 
-        self.fromuserqueue = queue.Queue()	# Client reads from this queue. Other end is simulated
-        self.touserqueue = queue.Queue()	# Client writes to this queue. Other end is simulated
+        self.fromuserqueue = queue.Queue()  # Client reads from this queue. Other end is simulated
+        self.touserqueue = queue.Queue()  # Client writes to this queue. Other end is simulated
         self.opened = False
         self.mtu = mtu
 
@@ -376,13 +383,13 @@ class QueueConnection(BaseConnection):
         self.close()
 
     def is_open(self):
-        return self.opened 
+        return self.opened
 
     def close(self):
         self.empty_rxqueue()
         self.empty_txqueue()
         self.opened = False
-        self.logger.info('Connection closed')	
+        self.logger.info('Connection closed')
 
     def specific_send(self, payload):
         if self.mtu is not None:
@@ -443,13 +450,13 @@ class PythonIsoTpConnection(BaseConnection):
     def __init__(self, isotp_layer, name=None):
         BaseConnection.__init__(self, name)
         self.toIsoTPQueue = queue.Queue()
-        self.fromIsoTPQueue = queue.Queue()	
+        self.fromIsoTPQueue = queue.Queue()
         self.rxthread = None
         self.exit_requested = False
         self.opened = False
         self.isotp_layer = isotp_layer
 
-        assert isinstance(self.isotp_layer, isotp.TransportLayer) , 'isotp_layer must be a valid isotp.TransportLayer '
+        assert isinstance(self.isotp_layer, isotp.TransportLayer), 'isotp_layer must be a valid isotp.TransportLayer '
 
     def open(self, bus=None):
         if bus is not None:
@@ -469,16 +476,16 @@ class PythonIsoTpConnection(BaseConnection):
         self.close()
 
     def is_open(self):
-        return self.opened 
+        return self.opened
 
     def close(self):
         self.empty_rxqueue()
         self.empty_txqueue()
-        self.exit_requested=True
+        self.exit_requested = True
         self.rxthread.join()
         self.isotp_layer.reset()
         self.opened = False
-        self.logger.info('Connection closed')	
+        self.logger.info('Connection closed')
 
     def specific_send(self, payload):
         if self.mtu is not None:
@@ -486,7 +493,7 @@ class PythonIsoTpConnection(BaseConnection):
                 self.logger.warning("Truncating payload to be set to a length of %d" % (self.mtu))
                 payload = payload[0:self.mtu]
 
-        self.toIsoTPQueue.put(bytearray(payload)) # isotp.protocol.TransportLayer uses byte array. udsoncan is strict on bytes format
+        self.toIsoTPQueue.put(bytearray(payload))  # isotp.protocol.TransportLayer uses byte array. udsoncan is strict on bytes format
 
     def specific_wait_frame(self, timeout=2):
         if not self.opened:
@@ -507,7 +514,7 @@ class PythonIsoTpConnection(BaseConnection):
                 self.logger.warning("Truncating received payload to a length of %d" % (self.mtu))
                 frame = frame[0:self.mtu]
 
-        return bytes(frame)	# isotp.protocol.TransportLayer uses bytearray. udsoncan is strict on bytes format
+        return bytes(frame)  # isotp.protocol.TransportLayer uses bytearray. udsoncan is strict on bytes format
 
     def empty_rxqueue(self):
         while not self.fromIsoTPQueue.empty():
@@ -515,7 +522,7 @@ class PythonIsoTpConnection(BaseConnection):
 
     def empty_txqueue(self):
         while not self.toIsoTPQueue.empty():
-            self.toIsoTPQueue.get()			
+            self.toIsoTPQueue.get()
 
     def rxthread_task(self):
         while not self.exit_requested:
@@ -533,6 +540,7 @@ class PythonIsoTpConnection(BaseConnection):
             except Exception as e:
                 self.exit_requested = True
                 self.logger.error(str(e))
+
 
 class J2534Connection(BaseConnection):
     """
@@ -555,34 +563,36 @@ class J2534Connection(BaseConnection):
     :type kwargs: dict
 
     """
-    def __init__(self, windll, rxid, txid, name=None, debug = False, *args, **kwargs):
+
+    def __init__(self, windll, rxid, txid, name=None, debug=False, *args, **kwargs):
 
         BaseConnection.__init__(self, name)
 
-        #Set up a J2534 interface using the DLL provided
-        self.interface = J2534(windll = windll, rxid = rxid, txid = txid)
+        # Set up a J2534 interface using the DLL provided
+        self.interface = J2534(windll=windll, rxid=rxid, txid=txid)
 
-        #Set the protocol to ISO15765, Baud rate to 500000
+        # Set the protocol to ISO15765, Baud rate to 500000
         self.protocol = Protocol_ID.ISO15765
         self.baudrate = 500000
 
-        #Open the interface (connect to the DLL)
+        # Open the interface (connect to the DLL)
         result, self.devID = self.interface.PassThruOpen()
 
         if debug:
-            result = self.interface.PassThruIoctl(Handle = 0,IoctlID = Ioctl_Flags.TX_IOCTL_SET_DLL_DEBUG_FLAGS, ioctlInput = Ioctl_Flags.TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS)
+            result = self.interface.PassThruIoctl(Handle=0, IoctlID=Ioctl_Flags.TX_IOCTL_SET_DLL_DEBUG_FLAGS,
+                                                  ioctlInput=Ioctl_Flags.TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS)
 
-        #Get the firmeware and DLL version etc, mainly for debugging output
+        # Get the firmeware and DLL version etc, mainly for debugging output
         self.result, self.firmwareVersion, self.dllVersion, self.apiVersion = self.interface.PassThruReadVersion(self.devID)
-        self.logger.info("J2534 FirmwareVersion: " + str(self.firmwareVersion.value) + ", dllVersoin: " + str(self.dllVersion.value) + ", apiVersion" + str(self.apiVersion.value))
+        self.logger.info("J2534 FirmwareVersion: " + str(self.firmwareVersion.value) + ", dllVersoin: " +
+                         str(self.dllVersion.value) + ", apiVersion" + str(self.apiVersion.value))
 
-        #get the channel ID of the interface (used for subsequent communication)
+        # get the channel ID of the interface (used for subsequent communication)
         self.result, self.channelID = self.interface.PassThruConnect(self.devID, self.protocol.value, self.baudrate)
 
-        #Set the filters and clear the read buffer (filters will be set based on tx/rxids)
+        # Set the filters and clear the read buffer (filters will be set based on tx/rxids)
         self.result = self.interface.PassThruStartMsgFilter(self.channelID, self.protocol.value)
         self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_RX_BUFFER)
-
 
         self.rxqueue = queue.Queue()
         self.exit_requested = False
@@ -606,18 +616,17 @@ class J2534Connection(BaseConnection):
         return self.opened
 
     def rxthread_task(self):
-        
+
         while not self.exit_requested:
-            
+
             try:
                 result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 1)
-                
+
                 if data is not None:
                     self.rxqueue.put(data)
             except Exception:
                 self.logger.critical("Exiting J2534 rx thread")
                 self.exit_requested = True
-
 
     def close(self):
         self.exit_requested = True
@@ -650,23 +659,24 @@ class J2534Connection(BaseConnection):
         while not self.rxqueue.empty():
             self.rxqueue.get()
 
+
 class FakeConnection(BaseConnection):
     """
     Sends and receives STATIC data defined in a local dict. 
     Used so that an application can be tested without a live can network
     """
-    def __init__(self, name=None, debug = False, *args, **kwargs):
+
+    def __init__(self, name=None, debug=False, *args, **kwargs):
 
         BaseConnection.__init__(self, name)
 
         self.rxqueue = queue.Queue()
-        
+
         self.exit_requested = False
         self.opened = False
 
         self.ResponseData = {b'\x10\x03': b'\x50\x03\x12\x23\x34\x45',
-                b'\x22\xf1\x90\xf1\x89\xf1\x91\xf8\x06\xf1\xa3': b'\x22\xf1\x90\xf1\x89\xf1\x91\xf8\x06\xf1\xa3'}
-
+                             b'\x22\xf1\x90\xf1\x89\xf1\x91\xf8\x06\xf1\xa3': b'\x22\xf1\x90\xf1\x89\xf1\x91\xf8\x06\xf1\xa3'}
 
     def open(self):
         self.opened = True
@@ -712,6 +722,7 @@ class FakeConnection(BaseConnection):
         while not self.rxqueue.empty():
             self.rxqueue.get()
 
+
 class SyncAioIsotpConnection(BaseConnection):
     """
     A wrapper for aioisotp sync variant
@@ -735,6 +746,7 @@ class SyncAioIsotpConnection(BaseConnection):
     :param kwargs: Optional parameters dictionary passed to aioisotp binding method.
     :type kwargs: dict
     """
+
     def __init__(self, rx_id, tx_id, name=None, *args, **kwargs):
         BaseConnection.__init__(self, name)
         self.network = SyncISOTPNetwork(*args, **kwargs)

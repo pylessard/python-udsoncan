@@ -1,10 +1,11 @@
-from udsoncan import Request, services
+from udsoncan import Request
+from udsoncan.BaseService import BaseService
 from test.UdsTest import UdsTest
 
-class DummyServiceNormal(services.BaseService):
+class DummyServiceNormal(BaseService):
     _sid = 0x13
 
-class DummyServiceNoSubunction(services.BaseService):
+class DummyServiceNoSubunction(BaseService):
     _sid = 0x13
     _use_subfunction = False
 
