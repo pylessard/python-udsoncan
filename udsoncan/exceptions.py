@@ -1,16 +1,22 @@
-import inspect
-def service_name(service):
-    if inspect.isclass(service):
-        return service.__name__
-    else:
-        return service.__class__.__name__
+__all__ = [
+    'TimeoutException',
+    'NegativeResponseException',
+    'InvalidResponseException',
+    'UnexpectedResponseException',
+    'ConfigError'
+]
+from udsoncan.Response import Response
+from typing import Any
+
 
 class TimeoutException(Exception):
     """
     Simple extension of ``Exception`` with no additional property. Raised when a timeout in the communication happens.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
 
 class NegativeResponseException(Exception):
     """
@@ -20,17 +26,23 @@ class NegativeResponseException(Exception):
     :param response: The response that triggered the exception
     :type response: :ref:`Response<Response>`
     """
-    def __init__(self, response, *args, **kwargs):
+    response: Response
+
+    def __init__(self, response: Response, *args, **kwargs):
         self.response = response
         msg = self.make_msg(response)
-        if len(args) > 0 :
-            msg += " "+str(args[0])
+        if len(args) > 0:
+            msg += " " + str(args[0])
             args = tuple(list(args)[1:])
         super().__init__(msg, *args, **kwargs)
 
-    def make_msg(self, response):
-        servicename = response.service.get_name()+" " if response.service is not None else ""
-        return "%sservice execution returned a negative response %s (0x%x)" % (servicename, response.code_name, response.code)
+    def make_msg(self, response: Response):
+        servicename = response.service.get_name() + " " if response.service is not None else ""
+        codestr = ""
+        if response.code is not None:
+            codestr = " (0x%x)" % response.code
+        return "%sservice execution returned a negative response %s%s" % (servicename, response.code_name, codestr)
+
 
 class InvalidResponseException(Exception):
     """
@@ -40,19 +52,21 @@ class InvalidResponseException(Exception):
     :param response: The response that triggered the exception
     :type response: :ref:`Response<Response>`
     """
+    response: Response
 
     def __init__(self, response, *args, **kwargs):
         self.response = response
         msg = self.make_msg(response)
-        if len(args) > 0 :
-            msg += " "+str(args[0])
+        if len(args) > 0:
+            msg += " " + str(args[0])
             args = tuple(list(args)[1:])
         super().__init__(msg, *args, **kwargs)
 
-    def make_msg(self, response):
-        servicename = response.service.get_name()+" " if response.service is not None else ""
+    def make_msg(self, response: Response):
+        servicename = response.service.get_name() + " " if response.service is not None else ""
         reason = "" if response.valid else " Reason : %s" % (response.invalid_reason)
-        return "%sservice execution returned an invalid response.%s" % (servicename,reason)
+        return "%sservice execution returned an invalid response.%s" % (servicename, reason)
+
 
 class UnexpectedResponseException(Exception):
     """
@@ -65,17 +79,20 @@ class UnexpectedResponseException(Exception):
     :param details: Additional details about the error
     :type details: string
     """
-    def __init__(self, response, details="<No details given>", *args, **kwargs):
+    response: Response
+
+    def __init__(self, response: Response, details="<No details given>", *args, **kwargs):
         self.response = response
         msg = self.make_msg(response, details)
-        if len(args) > 0 :
-            msg += " "+str(args[0])
+        if len(args) > 0:
+            msg += " " + str(args[0])
             args = tuple(list(args)[1:])
         super().__init__(msg, *args, **kwargs)
 
-    def make_msg(self, response, details):
-        servicename = response.service.get_name()+" " if response.service is not None else ""
+    def make_msg(self, response: Response, details: str):
+        servicename = response.service.get_name() + " " if response.service is not None else ""
         return "%sservice execution returned a valid response but unexpected. Details : %s " % (servicename, details)
+
 
 class ConfigError(Exception):
     """
@@ -85,6 +102,8 @@ class ConfigError(Exception):
     :type key: object
 
     """
-    def __init__(self, key, msg="<No details given>", *args, **kwargs):
-        self.key=key
+    key: Any
+
+    def __init__(self, key: Any, msg="<No details given>", *args, **kwargs):
+        self.key = key
         super().__init__(msg, *args, **kwargs)

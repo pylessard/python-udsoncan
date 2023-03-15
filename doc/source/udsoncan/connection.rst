@@ -76,10 +76,11 @@ Defining a new Connection
 
 If all of the above Connection does not suits your needs, you can always implement your own Connection.
 
-In order to define a new connection, 5 methods must be implemented as they will be called by the ``Client`` object.
+In order to define a new connection, 6 methods must be implemented as they will be called by the ``Client`` object.
 
  .. automethod:: udsoncan.connections.BaseConnection.open
  .. automethod:: udsoncan.connections.BaseConnection.close
  .. automethod:: udsoncan.connections.BaseConnection.specific_send
  .. automethod:: udsoncan.connections.BaseConnection.specific_wait_frame
  .. automethod:: udsoncan.connections.BaseConnection.empty_rxqueue
+ .. automethod:: udsoncan.connections.BaseConnection.is_open

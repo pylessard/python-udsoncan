@@ -1,21 +1,41 @@
-from . import *
-from udsoncan.Response import Response
+import struct
+from udsoncan import Request, Response, DataFormatIdentifier, MemoryLocation
 from udsoncan.exceptions import *
-import struct 
+from udsoncan.BaseService import BaseService, BaseResponseData
+from udsoncan.ResponseCode import ResponseCode
+
+from typing import Optional, cast
+
 
 class RequestDownload(BaseService):
     _sid = 0x34
     _use_subfunction = False
 
-    supported_negative_response = [	 Response.Code.IncorrectMessageLengthOrInvalidFormat,
-                                                    Response.Code.ConditionsNotCorrect,
-                                                    Response.Code.RequestOutOfRange,
-                                                    Response.Code.SecurityAccessDenied,
-                                                    Response.Code.UploadDownloadNotAccepted
-                                                    ]
+    supported_negative_response = [ResponseCode.IncorrectMessageLengthOrInvalidFormat,
+                                   ResponseCode.ConditionsNotCorrect,
+                                   ResponseCode.RequestOutOfRange,
+                                   ResponseCode.SecurityAccessDenied,
+                                   ResponseCode.UploadDownloadNotAccepted
+                                   ]
+
+    class ResponseData(BaseResponseData):
+        """
+        .. data:: max_length
+
+                (int) Maximum number of data blocks to write
+        """
+
+        max_length: int
+
+        def __init__(self, max_length):
+            super().__init__(RequestDownload)
+            self.max_length = max_length
+
+    class InterpretedResponse(Response):
+        service_data: "RequestDownload.ResponseData"
+
     @classmethod
-    def normalize_data_format_identifier(cls, dfi):
-        from udsoncan import DataFormatIdentifier
+    def normalize_data_format_identifier(cls, dfi: Optional[DataFormatIdentifier]) -> DataFormatIdentifier:
         if dfi is None:
             dfi = DataFormatIdentifier()
 
@@ -25,7 +45,7 @@ class RequestDownload(BaseService):
         return dfi
 
     @classmethod
-    def make_request(cls, memory_location, dfi=None):
+    def make_request(cls, memory_location: MemoryLocation, dfi: Optional[DataFormatIdentifier] = None) -> Request:
         """
         Generates a request for RequestDownload
 
@@ -37,8 +57,7 @@ class RequestDownload(BaseService):
         :type dfi: :ref:`DataFormatIdentifier <DataFormatIdentifier>`	
 
         :raises ValueError: If parameters are out of range, missing or wrong type
-        """				
-        from udsoncan import Request, MemoryLocation
+        """
 
         dfi = cls.normalize_data_format_identifier(dfi)
 
@@ -46,16 +65,16 @@ class RequestDownload(BaseService):
             raise ValueError('memory_location must be an instance of MemoryLocation')
 
         request = Request(service=cls)
-        request.data=b""
-        request.data += dfi.get_byte()	# Data Format Identifier
-        request.data += memory_location.alfid.get_byte()	# AddressAndLengthFormatIdentifier
+        request.data = bytes()
+        request.data += dfi.get_byte()  # Data Format Identifier
+        request.data += memory_location.alfid.get_byte()  # AddressAndLengthFormatIdentifier
         request.data += memory_location.get_address_bytes()
         request.data += memory_location.get_memorysize_bytes()
 
         return request
 
     @classmethod
-    def interpret_response(cls, response):
+    def interpret_response(cls, response: Response) -> InterpretedResponse:
         """
         Populates the response ``service_data`` property with an instance of :class:`RequestDownload.ResponseData<udsoncan.services.RequestDownload.ResponseData>`
 
@@ -64,7 +83,9 @@ class RequestDownload(BaseService):
 
         :raises InvalidResponseException: If length of ``response.data`` is too short
         :raises NotImplementedError: If the ``maxNumberOfBlockLength`` value is encoded over more than 8 bytes.
-        """		
+        """
+        if response.data is None:
+            raise InvalidResponseException(response, "No data in response")
 
         if len(response.data) < 1:
             raise InvalidResponseException(response, "Response data must be at least 1 bytes")
@@ -72,24 +93,18 @@ class RequestDownload(BaseService):
         lfid = int(response.data[0]) >> 4
 
         if lfid > 8:
-            raise NotImplementedError('This client does not support number bigger than %d bits' % (8*8))
+            raise NotImplementedError('This client does not support number bigger than %d bits' % (8 * 8))
 
-        if len(response.data) < lfid+1:
-            raise InvalidResponseException(response, "Length of data (%d) is too short to contains the number of block of given length (%d)" % (len(response.data), lfid))
+        if len(response.data) < lfid + 1:
+            raise InvalidResponseException(
+                response, "Length of data (%d) is too short to contains the number of block of given length (%d)" % (len(response.data), lfid))
 
         todecode = bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00')
-        for i in range(1,lfid+1):
-            todecode[-i] = response.data[lfid+1-i]
+        for i in range(1, lfid + 1):
+            todecode[-i] = response.data[lfid + 1 - i]
 
-        response.service_data = cls.ResponseData()
-        response.service_data.max_length = struct.unpack('>q', todecode)[0]
+        response.service_data = cls.ResponseData(
+            max_length=struct.unpack('>q', todecode)[0]
+        )
 
-    class ResponseData(BaseResponseData):
-        """
-        .. data:: max_length
-
-                (int) Maximum number of data blocks to write
-        """		
-        def __init__(self):
-            super().__init__(RequestDownload)
-            self.max_length = None
+        return cast(RequestDownload.InterpretedResponse, response)

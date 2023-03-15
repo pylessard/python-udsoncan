@@ -1,21 +1,44 @@
-from . import *
-from udsoncan.Response import Response
-from udsoncan.exceptions import *
 import struct
+
+from udsoncan import Request, Response, DidCodec, check_did_config, make_did_codec_from_config, DIDConfig
+from udsoncan.exceptions import *
+from udsoncan.BaseService import BaseService, BaseResponseData
+from udsoncan.ResponseCode import ResponseCode
+import udsoncan.tools as tools
+
+from typing import Any, cast
+
 
 class WriteDataByIdentifier(BaseService):
     _sid = 0x2E
     _use_subfunction = False
 
-    supported_negative_response = [	 Response.Code.IncorrectMessageLengthOrInvalidFormat,
-                                                    Response.Code.ConditionsNotCorrect,
-                                                    Response.Code.RequestOutOfRange,
-                                                    Response.Code.SecurityAccessDenied,
-                                                    Response.Code.GeneralProgrammingFailure
-                                                    ]
+    supported_negative_response = [ResponseCode.IncorrectMessageLengthOrInvalidFormat,
+                                   ResponseCode.ConditionsNotCorrect,
+                                   ResponseCode.RequestOutOfRange,
+                                   ResponseCode.SecurityAccessDenied,
+                                   ResponseCode.GeneralProgrammingFailure
+                                   ]
+
+    class ResponseData(BaseResponseData):
+        """
+        .. data:: did_echo
+
+                The DID echoed back by the server
+        """
+
+        did_echo: int
+
+        def __init__(self, did_echo: int):
+            super().__init__(WriteDataByIdentifier)
+
+            self.did_echo = did_echo
+
+    class InterpretedResponse(Response):
+        service_data: "WriteDataByIdentifier.ResponseData"
 
     @classmethod
-    def make_request(cls, did, value, didconfig):
+    def make_request(cls, did: int, value: Any, didconfig: DIDConfig) -> Request:
         """
         Generates a request for WriteDataByIdentifier
 
@@ -30,14 +53,13 @@ class WriteDataByIdentifier(BaseService):
 
         :raises ValueError: If parameters are out of range, missing or wrong type
         :raises ConfigError: If ``didlist`` contains a DID not defined in ``didconfig``
-        """	
+        """
 
-        from udsoncan import Request, DidCodec
-        ServiceHelper.validate_int(did, min=0, max=0xFFFF, name='Data Identifier')
+        tools.validate_int(did, min=0, max=0xFFFF, name='Data Identifier')
         req = Request(cls)
-        didconfig = ServiceHelper.check_did_config(did, didconfig=didconfig)	# Make sure all DIDs are correctly defined in client config
-        req.data = struct.pack('>H', did)	# encode DID number
-        codec = DidCodec.from_config(didconfig[did])
+        didconfig = check_did_config(did, didconfig=didconfig)  # Make sure all DIDs are correctly defined in client config
+        req.data = struct.pack('>H', did)  # encode DID number
+        codec = make_did_codec_from_config(didconfig[did])
         if codec.__class__ == DidCodec and isinstance(value, tuple):
             req.data += codec.encode(*value)    # Fixes issue #29
         else:
@@ -46,7 +68,7 @@ class WriteDataByIdentifier(BaseService):
         return req
 
     @classmethod
-    def interpret_response(cls, response):
+    def interpret_response(cls, response: Response) -> InterpretedResponse:
         """
         Populates the response ``service_data`` property with an instance of :class:`WriteDataByIdentifier.ResponseData<udsoncan.services.WriteDataByIdentifier.ResponseData>`
 
@@ -54,21 +76,15 @@ class WriteDataByIdentifier(BaseService):
         :type response: :ref:`Response<Response>`
 
         :raises InvalidResponseException: If length of ``response.data`` is too short
-        """			
+        """
+        if response.data is None:
+            raise InvalidResponseException(response, "No data in response")
+
         if len(response.data) < 2:
             raise InvalidResponseException(response, "Response must be at least 2 bytes long")
 
-        response.service_data = cls.ResponseData()
-        response.service_data.did_echo = struct.unpack(">H", response.data[0:2])[0]
+        response.service_data = cls.ResponseData(
+            did_echo=struct.unpack(">H", response.data[0:2])[0]
+        )
 
-
-    class ResponseData(BaseResponseData):
-        """
-        .. data:: did_echo
-
-                The DID echoed back by the server
-        """			
-        def __init__(self):
-            super().__init__(WriteDataByIdentifier)
-
-            self.did_echo = None
+        return cast(WriteDataByIdentifier.InterpretedResponse, response)

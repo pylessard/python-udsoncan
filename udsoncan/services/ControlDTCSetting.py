@@ -1,15 +1,21 @@
-from . import *
-from udsoncan.Response import Response
+from udsoncan import Request, Response
 from udsoncan.exceptions import *
+from udsoncan.BaseService import BaseService, BaseSubfunction, BaseResponseData
+from udsoncan.ResponseCode import ResponseCode
+import udsoncan.tools as tools
+
+from typing import Optional, cast
+
 
 class ControlDTCSetting(BaseService):
     _sid = 0x85
 
-    supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
-                                                    Response.Code.IncorrectMessageLengthOrInvalidFormat,
-                                                    Response.Code.ConditionsNotCorrect,
-                                                    Response.Code.RequestOutOfRange
-                                                    ]
+    supported_negative_response = [ResponseCode.SubFunctionNotSupported,
+                                   ResponseCode.IncorrectMessageLengthOrInvalidFormat,
+                                   ResponseCode.ConditionsNotCorrect,
+                                   ResponseCode.RequestOutOfRange
+                                   ]
+
     class SettingType(BaseSubfunction):
         """
         ControlDTCSetting defined subfunctions
@@ -19,11 +25,25 @@ class ControlDTCSetting(BaseService):
 
         on = 1
         off = 2
-        vehicleManufacturerSpecific = (0x40, 0x5F)	# To be able to print textual name for logging only.
+        vehicleManufacturerSpecific = (0x40, 0x5F)  # To be able to print textual name for logging only.
         systemSupplierSpecific = (0x60, 0x7E)		# To be able to print textual name for logging only.
 
+    class ResponseData(BaseResponseData):
+        """
+        .. data:: setting_type_echo
+
+                Request subfunction echoed back by the server
+        """
+
+        def __init__(self, setting_type_echo: int):
+            super().__init__(ControlDTCSetting)
+            self.setting_type_echo = setting_type_echo
+
+    class InterpretedResponse(Response):
+        service_data: "ControlDTCSetting.ResponseData"
+
     @classmethod
-    def make_request(cls, setting_type, data = None):
+    def make_request(cls, setting_type: int, data: Optional[bytes] = None) -> Request:
         """
         Generates a request for ControlDTCSetting
 
@@ -34,10 +54,9 @@ class ControlDTCSetting(BaseService):
         :type data: bytes
 
         :raises ValueError: If parameters are out of range, missing or wrong type
-        """		
-        from udsoncan import Request
+        """
 
-        ServiceHelper.validate_int(setting_type, min=0, max=0x7F, name='Setting type')
+        tools.validate_int(setting_type, min=0, max=0x7F, name='Setting type')
         if data is not None:
             if not isinstance(data, bytes):
                 raise ValueError('data must be a valid bytes object')
@@ -45,7 +64,7 @@ class ControlDTCSetting(BaseService):
         return Request(service=cls, subfunction=setting_type, data=data)
 
     @classmethod
-    def interpret_response(cls, response):
+    def interpret_response(cls, response: Response) -> InterpretedResponse:
         """
         Populates the response ``service_data`` property with an instance of :class:`ControlDTCSetting.ResponseData<udsoncan.services.ControlDTCSetting.ResponseData>`
 
@@ -53,19 +72,15 @@ class ControlDTCSetting(BaseService):
         :type response: :ref:`Response<Response>`
 
         :raises InvalidResponseException: If length of ``response.data`` is too short
-        """		
-        if len(response.data) < 1: 	
+        """
+        if response.data is None:
+            raise InvalidResponseException(response, "No data in response")
+
+        if len(response.data) < 1:
             raise InvalidResponseException(response, "Response data must be at least 1 byte")
 
-        response.service_data = cls.ResponseData()
-        response.service_data.setting_type_echo = response.data[0]
+        response.service_data = cls.ResponseData(
+            setting_type_echo=response.data[0]
+        )
 
-    class ResponseData(BaseResponseData):
-        """
-        .. data:: setting_type_echo
-
-                Request subfunction echoed back by the server
-        """		
-        def __init__(self):
-            super().__init__(ControlDTCSetting)
-            self.setting_type_echo = None
+        return cast(ControlDTCSetting.InterpretedResponse, response)

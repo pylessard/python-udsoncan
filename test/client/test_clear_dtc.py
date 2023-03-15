@@ -1,7 +1,8 @@
 from udsoncan.exceptions import *
 
 from test.ClientServerTest import ClientServerTest
-from udsoncan.configs import latest_standard
+from udsoncan import latest_standard
+
 
 class TestClearDtc(ClientServerTest):
     def __init__(self, *args, **kwargs):
@@ -10,7 +11,7 @@ class TestClearDtc(ClientServerTest):
     def test_clear_dtc_success(self):
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b"\x14\x12\x34\x56")
-        self.conn.fromuserqueue.put(b"\x54")	# Positive response
+        self.conn.fromuserqueue.put(b"\x54")  # Positive response
 
     def _test_clear_dtc_success(self):
         response = self.udsclient.clear_dtc(0x123456)
@@ -20,7 +21,7 @@ class TestClearDtc(ClientServerTest):
     def test_clear_dtc_spr_no_effect(self):
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b"\x14\x12\x34\x56")
-        self.conn.fromuserqueue.put(b"\x54")	# Positive response
+        self.conn.fromuserqueue.put(b"\x54")  # Positive response
 
     def _test_clear_dtc_spr_no_effect(self):
         with self.udsclient.suppress_positive_response:
@@ -44,36 +45,36 @@ class TestClearDtc(ClientServerTest):
         self.conn.fromuserqueue.put(b"\x54")    # Positive response
 
     def _test_clear_dtc_with_memory_selection(self):
-        response = self.udsclient.clear_dtc(group = 0x123456, memory_selection = 0x99)
+        response = self.udsclient.clear_dtc(group=0x123456, memory_selection=0x99)
         self.assertTrue(response.valid)
-        self.assertTrue(response.positive)        
+        self.assertTrue(response.positive)
 
     def test_clear_dtc_denied_exception(self):
-        self.wait_request_and_respond(b"\x7F\x14\x31") #Request Out Of Range
+        self.wait_request_and_respond(b"\x7F\x14\x31")  # Request Out Of Range
 
     def _test_clear_dtc_denied_exception(self):
         with self.assertRaises(NegativeResponseException):
             self.udsclient.clear_dtc(0x123456)
 
     def test_clear_dtc_denied_no_exception(self):
-        self.wait_request_and_respond(b"\x7F\x14\x31") #Request Out Of Range
+        self.wait_request_and_respond(b"\x7F\x14\x31")  # Request Out Of Range
 
     def _test_clear_dtc_denied_no_exception(self):
         self.udsclient.config['exception_on_negative_response'] = False
-        response =self.udsclient.clear_dtc(0x123456)
+        response = self.udsclient.clear_dtc(0x123456)
         self.assertTrue(response.valid)
         self.assertFalse(response.positive)
         self.assertEqual(response.code, 0x31)
 
     def test_clear_dtc_invalidservice_exception(self):
-        self.wait_request_and_respond(b"\x00") #Inexistent Service
+        self.wait_request_and_respond(b"\x00")  # Inexistent Service
 
     def _test_clear_dtc_invalidservice_exception(self):
         with self.assertRaises(InvalidResponseException):
             self.udsclient.clear_dtc(0x123456)
 
     def test_clear_dtc_invalidservice_no_exception(self):
-        self.wait_request_and_respond(b"\x00") #Inexistent Service
+        self.wait_request_and_respond(b"\x00")  # Inexistent Service
 
     def _test_clear_dtc_invalidservice_no_exception(self):
         self.udsclient.config['exception_on_invalid_response'] = False
@@ -81,14 +82,14 @@ class TestClearDtc(ClientServerTest):
         self.assertFalse(response.valid)
 
     def test_clear_dtc_wrongservice_exception(self):
-        self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+        self.wait_request_and_respond(b"\x7E\x00")  # Valid but wrong service (Tester Present)
 
     def _test_clear_dtc_wrongservice_exception(self):
         with self.assertRaises(UnexpectedResponseException):
             self.udsclient.clear_dtc(0x123456)
 
     def test_clear_dtc_wrongservice_no_exception(self):
-        self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+        self.wait_request_and_respond(b"\x7E\x00")  # Valid but wrong service (Tester Present)
 
     def _test_clear_dtc_wrongservice_no_exception(self):
         self.udsclient.config['exception_on_unexpected_response'] = False

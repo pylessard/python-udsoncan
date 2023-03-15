@@ -3,9 +3,8 @@ from udsoncan.exceptions import *
 from udsoncan.services import ReadDTCInformation
 
 from test.ClientServerTest import ClientServerTest
-from udsoncan import Dtc, Response
+from udsoncan import Dtc, Response, latest_standard
 import struct
-from udsoncan.configs import latest_standard
 
 class GenericTest_RequestStatusMask_ResponseNumberOfDTC():	
 

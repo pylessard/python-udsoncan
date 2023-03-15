@@ -1,17 +1,18 @@
-from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier,MemoryLocation, CommunicationType, Baudrate, IOMasks, IOValues, Dtc, DidCodec, AsciiCodec, Filesize, DynamicDidDefinition
+from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier, MemoryLocation, CommunicationType, Baudrate, IOMasks, Dtc, DidCodec, AsciiCodec, Filesize, DynamicDidDefinition, make_did_codec_from_config
 from test.UdsTest import UdsTest
 import struct
+
 
 class TestAddressAndLengthFormatIdentifier(UdsTest):
     def test_ali_1(self):
         alfid = AddressAndLengthFormatIdentifier(memorysize_format=8, address_format=8)
-        self.assertEqual(alfid.get_byte(),b'\x11')
+        self.assertEqual(alfid.get_byte(), b'\x11')
 
     def test_ali_2(self):
         alfid = AddressAndLengthFormatIdentifier(memorysize_format=16, address_format=8)
-        self.assertEqual(alfid.get_byte(),b'\x21')
+        self.assertEqual(alfid.get_byte(), b'\x21')
 
-    def test_ali_oob_values(self):	# Out Of Bounds Value
+    def test_ali_oob_values(self):  # Out Of Bounds Value
         with self.assertRaises(ValueError):
             AddressAndLengthFormatIdentifier(memorysize_format=1, address_format=1)
 
@@ -38,14 +39,15 @@ class TestAddressAndLengthFormatIdentifier(UdsTest):
         str(alfid)
         alfid.__repr__()
 
+
 class TestDataFormatIdentifier(UdsTest):
     def test_dfi(self):
         dfi = DataFormatIdentifier(compression=1, encryption=2)
-        self.assertEqual(dfi.get_byte(),b'\x12')
+        self.assertEqual(dfi.get_byte(), b'\x12')
 
     def test_dfi2(self):
         dfi = DataFormatIdentifier(compression=15, encryption=15)
-        self.assertEqual(dfi.get_byte(),b'\xFF')
+        self.assertEqual(dfi.get_byte(), b'\xFF')
 
     def test_str_repr(self):
         dfi = DataFormatIdentifier(compression=1, encryption=2)
@@ -56,7 +58,6 @@ class TestDataFormatIdentifier(UdsTest):
         dfi = DataFormatIdentifier.from_byte(0xAB)
         self.assertEqual(dfi.compression, 0xA)
         self.assertEqual(dfi.encryption, 0xB)
-
 
     def test_ali_oob_values(self):
         with self.assertRaises(ValueError):
@@ -70,6 +71,7 @@ class TestDataFormatIdentifier(UdsTest):
 
         with self.assertRaises(ValueError):
             DataFormatIdentifier(compression=1, encryption=16)
+
 
 class TestMemoryLocation(UdsTest):
     def test_memloc1(self):
@@ -104,10 +106,9 @@ class TestMemoryLocation(UdsTest):
         self.assertEqual(memloc.get_memorysize_bytes(), b'\x00\x00\x78')
 
         memloc = MemoryLocation(address=0x1234, memorysize=0x78)
-        memloc.set_format_if_none(address_format=32, memorysize_format=24)	# Both at same time.
+        memloc.set_format_if_none(address_format=32, memorysize_format=24)  # Both at same time.
         self.assertEqual(memloc.get_address_bytes(), b'\x00\x00\x12\x34')
         self.assertEqual(memloc.get_memorysize_bytes(), b'\x00\x00\x78')
-
 
     def test_memloc_from_bytes(self):
         memloc = MemoryLocation.from_bytes(address_bytes=b'\x12\x34', memorysize_bytes=b'\xFF')
@@ -174,6 +175,7 @@ class TestCommunicationType(UdsTest):
         with self.assertRaises(ValueError):
             CommunicationType(subnet=0, normal_msg=True, network_management_msg=1)
 
+
 class TestBaudrate(UdsTest):
     def test_create_fixed(self):
         br = Baudrate(115200, baudtype=Baudrate.Type.Fixed)
@@ -190,7 +192,7 @@ class TestBaudrate(UdsTest):
             br = Baudrate(0x1000000, baudtype=Baudrate.Type.Specific)
 
     def test_create_id(self):
-        for i in range (0xFF):
+        for i in range(0xFF):
             br = Baudrate(i, baudtype=Baudrate.Type.Identifier)
             self.assertEqual(br.get_bytes(), struct.pack('B', i))
 
@@ -198,7 +200,7 @@ class TestBaudrate(UdsTest):
             br = Baudrate(0x100, baudtype=Baudrate.Type.Identifier)
 
     def test_effective_baudrate(self):
-        br = Baudrate(0x12, Baudrate.Type.Identifier) # 500kbits
+        br = Baudrate(0x12, Baudrate.Type.Identifier)  # 500kbits
         self.assertEqual(br.effective_baudrate(), 500000)
 
     def test_change_type(self):
@@ -230,7 +232,7 @@ class TestBaudrate(UdsTest):
         br = Baudrate(500000)
         self.assertEqual(br.get_bytes(), b'\x12')
 
-        #Specific Baudrate:
+        # Specific Baudrate:
         br = Baudrate(0x123456)
         self.assertEqual(br.get_bytes(), b'\x12\x34\x56')
 
@@ -244,25 +246,27 @@ class TestBaudrate(UdsTest):
         with self.assertRaises(ValueError):
             br = Baudrate(1, baudtype=0xFF)
 
+
 class TestIOMasks(UdsTest):
     def test_oob_values(self):
         with self.assertRaises(ValueError):
             IOMasks(aaa='asd')
 
         with self.assertRaises(ValueError):
-            IOMasks(1,2,3)
+            IOMasks(1, 2, 3)
 
     def test_make_dict(self):
-        m = IOMasks('aaa', 'bbb') # Correct syntax
-        self.assertEqual(m.get_dict(), {'aaa' : True, 'bbb' : True})
+        m = IOMasks('aaa', 'bbb')  # Correct syntax
+        self.assertEqual(m.get_dict(), {'aaa': True, 'bbb': True})
 
-        m = IOMasks('aaa', 'bbb', ccc=True, ddd=False) # Correct syntax
-        self.assertEqual(m.get_dict(), {'aaa' : True, 'bbb' : True, 'ccc':True, 'ddd':False})
+        m = IOMasks('aaa', 'bbb', ccc=True, ddd=False)  # Correct syntax
+        self.assertEqual(m.get_dict(), {'aaa': True, 'bbb': True, 'ccc': True, 'ddd': False})
+
 
 class TestDtc(UdsTest):
     def test_init(self):
         dtc = Dtc(0x1234)
-        self.assertEqual(dtc.id, 0x1234 )
+        self.assertEqual(dtc.id, 0x1234)
         self.assertEqual(dtc.status.get_byte(), b'\x00')
         self.assertEqual(dtc.status.get_byte_as_int(), 0x00)
         self.assertEqual(dtc.severity.get_byte(), b'\x00')
@@ -281,15 +285,15 @@ class TestDtc(UdsTest):
             Dtc()
 
     def test_set_status_with_byte_no_error(self):
-        dtc=Dtc(1)
+        dtc = Dtc(1)
         for i in range(255):
             dtc.status.set_byte(i)
 
     def test_status_behaviour(self):
-        dtc=Dtc(1)
+        dtc = Dtc(1)
 
         self.assertEqual(dtc.status.get_byte(), b'\x00')
-        dtc.status.test_failed=True
+        dtc.status.test_failed = True
         self.assertEqual(dtc.status.get_byte(), b'\x01')
         dtc.status.test_failed_this_operation_cycle = True
         self.assertEqual(dtc.status.get_byte(), b'\x03')
@@ -387,22 +391,21 @@ class TestDtc(UdsTest):
         self.assertEqual(dtc.status.warning_indicator_requested, True)
 
     def test_set_severity_with_byte_no_error(self):
-        dtc=Dtc(1)
+        dtc = Dtc(1)
         for i in range(255):
             dtc.severity.set_byte(i)
 
     def test_str_repr(self):
-        dtc=Dtc(0x123456)
+        dtc = Dtc(0x123456)
         dtc.status.pending = True
         str(dtc)
         dtc.__repr__()
 
-
     def test_severity_behaviour(self):
-        dtc=Dtc(1)
+        dtc = Dtc(1)
 
         self.assertEqual(dtc.severity.get_byte_as_int(), 0x00)
-        dtc.severity.maintenance_only=True
+        dtc.severity.maintenance_only = True
         self.assertEqual(dtc.severity.get_byte_as_int(), 0x20)
         dtc.severity.check_at_next_exit = True
         self.assertEqual(dtc.severity.get_byte_as_int(), 0x60)
@@ -424,18 +427,19 @@ class TestDtc(UdsTest):
         self.assertEqual(dtc.severity.check_at_next_exit, True)
         self.assertEqual(dtc.severity.check_immediately, True)
 
+
 class TestCodec(UdsTest):
     def test_DIDCodec_bad_values(self):
         with self.assertRaises(NotImplementedError):
-            codec = DidCodec();
+            codec = DidCodec()
             codec.encode("asd")
 
         with self.assertRaises(NotImplementedError):
-            codec = DidCodec();
+            codec = DidCodec()
             codec.decode(b"asd")
 
         with self.assertRaises(ValueError):
-            DidCodec.from_config("")
+            make_did_codec_from_config("")
 
     def test_ascii_codec(self):
         codec = AsciiCodec(10)
@@ -448,13 +452,14 @@ class TestCodec(UdsTest):
         with self.assertRaises(ValueError):
             codec.encode("abcdefghijklmnop")
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Exception):
             AsciiCodec()
+
 
 class TestFilesize(UdsTest):
 
     def test_create(self):
-        #Normal use case
+        # Normal use case
         Filesize(uncompressed=123)
         Filesize(compressed=123)
         Filesize(uncompressed=123, compressed=100)
@@ -535,7 +540,7 @@ class TestFilesize(UdsTest):
 class TestDynamicDidDefinition(UdsTest):
     def test_def_mismatch(self):
         diddef = DynamicDidDefinition()
-        diddef.add(source_did = 0x1234, position=1, memorysize=1)
+        diddef.add(source_did=0x1234, position=1, memorysize=1)
         with self.assertRaises(ValueError):
             diddef.add(MemoryLocation(address=0x1234, memorysize=1))
 
@@ -544,8 +549,8 @@ class TestDynamicDidDefinition(UdsTest):
 
         self.assertFalse(diddef.is_by_source_did())
         self.assertFalse(diddef.is_by_memory_address())
-        diddef.add(source_did = 0x1234, position=1, memorysize=1)
-        diddef.add(source_did = 0x1234, position=2, memorysize=1)
+        diddef.add(source_did=0x1234, position=1, memorysize=1)
+        diddef.add(source_did=0x1234, position=2, memorysize=1)
 
         self.assertTrue(diddef.is_by_source_did())
         self.assertFalse(diddef.is_by_memory_address())
@@ -559,8 +564,8 @@ class TestDynamicDidDefinition(UdsTest):
 
     def test_get_alfid(self):
         diddef = DynamicDidDefinition()
-        diddef.add(source_did = 0x1234, position=1, memorysize=1)
-        diddef.add(source_did = 0x1234, position=2, memorysize=1)
+        diddef.add(source_did=0x1234, position=1, memorysize=1)
+        diddef.add(source_did=0x1234, position=2, memorysize=1)
         with self.assertRaises(ValueError):
             diddef.get_alfid()
 

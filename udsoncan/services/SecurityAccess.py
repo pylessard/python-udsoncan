@@ -1,36 +1,66 @@
-from . import *
-from udsoncan.Response import Response
+from udsoncan import Request, Response
 from udsoncan.exceptions import *
+from udsoncan.BaseService import BaseService, BaseResponseData
+from udsoncan.ResponseCode import ResponseCode
+import udsoncan.tools as tools
+
+from typing import Optional, cast
+
 
 class SecurityAccess(BaseService):
     _sid = 0x27
 
-    supported_negative_response = [	Response.Code.SubFunctionNotSupported, 
-                                                    Response.Code.IncorrectMessageLengthOrInvalidFormat,
-                                                    Response.Code.ConditionsNotCorrect,
-                                                    Response.Code.RequestSequenceError,
-                                                    Response.Code.RequestOutOfRange,
-                                                    Response.Code.InvalidKey,
-                                                    Response.Code.ExceedNumberOfAttempts,
-                                                    Response.Code.RequiredTimeDelayNotExpired
-                                                    ]
+    supported_negative_response = [ResponseCode.SubFunctionNotSupported,
+                                   ResponseCode.IncorrectMessageLengthOrInvalidFormat,
+                                   ResponseCode.ConditionsNotCorrect,
+                                   ResponseCode.RequestSequenceError,
+                                   ResponseCode.RequestOutOfRange,
+                                   ResponseCode.InvalidKey,
+                                   ResponseCode.ExceedNumberOfAttempts,
+                                   ResponseCode.RequiredTimeDelayNotExpired
+                                   ]
 
     class Mode:
-        RequestSeed=0
-        SendKey=1
+        RequestSeed = 0
+        SendKey = 1
 
-    @classmethod 
-    def normalize_level(cls, mode, level):
-        cls.validate_mode(mode)
-        ServiceHelper.validate_int(level, min=0, max=0x7F, name='Security level')
+    class ResponseData(BaseResponseData):
+        """
+        .. data:: security_level_echo
 
-        if mode == cls.Mode.RequestSeed:
-            return level if level % 2 == 1 else level-1
-        elif mode == cls.Mode.SendKey:
-            return level if level % 2 == 0 else level+1
+                Requests subfunction echoed back by the server
+
+        .. data:: seed
+
+                Seed value. Only present if request mode was ``RequestSeed`` (even subfunction)
+        """
+
+        security_level_echo: int
+        seed: Optional[bytes]
+
+        def __init__(self, security_level_echo: int, seed: Optional[bytes] = None):
+            super().__init__(SecurityAccess)
+
+            self.security_level_echo = security_level_echo
+            self.seed = seed
+
+    class InterpretedResponse(Response):
+        service_data: "SecurityAccess.ResponseData"
 
     @classmethod
-    def make_request(cls, level, mode, data=bytes()):
+    def normalize_level(cls, mode: int, level: int) -> int:
+        cls.validate_mode(mode)
+        tools.validate_int(level, min=0, max=0x7F, name='Security level')
+
+        if mode == cls.Mode.RequestSeed:
+            return level if level % 2 == 1 else level - 1
+        elif mode == cls.Mode.SendKey:
+            return level if level % 2 == 0 else level + 1
+
+        raise ValueError("Unsupported mode")
+
+    @classmethod
+    def make_request(cls, level: int, mode: int, data=bytes()) -> Request:
         """
         Generates a request for SecurityAccess
 
@@ -46,11 +76,10 @@ class SecurityAccess(BaseService):
         :type data: bytes
 
         :raises ValueError: If parameters are out of range, missing or wrong type
-        """		
-        from udsoncan import Request
+        """
         cls.validate_mode(mode)
 
-        ServiceHelper.validate_int(level, min=0, max=0x7F, name='Security level')
+        tools.validate_int(level, min=0, max=0x7F, name='Security level')
         req = Request(service=cls, subfunction=cls.normalize_level(mode=mode, level=level))
 
         if not isinstance(data, bytes):
@@ -60,7 +89,7 @@ class SecurityAccess(BaseService):
         return req
 
     @classmethod
-    def interpret_response(cls, response, mode):
+    def interpret_response(cls, response: Response, mode: int) -> InterpretedResponse:
         """
         Populates the response ``service_data`` property with an instance of :class:`SecurityAccess.ResponseData<udsoncan.services.SecurityAccess.ResponseData>`
 
@@ -73,34 +102,24 @@ class SecurityAccess(BaseService):
 
         cls.validate_mode(mode)
 
-        response.service_data = cls.ResponseData()
         minlength = 2 if mode == cls.Mode.RequestSeed else 1
+
+        if response.data is None:
+            raise InvalidResponseException(response, "No data in response")
 
         if len(response.data) < minlength:
             raise InvalidResponseException(response, "Response data must be at least %d bytes" % (minlength))
 
-        response.service_data.security_level_echo = response.data[0]
+        response.service_data = cls.ResponseData(
+            security_level_echo=response.data[0]
+        )
 
         if mode == cls.Mode.RequestSeed:
             response.service_data.seed = response.data[1:]
 
+        return cast(SecurityAccess.InterpretedResponse, response)
+
     @classmethod
-    def validate_mode(cls, mode):
+    def validate_mode(cls, mode: int):
         if mode not in [cls.Mode.RequestSeed, cls.Mode.SendKey]:
             raise ValueError('Given mode must be either be RequestSeed (0) or SendKey (1).')
-
-    class ResponseData(BaseResponseData):
-        """
-        .. data:: security_level_echo
-
-                Requests subfunction echoed back by the server
-
-        .. data:: seed
-
-                Seed value. Only present if request mode was ``RequestSeed`` (even subfunction)
-        """		
-        def __init__(self):
-            super().__init__(SecurityAccess)
-
-            self.security_level_echo = None
-            self.seed = None
