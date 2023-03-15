@@ -16,10 +16,10 @@ How reliable is this code?
    
    To the best of my knowledge, quite good. This project comes with a fair amount of unit tests, many based on examples proposed in the UDS standard document.
    Every service encoding/decoding is unit-tested.
-   
-   Only a few common services have been tested on a real ECU.
 
-   The project lacks static type check, but it is in the plan to introduce it.
+   The project is fully type-hinted and passes static type check using the `mypy` module
+
+   Only a few common services have been tested on a real ECU by the author, but many users are using the library successfully, including some major OEM.
 
 -----
 
