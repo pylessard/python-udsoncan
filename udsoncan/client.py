@@ -19,8 +19,15 @@ import logging
 import binascii
 import functools
 import time
+import sys
 
-from typing import Callable, Optional, Union, Dict, List, TypedDict, Any, cast, Type
+from typing import Callable, Optional, Union, Dict, List, Any, cast, Type
+
+if sys.version_info < (3, 8):
+    class TypedDict:
+        pass
+else:
+    from typing import TypedDict
 
 
 class SessionTiming(TypedDict):
@@ -153,8 +160,7 @@ class Client:
     # then suppresses them or not depending on the client configuration.
     # if func1 and func2 are decorated and func2 calls func1, it should be done this way : self.func1._func_no_error_management(self, ...)
 
-    @staticmethod
-    def standard_error_management(func: Callable):
+    def standard_error_management(func: Callable):  # type: ignore
         @functools.wraps(func)
         def decorated(self: "Client", *args, **kwargs):
             try:

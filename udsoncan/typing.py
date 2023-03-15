@@ -1,5 +1,13 @@
 from udsoncan.common.DidCodec import DidCodec
-from typing import TypedDict, Dict, Optional, Any, Callable, Union, Type
+from typing import Dict, Optional, Any, Callable, Union, Type
+import sys
+
+if sys.version_info < (3, 8):
+    class TypedDict:
+        def __init_subclass__(cls, *args, **kwargs):
+            pass
+else:
+    from typing import TypedDict
 
 SecurityAlgoType = Callable[[int, bytes, Any], bytes]
 
