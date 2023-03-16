@@ -23,6 +23,7 @@ The client may raise :ref:`UnexpectedResponseException<UnexpectedResponseExcepti
 
 
 .. autoclass:: udsoncan.client.Client
+    :noindex:
 
 .. _client_config:
 
