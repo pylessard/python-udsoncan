@@ -300,5 +300,5 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 
-# def setup(app):
-#    app.add_stylesheet('theme_overrides.css')
+def setup(app):
+    app.add_css_file('theme_overrides.css')
