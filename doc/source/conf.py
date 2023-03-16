@@ -302,6 +302,3 @@ texinfo_documents = [
 
 # def setup(app):
 #    app.add_stylesheet('theme_overrides.css')
-
-import sys
-sys.path.insert(0, os.path.abspath("."))
