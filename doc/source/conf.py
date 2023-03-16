@@ -216,7 +216,7 @@ html_context = {
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'udsoncandoc'
 
-autodoc_typehints = 'none'
+autodoc_typehints = 'description'
 
 # -- Options for LaTeX output ---------------------------------------------
 
