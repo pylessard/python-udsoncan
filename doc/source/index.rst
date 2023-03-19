@@ -2,9 +2,8 @@ Python implementation of UDS standard (ISO-14229)
 =================================================
 
 .. toctree::
-   :maxdepth: 2
    :hidden:
-
+   
    Home <self>
    udsoncan/intro
    udsoncan/connection

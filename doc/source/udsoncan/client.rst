@@ -1,5 +1,7 @@
 Client
 ======
+.. toctree::
+    :maxdepth: 3 
 
 .. _Client:
 
@@ -23,7 +25,6 @@ The client may raise :ref:`UnexpectedResponseException<UnexpectedResponseExcepti
 
 
 .. autoclass:: udsoncan.client.Client
-    :noindex:
 
 .. _client_config:
 

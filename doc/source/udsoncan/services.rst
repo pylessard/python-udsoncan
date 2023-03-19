@@ -30,7 +30,7 @@ Each service is represented by a class that extends the ``BaseService`` class. T
 .. _AccessTimingParameter:
 
 AccessTimingParameter (0x83)
---------------------------------------
+----------------------------
 
 .. automethod:: udsoncan.services.AccessTimingParameter.make_request
 .. automethod:: udsoncan.services.AccessTimingParameter.interpret_response

@@ -1,5 +1,5 @@
 Exceptions
-===========
+==========
 
 This section explains the different exceptions used in the project.
 
@@ -27,13 +27,13 @@ UnexpectedResponseException
 .. _TimeoutException:
 
 TimeoutException
----------------------------
+----------------
 
 .. autoclass:: udsoncan.exceptions.TimeoutException
 
 .. _ConfigError:
 
 ConfigError
----------------------------
+-----------
 
 .. autoclass:: udsoncan.exceptions.ConfigError

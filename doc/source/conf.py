@@ -33,6 +33,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+    "sphinxcontrib.jquery"
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -118,8 +119,10 @@ html_theme = 'sphinx_rtd_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    'sticky_navigation': False,
-    'collapse_navigation': True
+    'sticky_navigation': True,
+    'collapse_navigation': False,
+    'navigation_depth': 3,
+    'titles_only': False
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
