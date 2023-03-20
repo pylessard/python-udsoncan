@@ -33,6 +33,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+    "sphinxcontrib.jquery"
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -68,7 +69,7 @@ release = version
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -107,6 +108,7 @@ pygments_style = 'default'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+primary_domain = 'py'
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -114,12 +116,15 @@ todo_include_todos = False
 # a list of builtin themes.
 html_theme = 'sphinx_rtd_theme'
 
+toc_object_entries = False
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    'sticky_navigation': False,
-    'collapse_navigation': True
+    'sticky_navigation': True,
+    'collapse_navigation': True,
+    'navigation_depth': 3,
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -216,6 +221,8 @@ html_context = {
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'udsoncandoc'
 
+autodoc_typehints = 'description'
+
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
@@ -299,4 +306,4 @@ texinfo_documents = [
 
 
 def setup(app):
-    app.add_stylesheet('theme_overrides.css')
+    app.add_css_file('theme_overrides.css')

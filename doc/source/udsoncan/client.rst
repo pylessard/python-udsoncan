@@ -1,5 +1,7 @@
 Client
 ======
+.. toctree::
+    :maxdepth: 3 
 
 .. _Client:
 

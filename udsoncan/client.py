@@ -552,7 +552,7 @@ class Client:
         :type group: int
 
         :param memory_selection: MemorySelection byte (0-0xFF). This value is user defined and introduced in 2020 version of ISO-14229-1. 
-        Only added to the request payload when different from None. Default : None
+            Only added to the request payload when different from None. Default : None
         :type memory_selection: int
 
         :return: The server response parsed by :meth:`ClearDiagnosticInformation.interpret_response<udsoncan.services.ClearDiagnosticInformation.interpret_response>`
@@ -1619,8 +1619,8 @@ class Client:
         :type record_number: int
 
         :param data_size: The number of bytes of each extended data record. If not specified ``config['extended_data_size']`` will be used. 
-        Since this method can return data for multiple DTCs and data size might be different for each DTC, it is possible to pass a dictionary 
-        with a size for each DTC id (just like ``extended_data_size`` configuration). Example : size = {0x123456 : 5, 0x112233 : 10}
+            Since this method can return data for multiple DTCs and data size might be different for each DTC, it is possible to pass a dictionary 
+            with a size for each DTC id (just like ``extended_data_size`` configuration). Example : size = {0x123456 : 5, 0x112233 : 10}
         :type data_size: int, dict or None
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
