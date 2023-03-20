@@ -23,10 +23,9 @@ Request
    print(req2) # <Request: [ECUReset] (subfunction=1) - 2 data bytes at 0x12345678>
 
 .. autoclass:: udsoncan.Request
+    :exclude-members: from_payload, get_payload
 .. automethod:: udsoncan.Request.get_payload
-    :noindex:
 .. automethod:: udsoncan.Request.from_payload
-    :noindex:
 
 .. _Response:
 
@@ -45,11 +44,10 @@ Response
 
 
 .. autoclass:: udsoncan.Response
-    :members: 
+    :members:
+    :exclude-members: from_payload, get_payload
 .. automethod:: udsoncan.Response.get_payload
-    :noindex:
 .. automethod:: udsoncan.Response.from_payload
-    :noindex:
 
 Response Codes
 ##############
