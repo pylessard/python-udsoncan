@@ -24,7 +24,9 @@ Request
 
 .. autoclass:: udsoncan.Request
 .. automethod:: udsoncan.Request.get_payload
+    :noindex:
 .. automethod:: udsoncan.Request.from_payload
+    :noindex:
 
 .. _Response:
 
@@ -41,6 +43,7 @@ Response
    response2 = Response.from_payload(payload)
    print(response2) # <PositiveResponse: [ECUReset] - 2 data bytes at 0x7f9367e619b0>
 
+
 .. autoclass:: udsoncan.Response
     :members: 
 .. automethod:: udsoncan.Response.get_payload
@@ -52,7 +55,7 @@ Response Codes
 ##############
 
 .. autoclass:: udsoncan::Response.Code
-   :members: 
-   :undoc-members:
-   :member-order: bysource
-   :exclude-members: get_name, is_negative, is_supported_by_standard
+    :members: 
+    :undoc-members:
+    :member-order: bysource
+    :exclude-members: get_name, is_negative, is_supported_by_standard

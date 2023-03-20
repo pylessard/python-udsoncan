@@ -108,6 +108,7 @@ pygments_style = 'default'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+primary_domain = 'py'
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -115,14 +116,15 @@ todo_include_todos = False
 # a list of builtin themes.
 html_theme = 'sphinx_rtd_theme'
 
+toc_object_entries = False
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
     'sticky_navigation': True,
-    'collapse_navigation': False,
+    'collapse_navigation': True,
     'navigation_depth': 3,
-    'titles_only': False
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
