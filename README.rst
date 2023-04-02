@@ -14,7 +14,7 @@ The documentation is available here :   http://udsoncan.readthedocs.io
 Requirements
 ------------
 
- - Python 3+
+ - Python 3.7+
 
 Installation
 ------------
