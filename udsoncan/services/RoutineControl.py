@@ -1,4 +1,5 @@
-from udsoncan import Request, Response
+from udsoncan.Request import Request
+from udsoncan.Response import Response
 from udsoncan.BaseService import BaseService, BaseSubfunction, BaseResponseData
 import udsoncan.tools as tools
 from udsoncan.ResponseCode import ResponseCode

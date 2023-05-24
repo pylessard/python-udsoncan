@@ -1,5 +1,7 @@
 import struct
-from udsoncan import Request, Response, DataFormatIdentifier, Filesize
+from udsoncan import DataFormatIdentifier, Filesize
+from udsoncan.Request import Request
+from udsoncan.Response import Response
 from udsoncan.exceptions import *
 from udsoncan.BaseService import BaseService, BaseSubfunction, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode

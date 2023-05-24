@@ -1,5 +1,7 @@
 import struct
-from udsoncan import Response, Request, Dtc, check_did_config, make_did_codec_from_config, latest_standard, DIDConfig
+from udsoncan import Dtc, check_did_config, make_did_codec_from_config, latest_standard, DIDConfig
+from udsoncan.Request import Request
+from udsoncan.Response import Response
 from udsoncan.exceptions import *
 from udsoncan.BaseService import BaseService, BaseSubfunction, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode
