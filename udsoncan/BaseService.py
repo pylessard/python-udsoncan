@@ -53,6 +53,8 @@ class BaseService(ABC):
 
     @staticmethod
     def __get_all_subclasses(cls) -> List[Type["BaseService"]]:
+        import udsoncan.services    # This import is required for __subclasses__ to have a value. Python never import twice the same package.
+
         # this gets all subclasses and returns a list where the "most original" subclasses are listed in front of the other subclasses
         # This enables subclasses of any BaseService outside of udsoncan.services to be available, enabling specialization of calls in
         # cases where a CAN message is similar to one found in official UDS documentation but has a different service ID
