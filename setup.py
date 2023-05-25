@@ -13,14 +13,14 @@ setup(
     package_data={
         '': ['*.conf'],
     },
-    version='1.17.1',
+    version='1.17.2',
     description='Implementation of the Unified Diagnostic Service (UDS) protocol (ISO-14229) used in the automotive industry.',
     long_description=long_description,
     author='Pier-Yves Lessard',
     author_email='py.lessard@gmail.com',
     license='MIT',
     url='https://github.com/pylessard/python-udsoncan',
-    download_url='https://github.com/pylessard/python-udsoncan/archive/v1.17.1.tar.gz',
+    download_url='https://github.com/pylessard/python-udsoncan/archive/v1.17.2.tar.gz',
     keywords=['uds', '14229', 'iso-14229', 'diagnostic', 'automotive'],
     python_requires='>=3.7',
     classifiers=[
