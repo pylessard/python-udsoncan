@@ -1,5 +1,7 @@
 import struct
-from udsoncan import Request, Response, latest_standard
+from udsoncan import latest_standard
+from udsoncan.Request import Request
+from udsoncan.Response import Response
 from udsoncan.exceptions import *
 from udsoncan.BaseService import BaseService, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode

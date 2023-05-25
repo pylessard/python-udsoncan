@@ -1,4 +1,6 @@
-from udsoncan import Request, Response, MemoryLocation
+from udsoncan import MemoryLocation
+from udsoncan.Request import Request
+from udsoncan.Response import Response
 from udsoncan.exceptions import *
 from udsoncan.BaseService import BaseService, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode

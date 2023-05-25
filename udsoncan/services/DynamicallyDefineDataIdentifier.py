@@ -1,5 +1,7 @@
 import struct
-from udsoncan import Request, Response, DynamicDidDefinition
+from udsoncan import DynamicDidDefinition
+from udsoncan.Request import Request
+from udsoncan.Response import Response
 from udsoncan.exceptions import *
 from udsoncan.BaseService import BaseService, BaseSubfunction, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode

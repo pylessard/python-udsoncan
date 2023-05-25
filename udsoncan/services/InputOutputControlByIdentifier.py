@@ -1,7 +1,8 @@
 import struct
 import math
-
-from udsoncan import Request, Response, IOMasks, IOValues, DidCodec, CodecDefinition, IOConfig, IOConfigEntry
+from udsoncan.Request import Request
+from udsoncan.Response import Response
+from udsoncan import IOMasks, IOValues, DidCodec, CodecDefinition, IOConfig, IOConfigEntry
 from udsoncan.exceptions import *
 from udsoncan.BaseService import BaseService, BaseSubfunction, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode

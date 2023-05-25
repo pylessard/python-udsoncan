@@ -1,4 +1,6 @@
-from udsoncan import Request, Response, CommunicationType
+from udsoncan.Request import Request
+from udsoncan.Response import Response
+from udsoncan import CommunicationType
 from udsoncan.exceptions import *
 from udsoncan.BaseService import BaseService, BaseSubfunction, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode
@@ -85,7 +87,7 @@ class CommunicationControl(BaseService):
         """
         if response.data is None:
             raise InvalidResponseException(response, "No data in response")
- 
+
         if len(response.data) < 1:
             raise InvalidResponseException(response, "Response data must be at least 1 byte")
 

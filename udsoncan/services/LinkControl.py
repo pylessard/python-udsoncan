@@ -1,4 +1,6 @@
-from udsoncan import Request, Response, Baudrate
+from udsoncan import Baudrate
+from udsoncan.Request import Request
+from udsoncan.Response import Response
 from udsoncan.exceptions import *
 from udsoncan.BaseService import BaseService, BaseSubfunction, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode
