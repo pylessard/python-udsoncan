@@ -100,7 +100,7 @@ class Client:
     session_timing: SessionTiming
     logger: logging.Logger
 
-    def __init__(self, conn: BaseConnection, config: ClientConfig = default_client_config, request_timeout: Optional[bool] = None):
+    def __init__(self, conn: BaseConnection, config: ClientConfig = default_client_config, request_timeout: Optional[float] = None):
         self.conn = conn
         self.config = cast(ClientConfig, dict(config))  # Makes a copy of given configuration
 
@@ -2207,4 +2207,7 @@ class Client:
         assert response.service is not None
         self.logger.info('Received positive response for service %s (0x%02x) from server.' %
                          (response.service.get_name(), response.service.request_id()))
+
+        response.original_request = request
+
         return response

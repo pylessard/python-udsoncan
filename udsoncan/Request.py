@@ -1,5 +1,4 @@
 from udsoncan.BaseService import BaseService
-import udsoncan.tools as tools
 import inspect
 import struct
 
@@ -121,7 +120,7 @@ class Request:
         req = cls()
 
         if len(payload) >= 1:
-            req.service = tools.cls_from_request_id(payload[0])
+            req.service = BaseService.from_request_id(payload[0])
             if req.service is not None:		# Invalid service ID will make service None
                 offset = 0
                 if req.service.use_subfunction():

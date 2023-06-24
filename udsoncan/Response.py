@@ -3,6 +3,8 @@ from udsoncan.ResponseCode import ResponseCode
 import inspect
 import struct
 
+from udsoncan.Request import Request
+
 from typing import Type, Optional, Union
 
 
@@ -35,6 +37,10 @@ class Response:
 
             (boolean) True if the response code is 0 (PositiveResponse), False otherwise
 
+    .. data:: unexpected 
+
+            (boolean) Indicates that the response was unexpected. Set by an external source such as the :ref:`Client<Client>` object            
+
     .. data:: code 
 
             (int) The response code. 
@@ -58,11 +64,10 @@ class Response:
 
             (bytes) When the response is built with `Response.from_payload`, this property contains a copy of the payload used. None otherwise.
 
-    .. data:: unexpected 
+    .. data:: original_request 
 
-            (boolean) Indicates that the response was unexpected. Set by an external source such as the :ref:`Client<Client>` object
+            (Request) Optional reference to the request object that generated this response.  """
 
-    """
     Code = ResponseCode
 
     service: Optional[Type[BaseService]]
@@ -71,6 +76,7 @@ class Response:
     suppress_positive_response: bool
     original_payload: Optional[bytes]
     service_data: Optional[BaseResponseData]
+    original_request: Optional[Request]
 
     def __init__(self,
                  service: Optional[Union[BaseService, Type[BaseService]]] = None,
@@ -93,6 +99,7 @@ class Response:
         self.service_data = None
         self.original_payload = None
         self.unexpected = False
+        self.original_request = None
 
         if data is not None:
             if not isinstance(data, bytes):
