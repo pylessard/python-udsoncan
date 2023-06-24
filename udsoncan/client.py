@@ -2207,4 +2207,7 @@ class Client:
         assert response.service is not None
         self.logger.info('Received positive response for service %s (0x%02x) from server.' %
                          (response.service.get_name(), response.service.request_id()))
+
+        response.original_request = request
+
         return response

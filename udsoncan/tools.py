@@ -60,11 +60,3 @@ def check_io_config(didlist: Union[int, List[int]], ioconfig: Dict[Any, Any]) ->
             }
 
     return ioconfig
-
-
-def cls_from_request_id(given_id: int) -> Optional[Type[BaseService]]:
-    return BaseService.from_request_id(given_id)
-
-
-def is_valid_service(service_cls: Type) -> bool:
-    return issubclass(service_cls, BaseService)
