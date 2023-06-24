@@ -100,7 +100,7 @@ class Client:
     session_timing: SessionTiming
     logger: logging.Logger
 
-    def __init__(self, conn: BaseConnection, config: ClientConfig = default_client_config, request_timeout: Optional[bool] = None):
+    def __init__(self, conn: BaseConnection, config: ClientConfig = default_client_config, request_timeout: Optional[float] = None):
         self.conn = conn
         self.config = cast(ClientConfig, dict(config))  # Makes a copy of given configuration
 
