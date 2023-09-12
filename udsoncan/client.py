@@ -2232,3 +2232,134 @@ class Client:
             return None
 
         return response
+
+    # ====  Authentication Service Client Functions
+    def deauthenticate(self) -> Optional[services.Authentication.InterpretedResponse]:
+        return self.authentication(
+            authentication_task=services.Authentication.AuthenticationTask.deAuthenticate
+        )
+
+    def verify_certificate_unidirectional(self,
+                                          communication_configuration: int,
+                                          certificate_client: bytes,
+                                          challenge_client: Optional[bytes] = None) -> Optional[
+         services.Authentication.InterpretedResponse]:
+        return self.authentication(
+            authentication_task=services.Authentication.AuthenticationTask.verifyCertificateUnidirectional,
+            communication_configuration=communication_configuration,
+            certificate_client=certificate_client,
+            challenge_client=challenge_client
+                            )
+
+    def verify_certificate_bidirectional(self,
+                                         communication_configuration: int,
+                                         certificate_client: bytes,
+                                         challenge_client: bytes) -> Optional[
+         services.Authentication.InterpretedResponse]:
+        return self.authentication(
+            authentication_task=services.Authentication.AuthenticationTask.verifyCertificateBidirectional,
+            communication_configuration=communication_configuration,
+            certificate_client=certificate_client,
+            challenge_client=challenge_client
+                            )
+
+    def proof_of_ownership(self,
+                           proof_of_ownership_client: bytes,
+                           ephemeral_public_key_client: Optional[bytes] = None) -> Optional[
+         services.Authentication.InterpretedResponse]:
+        return self.authentication(
+            authentication_task=services.Authentication.AuthenticationTask.proofOfOwnership,
+            proof_of_ownership_client=proof_of_ownership_client,
+            ephemeral_public_key_client=ephemeral_public_key_client
+                            )
+
+    def transmit_certificate(self,
+                             certificate_evaluation_id: int,
+                             certificate_data: bytes) -> Optional[services.Authentication.InterpretedResponse]:
+        return self.authentication(
+            authentication_task=services.Authentication.AuthenticationTask.transmitCertificate,
+            certificate_evaluation_id=certificate_evaluation_id,
+            certificate_data=certificate_data
+                            )
+
+    def request_challenge_for_authentication(self,
+                                             communication_configuration: int,
+                                             algorithm_indicator: bytes) -> Optional[
+         services.Authentication.InterpretedResponse]:
+        return self.authentication(
+            authentication_task=services.Authentication.AuthenticationTask.requestChallengeForAuthentication,
+            communication_configuration=communication_configuration,
+            algorithm_indicator=algorithm_indicator
+                            )
+
+    def verify_proof_of_ownership_unidirectional(self,
+                                                 algorithm_indicator: bytes,
+                                                 proof_of_ownership_client: bytes,
+                                                 challenge_client: Optional[bytes] = None,
+                                                 additional_parameter: Optional[bytes] = None) -> Optional[
+         services.Authentication.InterpretedResponse]:
+        return self.authentication(
+            authentication_task=services.Authentication.AuthenticationTask.verifyProofOfOwnershipUnidirectional,
+            algorithm_indicator=algorithm_indicator,
+            proof_of_ownership_client=proof_of_ownership_client,
+            challenge_client=challenge_client,
+            additional_parameter=additional_parameter
+                            )
+
+    def verify_proof_of_ownership_bidirectional(self,
+                                                algorithm_indicator: bytes,
+                                                proof_of_ownership_client: bytes,
+                                                challenge_client: bytes,
+                                                additional_parameter: Optional[bytes] = None) -> Optional[
+        services.Authentication.InterpretedResponse]:
+        return self.authentication(
+            authentication_task=services.Authentication.AuthenticationTask.verifyProofOfOwnershipBidirectional,
+            algorithm_indicator=algorithm_indicator,
+            proof_of_ownership_client=proof_of_ownership_client,
+            challenge_client=challenge_client,
+            additional_parameter=additional_parameter
+                            )
+
+    def authentication_configuration(self) -> Optional[services.Authentication.InterpretedResponse]:
+        return self.authentication(
+            authentication_task=services.Authentication.AuthenticationTask.authenticationConfiguration
+        )
+
+    @standard_error_management
+    def authentication(self,
+                       authentication_task: int,
+                       communication_configuration: Optional[int] = None,
+                       certificate_client: Optional[bytes] = None,
+                       challenge_client: Optional[bytes] = None,
+                       algorithm_indicator: Optional[bytes] = None,
+                       certificate_evaluation_id: Optional[int] = None,
+                       certificate_data: Optional[bytes] = None,
+                       proof_of_ownership_client: Optional[bytes] = None,
+                       ephemeral_public_key_client: Optional[bytes] = None,
+                       additional_parameter: Optional[bytes] = None) -> Optional[
+         services.Authentication.InterpretedResponse]:
+
+        request = services.Authentication.make_request(authentication_task,
+                                                       communication_configuration,
+                                                       certificate_client,
+                                                       challenge_client,
+                                                       algorithm_indicator,
+                                                       certificate_evaluation_id,
+                                                       certificate_data,
+                                                       proof_of_ownership_client,
+                                                       ephemeral_public_key_client,
+                                                       additional_parameter)
+
+        self.logger.info(f'{self.service_log_prefix(services.Authentication)} - Sending request with authentication'
+                         f' task "{services.Authentication.AuthenticationTask.get_name(authentication_task)}"'
+                         f' ({authentication_task:#02x}')
+        response = self.send_request(request)
+        if response is None:
+            return None
+
+        response = services.Authentication.interpret_response(response)
+        if authentication_task != response.service_data.authentication_task_echo:
+            raise UnexpectedResponseException(response, f'Authentication Task echo of response'
+                                              f' ({response.service_data.authentication_task_echo:#02x}) does not match'
+                                                        f' request Authentication Task ({authentication_task:#02x})')
+        return response

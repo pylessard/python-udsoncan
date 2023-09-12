@@ -97,7 +97,7 @@ class ResponseCode:
             cls.FailurePreventsExecutionOfRequestedAction: 2006,
             cls.RequestOutOfRange: 2006,
             cls.SecurityAccessDenied: 2006,
-            cls.AuthenticationRequired: 2006,
+            cls.AuthenticationRequired: 2020,
             cls.InvalidKey: 2006,
             cls.ExceedNumberOfAttempts: 2006,
             cls.RequiredTimeDelayNotExpired: 2006,
