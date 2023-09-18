@@ -62,6 +62,7 @@ class Client:
 
         def __call__(self, wait_nrc: bool = False):
             self.wait_nrc = wait_nrc
+            return self
 
         def __enter__(self):
             self.enabled = True
