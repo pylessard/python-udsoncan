@@ -2148,7 +2148,9 @@ class Client:
         done_receiving = False
         if respect_overall_timeout:
             overall_timeout_time = time.time() + overall_timeout
-        while not done_receiving:
+
+        timed_out = False
+        while not done_receiving and not timed_out:
             done_receiving = True
             self.logger.debug("Waiting for server response")
 
@@ -2168,10 +2170,16 @@ class Client:
                     timeout_name_to_report = 'Global request timeout'
                 else:  # Shouldn't go here.
                     timeout_name_to_report = 'Timeout'
-                raise TimeoutException('Did not receive response in time. %s time has expired (timeout=%.3f sec)' %
-                                       (timeout_name_to_report, timeout_value))
+                timed_out = True
+
             except Exception as e:
                 raise e
+
+            if timed_out:
+                if spr_used:
+                    return None
+                raise TimeoutException('Did not receive response in time. %s time has expired (timeout=%.3f sec)' %
+                                       (timeout_name_to_report, timeout_value))
 
             response = Response.from_payload(payload)
             self.last_response = response
