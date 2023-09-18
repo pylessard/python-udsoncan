@@ -226,3 +226,43 @@ class TestClient(ClientServerTest):
         req = Request(service=services.TesterPresent, subfunction=0)
         response = self.udsclient.send_request(req)
         self.assertIs(response.original_request, req)
+
+    def test_suppress_positive_response(self):
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7E\x00")
+
+    def _test_suppress_positive_response(self):
+        req = Request(service=services.TesterPresent, subfunction=0)
+        with self.udsclient.suppress_positive_response:
+            response = self.udsclient.send_request(req)
+            self.assertIsNone(response)
+        self.conn.fromuserqueue.get()   # Make sure to not exit too quick
+
+    def test_suppress_positive_response_wait_nrc(self):
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7E\x00")
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x01")
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x01")
+
+    def _test_suppress_positive_response_wait_nrc(self):
+        # Case 1 - Positive
+        req = Request(service=services.TesterPresent, subfunction=0)
+        with self.udsclient.suppress_positive_response(wait_nrc=False):
+            response = self.udsclient.send_request(req)
+            self.assertIsNone(response)
+        self.conn.fromuserqueue.get()   # Make sure to not exit too quick
+
+        # Case 2 - Negative no wait
+        req = Request(service=services.TesterPresent, subfunction=0)
+        with self.udsclient.suppress_positive_response(wait_nrc=False):
+            response = self.udsclient.send_request(req)
+            self.assertIsNone(response)
+        self.conn.fromuserqueue.get()   # Make sure to not exit too quick
+
+        # Case 3 - Negative and wait
+        req = Request(service=services.TesterPresent, subfunction=0)
+        with self.assertRaises(NegativeResponseException):
+            with self.udsclient.suppress_positive_response(wait_nrc=True):
+                self.udsclient.send_request(req)
