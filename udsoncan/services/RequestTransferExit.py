@@ -13,7 +13,9 @@ class RequestTransferExit(BaseService):
     _no_response_data = True
 
     supported_negative_response = [ResponseCode.IncorrectMessageLengthOrInvalidFormat,
-                                   ResponseCode.RequestSequenceError
+                                   ResponseCode.RequestSequenceError,
+                                   ResponseCode.RequestOutOfRange,
+                                   ResponseCode.GeneralProgrammingFailure
                                    ]
 
     class ResponseData(BaseResponseData):
