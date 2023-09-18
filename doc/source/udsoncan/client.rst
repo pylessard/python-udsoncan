@@ -256,12 +256,20 @@ The ``Client`` object lets you use that feature by using ``suppress_positive_res
 
 .. code-block:: python
 
-   with client.suppress_positive_response:
+   with client.suppress_positive_response():
       client.tester_present()
 
 When ``suppress_positive_response`` is asking for a service using a subfunction byte, the client will set suppressPosRspMsgIndicationBit before sending the request. The client will not wait for any response and will disregard negative responses if they happen. The response returned by the client function will always be ``None`` in that case.
 
 If ``suppress_positive_response`` is asking for a service with no subfunction byte, the directive will be ignored and a warning message will be logged.
+
+By default the client will not wait for an answer. In case it is required to wait and see if a negative response is returned, one can pass the `wait_nrc=True` parameter like this
+
+.. code-block:: python
+
+   with client.suppress_positive_response(wait_nrc=True):
+      client.tester_present()   # Will wait in case an NRC is returned. 
+      # In case of positive response, th response will not be validated and None will be returned
 
 -----
 
