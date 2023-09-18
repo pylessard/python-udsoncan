@@ -261,7 +261,6 @@ The ``Client`` object lets you use that feature by using ``suppress_positive_res
     
     with client.suppress_positive_response(wait_nrc=True):
         client.tester_present()   # Will wait in case an NRC is returned. 
-        # In case of positive response, th response will not be validated and None will be returned. 
 
 When ``suppress_positive_response`` is asking for a service using a subfunction byte, the client will set suppressPosRspMsgIndicationBit before sending the request. 
 If `wait_nrc` is `False` (default value), the client will not wait for any response and will disregard positive and negative responses if they happen. 
