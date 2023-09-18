@@ -54,9 +54,14 @@ class Client:
 
     class SuppressPositiveResponse:
         enabled: bool
+        wait_nrc: bool
 
         def __init__(self):
             self.enabled = False
+            self.wait_nrc = False
+
+        def __call__(self, wait_nrc: bool = False):
+            self.wait_nrc = wait_nrc
 
         def __enter__(self):
             self.enabled = True
@@ -64,6 +69,7 @@ class Client:
 
         def __exit__(self, type, value, traceback):
             self.enabled = False
+            self.wait_nrc = None
 
     class PayloadOverrider:
         modifier: Optional[Union[Callable, bytes]]
@@ -2132,7 +2138,10 @@ class Client:
 
         self.conn.send(payload)
 
-        if request.suppress_positive_response or override_suppress_positive_response:
+        spr_used = request.suppress_positive_response or override_suppress_positive_response
+        wait_nrc = self.suppress_positive_response.enabled and self.suppress_positive_response.wait_nrc
+
+        if spr_used and not wait_nrc:
             return None
 
         done_receiving = False
@@ -2209,5 +2218,8 @@ class Client:
                          (response.service.get_name(), response.service.request_id()))
 
         response.original_request = request
+
+        if spr_used:
+            return None
 
         return response
