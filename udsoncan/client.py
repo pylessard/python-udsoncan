@@ -54,9 +54,15 @@ class Client:
 
     class SuppressPositiveResponse:
         enabled: bool
+        wait_nrc: bool
 
         def __init__(self):
             self.enabled = False
+            self.wait_nrc = False
+
+        def __call__(self, wait_nrc: bool = False):
+            self.wait_nrc = wait_nrc
+            return self
 
         def __enter__(self):
             self.enabled = True
@@ -64,6 +70,7 @@ class Client:
 
         def __exit__(self, type, value, traceback):
             self.enabled = False
+            self.wait_nrc = None
 
     class PayloadOverrider:
         modifier: Optional[Union[Callable, bytes]]
@@ -2132,13 +2139,18 @@ class Client:
 
         self.conn.send(payload)
 
-        if request.suppress_positive_response or override_suppress_positive_response:
+        spr_used = request.suppress_positive_response or override_suppress_positive_response
+        wait_nrc = self.suppress_positive_response.enabled and self.suppress_positive_response.wait_nrc
+
+        if spr_used and not wait_nrc:
             return None
 
         done_receiving = False
         if respect_overall_timeout:
             overall_timeout_time = time.time() + overall_timeout
-        while not done_receiving:
+
+        timed_out = False
+        while not done_receiving and not timed_out:
             done_receiving = True
             self.logger.debug("Waiting for server response")
 
@@ -2158,10 +2170,16 @@ class Client:
                     timeout_name_to_report = 'Global request timeout'
                 else:  # Shouldn't go here.
                     timeout_name_to_report = 'Timeout'
-                raise TimeoutException('Did not receive response in time. %s time has expired (timeout=%.3f sec)' %
-                                       (timeout_name_to_report, timeout_value))
+                timed_out = True
+
             except Exception as e:
                 raise e
+
+            if timed_out:
+                if spr_used:
+                    return None
+                raise TimeoutException('Did not receive response in time. %s time has expired (timeout=%.3f sec)' %
+                                       (timeout_name_to_report, timeout_value))
 
             response = Response.from_payload(payload)
             self.last_response = response
@@ -2209,5 +2227,8 @@ class Client:
                          (response.service.get_name(), response.service.request_id()))
 
         response.original_request = request
+
+        if spr_used:
+            return None
 
         return response
