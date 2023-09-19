@@ -262,7 +262,7 @@ The ``Client`` object lets you use that feature by using ``suppress_positive_res
     with client.suppress_positive_response(wait_nrc=True):
         client.tester_present()   # Will wait in case an NRC is returned. 
 
-When ``suppress_positive_response`` is asking for a service using a subfunction byte, the client will set suppressPosRspMsgIndicationBit before sending the request. 
+When ``suppress_positive_response`` is askied for a service using a subfunction byte, the client will set suppressPosRspMsgIndicationBit before sending the request. 
 If `wait_nrc` is `False` (default value), the client will not wait for any response and will disregard positive and negative responses if they happen. 
 The response returned by the client function will always be ``None`` in that case.
 
@@ -272,7 +272,7 @@ If `wait_nrc` is `True`, the client will wait to see if a negative response is r
  - If a negative response is received, the normal processing will happen. Meaning either the response will be returned or a `NegativeResponseException` 
  will be raised, depending on :ref:`exception_on_negative_response<config_exception_on_negative_response>` parameter.
 
-If ``suppress_positive_response`` is asking for a service with no subfunction byte, the directive will be ignored and a warning message will be logged.
+If ``suppress_positive_response`` is askied for a service with no subfunction byte, the directive will be ignored and a warning message will be logged.
 
 -----
 
