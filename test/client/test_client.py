@@ -281,3 +281,15 @@ class TestClient(ClientServerTest):
         req = Request(service=services.TesterPresent, subfunction=0)
         with self.udsclient.suppress_positive_response(wait_nrc=True):
             self.udsclient.send_request(req)
+
+    def test_suppress_positive_response_wait_nrc_case5(self):
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x31")
+
+    def _test_suppress_positive_response_wait_nrc_case5(self):
+        # Case 3 - Negative and wait
+        req = Request(service=services.TesterPresent, subfunction=0)
+        self.udsclient.config['exception_on_negative_response'] = False
+        with self.udsclient.suppress_positive_response(wait_nrc=True):
+            resp = self.udsclient.tester_present()
+            self.assertIsNotNone(resp)
