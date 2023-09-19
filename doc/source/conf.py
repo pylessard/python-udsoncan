@@ -60,7 +60,7 @@ author = u'Pier-Yves Lessard'
 # built documents.
 #
 # The short X.Y version.
-version = u'1.18.1'
+version = u'1.19.0'
 # The full version, including alpha/beta/rc tags.
 release = version
 
