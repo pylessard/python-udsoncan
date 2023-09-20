@@ -510,3 +510,21 @@ Methods by services
 .. automethod:: udsoncan.client.Client.read_file
 .. automethod:: udsoncan.client.Client.read_dir
 .. automethod:: udsoncan.client.Client.resume_file
+
+-------------
+
+:ref:`Authentication<Authentication>`
+#############################################
+
+.. automethod:: udsoncan.client.Client.authentication
+.. automethod:: udsoncan.client.Client.deauthenticate
+.. automethod:: udsoncan.client.Client.verify_certificate_unidirectional
+.. automethod:: udsoncan.client.Client.verify_certificate_bidirectional
+.. automethod:: udsoncan.client.Client.proof_of_ownership
+.. automethod:: udsoncan.client.Client.transmit_certificate
+.. automethod:: udsoncan.client.Client.request_challenge_for_authentication
+.. automethod:: udsoncan.client.Client.verify_proof_of_ownership_unidirectional
+.. automethod:: udsoncan.client.Client.verify_proof_of_ownership_bidirectional
+.. automethod:: udsoncan.client.Client.authentication_configuration
+
+-------------

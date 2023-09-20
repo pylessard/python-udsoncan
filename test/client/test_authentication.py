@@ -1,6 +1,6 @@
-from udsoncan import services, Response
+from udsoncan import Response
 from udsoncan.services.Authentication import AuthenticationReturnParameter, Authentication
-from udsoncan.exceptions import *
+from udsoncan.exceptions import NegativeResponseException, InvalidResponseException, UnexpectedResponseException
 
 from test.ClientServerTest import ClientServerTest
 
