@@ -28,8 +28,21 @@ class Authentication(BaseService):
     supported_negative_response = [ResponseCode.SubFunctionNotSupported,
                                    ResponseCode.IncorrectMessageLengthOrInvalidFormat,
                                    ResponseCode.ConditionsNotCorrect,
-                                   ResponseCode.RequestSequenceError
-                                   ]
+                                   ResponseCode.RequestSequenceError,
+                                   ResponseCode.CertificateVerificationFailed_InvalidTimePeriod,
+                                   ResponseCode.CertificateVerificationFailed_InvalidSignature,
+                                   ResponseCode.CertificateVerificationFailed_InvalidChainOfTrust,
+                                   ResponseCode.CertificateVerificationFailed_InvalidType,
+                                   ResponseCode.CertificateVerificationFailed_InvalidFormat,
+                                   ResponseCode.CertificateVerificationFailed_InvalidContent,
+                                   ResponseCode.CertificateVerificationFailed_InvalidScope,
+                                   ResponseCode.CertificateVerificationFailed_InvalidCertificate,
+                                   ResponseCode.OwnershipVerificationFailed,
+                                   ResponseCode.ChallengeCalculationFailed,
+                                   ResponseCode.SettingAccessRightsFailed,
+                                   ResponseCode.SessionKeyCreationDerivationFailed,
+                                   ResponseCode.ConfigurationDataUsageFailed,
+                                   ResponseCode.DeAuthenticationFailed]
 
     class ResponseData(BaseResponseData):
         """
