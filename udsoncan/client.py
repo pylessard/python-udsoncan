@@ -2237,6 +2237,7 @@ class Client:
     def deauthenticate(self) -> Optional[services.Authentication.InterpretedResponse]:
         """
         Sends a deAuthenticate request (sub function of Authentication Service) introduced in 2020 version of ISO-14229-1.
+
         :Effective configuration: ``exception_on_<type>_response``
 
         :return: The server response parsed by :meth:`Authentication.interpret_response<udsoncan.services.Authentication.interpret_response>`
@@ -2250,9 +2251,10 @@ class Client:
                                           communication_configuration: int,
                                           certificate_client: bytes,
                                           challenge_client: Optional[bytes] = None) -> Optional[
-         services.Authentication.InterpretedResponse]:
+            services.Authentication.InterpretedResponse]:
         """
         Sends a verifyCertificateUnidirectional request (sub function of Authentication Service)
+
         :Effective configuration: ``exception_on_<type>_response``
 
         :param communication_configuration: Configuration information about how to proceed with security in further diagnostic communication after the Authentication (vehicle manufacturer specific).
@@ -2273,15 +2275,16 @@ class Client:
             communication_configuration=communication_configuration,
             certificate_client=certificate_client,
             challenge_client=challenge_client
-                            )
+        )
 
     def verify_certificate_bidirectional(self,
                                          communication_configuration: int,
                                          certificate_client: bytes,
                                          challenge_client: bytes) -> Optional[
-         services.Authentication.InterpretedResponse]:
+            services.Authentication.InterpretedResponse]:
         """
         Sends a verifyCertificateBidirectional request (sub function of Authentication Service)
+
         :Effective configuration: ``exception_on_<type>_response``
 
         :param communication_configuration: Configuration information about how to proceed with security in further diagnostic communication after the Authentication (vehicle manufacturer specific).
@@ -2302,14 +2305,15 @@ class Client:
             communication_configuration=communication_configuration,
             certificate_client=certificate_client,
             challenge_client=challenge_client
-                            )
+        )
 
     def proof_of_ownership(self,
                            proof_of_ownership_client: bytes,
                            ephemeral_public_key_client: Optional[bytes] = None) -> Optional[
-         services.Authentication.InterpretedResponse]:
+            services.Authentication.InterpretedResponse]:
         """
         Sends a proofOfOwnership request (sub function of Authentication Service)
+
         :Effective configuration: ``exception_on_<type>_response``
 
         :param proof_of_ownership_client: Proof of Ownership of the previous given challenge to be verified by the server.
@@ -2326,7 +2330,7 @@ class Client:
             authentication_task=services.Authentication.AuthenticationTask.proofOfOwnership,
             proof_of_ownership_client=proof_of_ownership_client,
             ephemeral_public_key_client=ephemeral_public_key_client
-                            )
+        )
 
     def transmit_certificate(self,
                              certificate_evaluation_id: int,
@@ -2352,14 +2356,15 @@ class Client:
             authentication_task=services.Authentication.AuthenticationTask.transmitCertificate,
             certificate_evaluation_id=certificate_evaluation_id,
             certificate_data=certificate_data
-                            )
+        )
 
     def request_challenge_for_authentication(self,
                                              communication_configuration: int,
                                              algorithm_indicator: bytes) -> Optional[
-         services.Authentication.InterpretedResponse]:
+            services.Authentication.InterpretedResponse]:
         """
         Sends a requestChallengeForAuthentication request (sub function of Authentication Service)
+
         :Effective configuration: ``exception_on_<type>_response``
 
         :param communication_configuration: Configuration information about how to proceed with security in further diagnostic communication after the Authentication (vehicle manufacturer specific).
@@ -2379,16 +2384,17 @@ class Client:
             authentication_task=services.Authentication.AuthenticationTask.requestChallengeForAuthentication,
             communication_configuration=communication_configuration,
             algorithm_indicator=algorithm_indicator
-                            )
+        )
 
     def verify_proof_of_ownership_unidirectional(self,
                                                  algorithm_indicator: bytes,
                                                  proof_of_ownership_client: bytes,
                                                  challenge_client: Optional[bytes] = None,
                                                  additional_parameter: Optional[bytes] = None) -> Optional[
-         services.Authentication.InterpretedResponse]:
+            services.Authentication.InterpretedResponse]:
         """
         Sends a verifyProofOfOwnershipUnidirectional request (sub function of Authentication Service)
+
         :Effective configuration: ``exception_on_<type>_response``
 
         :param algorithm_indicator: Indicates the algorithm used in the generating and verifying Proof of Ownership (POWN),
@@ -2415,16 +2421,17 @@ class Client:
             proof_of_ownership_client=proof_of_ownership_client,
             challenge_client=challenge_client,
             additional_parameter=additional_parameter
-                            )
+        )
 
     def verify_proof_of_ownership_bidirectional(self,
                                                 algorithm_indicator: bytes,
                                                 proof_of_ownership_client: bytes,
                                                 challenge_client: bytes,
                                                 additional_parameter: Optional[bytes] = None) -> Optional[
-        services.Authentication.InterpretedResponse]:
+            services.Authentication.InterpretedResponse]:
         """
         Sends a verifyProofOfOwnershipBidirectional request (sub function of Authentication Service)
+
         :Effective configuration: ``exception_on_<type>_response``
 
         :param algorithm_indicator: Indicates the algorithm used in the generating and verifying Proof of Ownership (POWN),
@@ -2451,7 +2458,7 @@ class Client:
             proof_of_ownership_client=proof_of_ownership_client,
             challenge_client=challenge_client,
             additional_parameter=additional_parameter
-                            )
+        )
 
     def authentication_configuration(self) -> Optional[services.Authentication.InterpretedResponse]:
         """
@@ -2478,9 +2485,10 @@ class Client:
                        proof_of_ownership_client: Optional[bytes] = None,
                        ephemeral_public_key_client: Optional[bytes] = None,
                        additional_parameter: Optional[bytes] = None) -> Optional[
-         services.Authentication.InterpretedResponse]:
+            services.Authentication.InterpretedResponse]:
         """
         Sends an Authentication request introduced in 2020 version of ISO-14229-1. You can also use the helper functions to send each authentication task (sub function).
+
         :Effective configuration: ``exception_on_<type>_response``
 
         :param authentication_task: The authenticationTask (subfunction) to use.
