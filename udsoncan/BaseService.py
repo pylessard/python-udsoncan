@@ -34,6 +34,9 @@ class BaseService(ABC):
         ResponseCode.NoResponseFromSubnetComponent,
         ResponseCode.FailurePreventsExecutionOfRequestedAction,
         ResponseCode.SecurityAccessDenied,  # ISO-14229:2006 Table A.1:  "Besides the mandatory use of this negative response code as specified in the applicable services within ISO 14229, this negative response code can also be used for any case where security is required and is not yet granted to perform the required service."
+        ResponseCode.AuthenticationRequired,  # ISO-14229:2020 Figure 5 - General server response behaviour
+        ResponseCode.SecureDataTransmissionRequired,  # ISO-14229:2020 Figure 5 - General server response behaviour
+        ResponseCode.SecureDataTransmissionNotAllowed,  # ISO-14229:2020 Figure 5 - General server response behaviour
         ResponseCode.RequestCorrectlyReceived_ResponsePending,
         ResponseCode.ServiceNotSupportedInActiveSession,
         ResponseCode.ResourceTemporarilyNotAvailable

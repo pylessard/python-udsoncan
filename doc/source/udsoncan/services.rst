@@ -775,3 +775,146 @@ ReadDataByPeriodicIdentifier (0x2A)
 
 .. warning:: Not implemented
 
+-------
+
+.. _Authentication:
+
+Authentication (0x29)
+--------------------------------------
+
+.. automethod:: udsoncan.services.Authentication.make_request
+.. automethod:: udsoncan.services.Authentication.interpret_response
+
+.. autoclass:: udsoncan.services::Authentication.ResponseData
+   :members:
+
+.. autoclass:: udsoncan.services::Authentication.AuthenticationTask
+   :members:
+   :undoc-members:
+   :member-order: bysource
+
+make_request() parameters per sub function
+#########################################
+
+.. raw:: html
+
+   <div style='overflow-x:scroll; margin-bottom:24px'>
+
+.. list-table:: make_request() parameters per Authentication Task
+   :header-rows: 1
+
+   * - authentication_task
+     - communication_configuration
+     - certificate_client
+     - challenge_client
+     - algorithm_indicator
+     - certificate_evaluation_id
+     - certificate_data
+     - proof_of_ownership_client
+     - ephemeral_public_key_client
+     - additional_parameter
+
+   * - deAuthenticate
+     -
+     -
+     -
+     -
+     -
+     -
+     -
+     -
+     -
+
+   * - verifyCertificateUnidirectional
+     - Yes
+     - Yes
+     - Yes
+     -
+     -
+     -
+     -
+     -
+     -
+
+   * - verifyCertificateBidirectional
+     - Yes
+     - Yes
+     - Yes
+     -
+     -
+     -
+     -
+     -
+     -
+
+   * - proofOfOwnership
+     -
+     -
+     -
+     -
+     -
+     -
+     - Yes
+     - Yes
+     -
+
+   * - transmitCertificate
+     -
+     -
+     -
+     -
+     - Yes
+     - Yes
+     -
+     -
+     -
+
+   * - requestChallengeForAuthentication
+     - Yes
+     -
+     -
+     - Yes
+     -
+     -
+     -
+     -
+     -
+
+   * - verifyProofOfOwnershipUnidirectional
+     -
+     -
+     - Yes
+     - Yes
+     -
+     -
+     - Yes
+     -
+     - Yes
+
+   * - verifyProofOfOwnershipBidirectional
+     -
+     -
+     - Yes
+     - Yes
+     -
+     -
+     - Yes
+     -
+     - Yes
+
+   * - authenticationConfiguration
+     -
+     -
+     -
+     -
+     -
+     -
+     -
+     -
+     -
+
+.. raw:: html
+
+   </div>
+
+-------

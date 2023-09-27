@@ -270,7 +270,7 @@ If `wait_nrc` is `True`, the client will wait to see if a negative response is r
  - No timeout will be raised if no response is received
  - If a positive response is received, it will not be validated and `None` will be returned
  - If a negative response is received, the normal processing will happen. Meaning either the response will be returned or a `NegativeResponseException` 
- will be raised, depending on :ref:`exception_on_negative_response<config_exception_on_negative_response>` parameter.
+    will be raised, depending on :ref:`exception_on_negative_response<config_exception_on_negative_response>` parameter.
 
 If ``suppress_positive_response`` is askied for a service with no subfunction byte, the directive will be ignored and a warning message will be logged.
 
@@ -510,3 +510,19 @@ Methods by services
 .. automethod:: udsoncan.client.Client.read_file
 .. automethod:: udsoncan.client.Client.read_dir
 .. automethod:: udsoncan.client.Client.resume_file
+
+-------------
+
+:ref:`Authentication<Authentication>`
+#############################################
+
+.. automethod:: udsoncan.client.Client.authentication
+.. automethod:: udsoncan.client.Client.deauthenticate
+.. automethod:: udsoncan.client.Client.verify_certificate_unidirectional
+.. automethod:: udsoncan.client.Client.verify_certificate_bidirectional
+.. automethod:: udsoncan.client.Client.proof_of_ownership
+.. automethod:: udsoncan.client.Client.transmit_certificate
+.. automethod:: udsoncan.client.Client.request_challenge_for_authentication
+.. automethod:: udsoncan.client.Client.verify_proof_of_ownership_unidirectional
+.. automethod:: udsoncan.client.Client.verify_proof_of_ownership_bidirectional
+.. automethod:: udsoncan.client.Client.authentication_configuration
