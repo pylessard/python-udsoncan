@@ -9,12 +9,12 @@ class TestAuthentication(ClientServerTest):
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
 
-    def test_deauthentication_success(self):
+    def test_deauthentication_success(self) -> None:
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x00')
         self.conn.fromuserqueue.put(b'\x69\x00\x10')
 
-    def _test_deauthentication_success(self):
+    def _test_deauthentication_success(self) -> None:
         response: Authentication.InterpretedResponse = self.udsclient.deauthenticate()
         self.assertTrue(response.positive)
         self.assertEqual(response.service_data.authentication_task_echo,
@@ -28,24 +28,24 @@ class TestAuthentication(ClientServerTest):
         self.assertIsNone(response.service_data.session_key_info)
         self.assertIsNone(response.service_data.algorithm_indicator)
 
-    def test_deauthentication_success_spr(self):
+    def test_deauthentication_success_spr(self) -> None:
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x80')
         self.conn.fromuserqueue.put('wait')  # Synchronize
 
-    def _test_deauthentication_success_spr(self):
+    def _test_deauthentication_success_spr(self) -> None:
         with self.udsclient.suppress_positive_response:
             response: Authentication.InterpretedResponse = self.udsclient.deauthenticate()
             self.assertIsNone(response)
         self.conn.fromuserqueue.get(timeout=0.2)  # Avoid closing connection prematurely
 
-    def test_verifyCertificateUnidirectional_success(self):
+    def test_verifyCertificateUnidirectional_success(self) -> None:
         # ISO 14229-1:2020 Table 89 / 90
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x01\x00\x01\xF4\x30' + bytes(498) + b'\xAD\x00\x20\xAA' + bytes(30) + b'\x44')
         self.conn.fromuserqueue.put(b'\x69\x01\x11\x00\x40\xAA' + bytes(62) + b'\x44\x00\x00')
 
-    def _test_verifyCertificateUnidirectional_success(self):
+    def _test_verifyCertificateUnidirectional_success(self) -> None:
         # ISO 14229-1:2020 Table 89 / 90
         response: Authentication.InterpretedResponse = self.udsclient.verify_certificate_unidirectional(
             communication_configuration=0,
@@ -65,13 +65,13 @@ class TestAuthentication(ClientServerTest):
         self.assertIsNone(response.service_data.session_key_info)
         self.assertIsNone(response.service_data.algorithm_indicator)
 
-    def test_verifyCertificateBidirectional_success(self):
+    def test_verifyCertificateBidirectional_success(self) -> None:
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x02\xAA\x00\x7D\xAA' + bytes(123) + b'\xBB\x01\xCA\xCC' + bytes(456) + b'\xDD')
         self.conn.fromuserqueue.put(b'\x69\x02\x13\x00\x0F\xEE' + bytes(13) + b'\xFF\x07\xC5' + bytes(1989)
                                     + b'\x00\x0Bmy precious\x00\x02\x12\x34')
 
-    def _test_verifyCertificateBidirectional_success(self):
+    def _test_verifyCertificateBidirectional_success(self) -> None:
         response: Authentication.InterpretedResponse = self.udsclient.verify_certificate_bidirectional(
             communication_configuration=0xAA,
             certificate_client=b'\xAA' + bytes(123) + b'\xBB',
@@ -90,13 +90,13 @@ class TestAuthentication(ClientServerTest):
         self.assertIsNone(response.service_data.session_key_info)
         self.assertIsNone(response.service_data.algorithm_indicator)
 
-    def test_proofOfOwnership_success(self):
+    def test_proofOfOwnership_success(self) -> None:
         # ISO 14229-1:2020 Table 91 / 92
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x03\x01\x50\x7F' + bytes(334) + b'\xB7\x00\x00')
         self.conn.fromuserqueue.put(b'\x69\x03\x12\x00\x00')
 
-    def _test_proofOfOwnership_success(self):
+    def _test_proofOfOwnership_success(self) -> None:
         # ISO 14229-1:2020 Table 91 / 92
         response: Authentication.InterpretedResponse = self.udsclient.proof_of_ownership(
             proof_of_ownership_client=b'\x7F' + bytes(334) + b'\xB7'
@@ -115,14 +115,14 @@ class TestAuthentication(ClientServerTest):
         self.assertIsNone(response.service_data.certificate_server)
         self.assertIsNone(response.service_data.algorithm_indicator)
 
-    def test_transmitCertificate_success(self):
+    def test_transmitCertificate_success(self) -> None:
         # ISO 14229-1:2020 Table 99 / 100
         # (the table missing "certificate evaluation id" - it's also not fixed in ISO 14229-1:2020 Amendment 1)
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x04\x24\x09\x01\xF4\x31' + bytes(498) + b'\xAC')
         self.conn.fromuserqueue.put(b'\x69\x04\x13')
 
-    def _test_transmitCertificate_success(self):
+    def _test_transmitCertificate_success(self) -> None:
         # ISO 14229-1:2020 Table 99 / 100
         # (the table missing "certificate evaluation id" - it's also not fixed in ISO 14229-1:2020 Amendment 1)
         response: Authentication.InterpretedResponse = self.udsclient.transmit_certificate(
@@ -143,14 +143,14 @@ class TestAuthentication(ClientServerTest):
         self.assertIsNone(response.service_data.certificate_server)
         self.assertIsNone(response.service_data.algorithm_indicator)
 
-    def test_requestChallengeForAuthentication(self):
+    def test_requestChallengeForAuthentication(self) -> None:
         # ISO 14229-1:2020 Table 103 / 104
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x05\x00\x06' + bytes(9) + b'\x0A' + bytes(4) + b'\x00')
         self.conn.fromuserqueue.put(b'\x69\x05\x00\x06' + bytes(9) + b'\x0A' + bytes(4) + b'\x00\x00\x40\xAA'
                                     + bytes(62) + b'\x44\x00\x00')
 
-    def _test_requestChallengeForAuthentication(self):
+    def _test_requestChallengeForAuthentication(self) -> None:
         # ISO 14229-1:2020 Table 103 / 104
         response: Authentication.InterpretedResponse = self.udsclient.request_challenge_for_authentication(
             communication_configuration=0,
@@ -170,7 +170,7 @@ class TestAuthentication(ClientServerTest):
         self.assertIsNone(response.service_data.proof_of_ownership_server)
         self.assertIsNone(response.service_data.certificate_server)
 
-    def test_verifyProofOfOwnershipUnidirectional(self):
+    def test_verifyProofOfOwnershipUnidirectional(self) -> None:
         # ISO 14229-1:2020 Table 105 / 106
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x06\x06' + bytes(9) + b'\x0A' + bytes(4) + b'\x00\x01\x50'
@@ -178,7 +178,7 @@ class TestAuthentication(ClientServerTest):
                          + b'\x00\x20\xAA' + bytes(30) + b'\x44\x00\x00')
         self.conn.fromuserqueue.put(b'\x69\x06\x12\x06' + bytes(9) + b'\x0A' + bytes(4) + b'\x00\x00\x00')
 
-    def _test_verifyProofOfOwnershipUnidirectional(self):
+    def _test_verifyProofOfOwnershipUnidirectional(self) -> None:
         # ISO 14229-1:2020 Table 105 / 106
         response: Authentication.InterpretedResponse = self.udsclient.verify_proof_of_ownership_unidirectional(
             algorithm_indicator=b'\x06' + bytes(9) + b'\x0A' + bytes(4) + b'\x00',
@@ -200,7 +200,7 @@ class TestAuthentication(ClientServerTest):
         self.assertIsNone(response.service_data.proof_of_ownership_server)
         self.assertIsNone(response.service_data.certificate_server)
 
-    def test_verifyProofOfOwnershipBidirectional(self):
+    def test_verifyProofOfOwnershipBidirectional(self) -> None:
         # ISO 14229-1:2020 Table 105 / 106
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x07\x06' + bytes(9) + b'\x0A' + bytes(4) + b'\x00\x01\x50'
@@ -209,7 +209,7 @@ class TestAuthentication(ClientServerTest):
         self.conn.fromuserqueue.put(b'\x69\x07\x12\x06' + bytes(9) + b'\x0A' + bytes(4)
                                     + b'\x00\x00\x0829111947\x00\x04ETAD')
 
-    def _test_verifyProofOfOwnershipBidirectional(self):
+    def _test_verifyProofOfOwnershipBidirectional(self) -> None:
         # ISO 14229-1:2020 Table 105 / 106
         response: Authentication.InterpretedResponse = self.udsclient.verify_proof_of_ownership_bidirectional(
             algorithm_indicator=b'\x06' + bytes(9) + b'\x0A' + bytes(4) + b'\x00',
@@ -232,13 +232,13 @@ class TestAuthentication(ClientServerTest):
         self.assertIsNone(response.service_data.ephemeral_public_key_server)
         self.assertIsNone(response.service_data.certificate_server)
 
-    def test_authenticationConfiguration_success(self):
+    def test_authenticationConfiguration_success(self) -> None:
         # ISO 14229-1:2020 Table 87 / 88
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x08')
         self.conn.fromuserqueue.put(b'\x69\x08\x02')
 
-    def _test_authenticationConfiguration_success(self):
+    def _test_authenticationConfiguration_success(self) -> None:
         # ISO 14229-1:2020 Table 87 / 88
         response: Authentication.InterpretedResponse = self.udsclient.authentication_configuration()
         self.assertTrue(response.positive)
@@ -254,13 +254,13 @@ class TestAuthentication(ClientServerTest):
         self.assertIsNone(response.service_data.session_key_info)
         self.assertIsNone(response.service_data.algorithm_indicator)
 
-    def test_verifyCertificateUnidirectional_negative(self):
+    def test_verifyCertificateUnidirectional_negative(self) -> None:
         # ISO 14229-1:2020 Table 95 / 96
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x01\x00\x01\xF4\x30' + bytes(498) + b'\xAD\x00\x20\xAA' + bytes(30) + b'\x44')
         self.conn.fromuserqueue.put(b'\x7F\x29\x50')
 
-    def _test_verifyCertificateUnidirectional_negative(self):
+    def _test_verifyCertificateUnidirectional_negative(self) -> None:
         # ISO 14229-1:2020 Table 95 / 96
         with self.assertRaises(NegativeResponseException) as handle:
             self.udsclient.verify_certificate_unidirectional(
@@ -272,41 +272,41 @@ class TestAuthentication(ClientServerTest):
         response: Response = handle.exception.response
 
         self.assertTrue(response.valid)
-        self.assertTrue(issubclass(response.service, Authentication))
+        self.assertTrue(issubclass(response.service, Authentication))  # type: ignore
         self.assertEqual(response.code, Response.Code.CertificateVerificationFailed_InvalidTimePeriod)
 
-    def test_authentication_unexpected_service_exception(self):
+    def test_authentication_unexpected_service_exception(self) -> None:
         self.wait_request_and_respond(b"\x51\x01")  # Positive ECU Reset
 
-    def _test_authentication_unexpected_service_exception(self):
+    def _test_authentication_unexpected_service_exception(self) -> None:
         with self.assertRaises(UnexpectedResponseException):
             self.udsclient.authentication_configuration()
 
-    def test_authentication_unexpected_service_no_exception(self):
+    def test_authentication_unexpected_service_no_exception(self) -> None:
         self.wait_request_and_respond(b"\x51\x01")  # Positive ECU Reset
 
-    def _test_authentication_unexpected_service_no_exception(self):
+    def _test_authentication_unexpected_service_no_exception(self) -> None:
         self.udsclient.config['exception_on_unexpected_response'] = False
         response: Response = self.udsclient.authentication_configuration()
         self.assertTrue(response.valid)
         self.assertTrue(response.unexpected)
 
-    def test_authentication_invalid_response_no_exception(self):
+    def test_authentication_invalid_response_no_exception(self) -> None:
         self.wait_request_and_respond(b"\x69\x08")  # no return value
 
-    def _test_authentication_invalid_response_no_exception(self):
+    def _test_authentication_invalid_response_no_exception(self) -> None:
         self.udsclient.config['exception_on_invalid_response'] = False
         response = self.udsclient.authentication_configuration()
         self.assertFalse(response.valid)
 
-    def test_authentication_unexpected_subfunction_exception(self):
+    def test_authentication_unexpected_subfunction_exception(self) -> None:
         self.wait_request_and_respond(b'\x69\x00\x10')  # Deauthenticate
 
     def _test_authentication_unexpected_subfunction_exception(self):
         with self.assertRaises(UnexpectedResponseException):
             self.udsclient.authentication_configuration()
 
-    def test_invalid_response(self):
+    def test_invalid_response(self) -> None:
         self.wait_request_and_respond(b'\x69')  # #0 no data
         self.wait_request_and_respond(b'\x69\x00')  # #1 no return value
         self.wait_request_and_respond(b'\x69\x00\x10\x00')  # #2 one extra byte
@@ -317,7 +317,7 @@ class TestAuthentication(ClientServerTest):
         self.wait_request_and_respond(b'\x69\x05\x10\x00\x00\x00\x00')  # #7 small algorithIndicator
         self.wait_request_and_respond(b'\x69\x09\x10')  # #8 Unknown Subfunction
 
-    def _test_invalid_response(self):
+    def _test_invalid_response(self) -> None:
         with self.assertRaises(InvalidResponseException):  # #0 no data
             self.udsclient.deauthenticate()
 
@@ -363,10 +363,10 @@ class TestAuthentication(ClientServerTest):
         with self.assertRaises(InvalidResponseException):  # #8 Unknown Subfunction
             self.udsclient.deauthenticate()
 
-    def test_bad_param(self):
+    def test_bad_param(self) -> None:
         pass
 
-    def _test_bad_param(self):
+    def _test_bad_param(self) -> None:
         with self.assertRaises(ValueError):
             self.udsclient.authentication(9)
 

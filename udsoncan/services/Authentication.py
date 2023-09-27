@@ -222,7 +222,7 @@ class Authentication(BaseService):
                 data = Authentication._append_byes_parameter(data, challenge_client, 'Challenge Client')
             else:
                 if not isinstance(algorithm_indicator, bytes) or len(algorithm_indicator) != 16:
-                    raise ValueError(f'{algorithm_indicator} must be a bytes object of length 16')
+                    raise ValueError(f'{algorithm_indicator!r} must be a bytes object of length 16')
                 # algorithmIndicator
                 data += algorithm_indicator
         elif authentication_task == Authentication.AuthenticationTask.proofOfOwnership:
@@ -243,7 +243,7 @@ class Authentication(BaseService):
         elif authentication_task in (Authentication.AuthenticationTask.verifyProofOfOwnershipUnidirectional,
                                      Authentication.AuthenticationTask.verifyProofOfOwnershipBidirectional):
             if not isinstance(algorithm_indicator, bytes) or len(algorithm_indicator) != 16:
-                raise ValueError(f'{algorithm_indicator} must be a bytes object of length 16')
+                raise ValueError(f'{algorithm_indicator!r} must be a bytes object of length 16')
             # algorithmIndicator
             data = algorithm_indicator
             # proofOfOwnershipClient
@@ -256,7 +256,7 @@ class Authentication(BaseService):
         return Request(service=cls, subfunction=authentication_task, data=data)
 
     @staticmethod
-    def _extract_byes_parameter(response: Response, data: bytes, parameter_name: str):
+    def _extract_byes_parameter(response: Response, data: bytes, parameter_name: str) -> bytes:
         if data is not None and len(data) >= 2:
             parameter_length, = struct.unpack('>H', data[:2])
         else:
