@@ -260,7 +260,7 @@ class Client:
         :param level: The security level to unlock. If value is even, it will be converted to the corresponding odd value
         :type level: int 
 
-        :param data: The data to send to the server
+        :param data: The data to send to the server (securityAccessDataRecord)
         :type data: bytes 
 
         :return: The server response parsed by :meth:`SecurityAccess.interpret_response<udsoncan.services.SecurityAccess.interpret_response>`
@@ -327,7 +327,7 @@ class Client:
         return response
 
     @standard_error_management
-    def unlock_security_access(self, level) -> Optional[services.SecurityAccess.InterpretedResponse]:
+    def unlock_security_access(self, level, seed_params=bytes()) -> Optional[services.SecurityAccess.InterpretedResponse]:
         """
         Successively calls request_seed and send_key to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service.
         The key computation is done by calling config['security_algo']
@@ -337,6 +337,9 @@ class Client:
         :param level: The level to unlock. Can be the odd or even variant of it.
         :type level: int
 
+        :param seed_params: Optional data to attach to the RequestSeed request (securityAccessDataRecord).
+        :type seed_params: bytes
+
         :return: The server response parsed by :meth:`SecurityAccess.interpret_response<udsoncan.services.SecurityAccess.interpret_response>`
         :rtype: :ref:`Response<Response>`
         """
@@ -344,7 +347,7 @@ class Client:
         if 'security_algo' not in self.config or not callable(self.config['security_algo']):
             raise NotImplementedError("Client configuration does not provide a security algorithm")
 
-        response = self.request_seed._func_no_error_management(self, level)
+        response = self.request_seed._func_no_error_management(self, level, data=seed_params)
         seed = response.service_data.seed
         if len(seed) > 0 and seed == b'\x00' * len(seed):
             self.logger.info('%s - Security access level 0x%02x is already unlocked, no key will be sent.' %
