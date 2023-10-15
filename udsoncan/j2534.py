@@ -265,7 +265,6 @@ class J2534():
         if ioctlInput is None:
             pInput = POINTER(c_ulong)()
         else:
-            # pInput = c_ulong(ioctlInput.value)
             pInput = ioctlInput
 
         if ioctlOutput is None:
