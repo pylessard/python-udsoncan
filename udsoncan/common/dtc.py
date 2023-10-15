@@ -221,11 +221,9 @@ class Dtc:
         return '<DTC ID=0x%06x, Status=0x%02x, Severity=0x%02x at 0x%08x>' % (self.id, self.status.get_byte_as_int(), self.severity.get_byte_as_int(), id(self))
 
     def id_iso(self) -> str:
-        return '%c%i%X%X%X-%02X' % (
+        return '%c%i%03X-%02X' % (
             ['P', 'C', 'B', 'U'][self.id >> 22],
             (self.id >> 20) & 3,
-            (self.id >> 16) & 0xF,
-            (self.id >> 12) & 0xF,
-            (self.id >> 8) & 0xF,
+            (self.id >> 8) & 0xFFF,
             (self.id) & 0xFF
         )
