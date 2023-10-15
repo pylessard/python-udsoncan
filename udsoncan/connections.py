@@ -596,7 +596,7 @@ class J2534Connection(BaseConnection):
             (Ioctl_ID.DATA_RATE.value, 500000),
             (Ioctl_ID.LOOPBACK.value, 0),
             (Ioctl_ID.ISO15765_BS.value, 0x20),
-            (Ioctl_ID.ISO15765_STMIN.value, 30),
+            (Ioctl_ID.ISO15765_STMIN.value, 0),
         ])
         self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.SET_CONFIG, configs)
         self.log_last_operation("PassThruIoctl SET_CONFIG")
