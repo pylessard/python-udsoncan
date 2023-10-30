@@ -93,7 +93,7 @@ Note that, in order to run this code, both ``python-can`` and ``can-isotp`` must
     'can_fd': False,                        # Does not set the can_fd flag on the output CAN messages
     'bitrate_switch': False,                # Does not set the bitrate_switch flag on the output CAN messages
     'rate_limit_enable': False,             # Disable the rate limiter
-    'rate_limit_max_bitrate': 0,            # Ignored when rate_limit_enable=False. Sets the max bitrate when rate_limit_enable=True
+    'rate_limit_max_bitrate': 1000000,      # Ignored when rate_limit_enable=False. Sets the max bitrate when rate_limit_enable=True
     'rate_limit_window_size': 0.2,          # Ignored when rate_limit_enable=False. Sets the averaging window size for bitrate calculation when rate_limit_enable=True
     'listen_mode': False                    # Does not use the listen_mode which prevent transmission.
    }
