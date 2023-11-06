@@ -20,8 +20,7 @@ except Exception as e:
     _import_isotp_err = e
 
 try:
-    from udsoncan.j2534 import J2534
-    from udsoncan.j2534 import Protocol_ID, Ioctl_Flags, Ioctl_ID
+    from udsoncan.j2534 import J2534, TxStatusFlag, Protocol_ID, Error_ID, Ioctl_Flags, Ioctl_ID, SCONFIG_LIST
     _import_j2534_err = None
 except Exception as e:
     _import_j2534_err = e
@@ -38,7 +37,6 @@ from udsoncan.exceptions import TimeoutException
 
 
 class BaseConnection(ABC):
-
     def __init__(self, name=None):
         if name is None:
             self.name = 'Connection'
@@ -565,22 +563,28 @@ class J2534Connection(BaseConnection):
     """
 
     def __init__(self, windll, rxid, txid, name=None, debug=False, *args, **kwargs):
-
         BaseConnection.__init__(self, name)
 
+        # Determine mode ID29 or ID11
+        txFlags = TxStatusFlag.ISO15765_CAN_ID_29.value if txid >> 11 else TxStatusFlag.ISO15765_CAN_ID_11.value
+
         # Set up a J2534 interface using the DLL provided
-        self.interface = J2534(windll=windll, rxid=rxid, txid=txid)
+        self.interface = J2534(windll=windll, rxid=rxid, txid=txid, txFlags=txFlags)
 
         # Set the protocol to ISO15765, Baud rate to 500000
         self.protocol = Protocol_ID.ISO15765
         self.baudrate = 500000
+        self.debug = debug
 
         # Open the interface (connect to the DLL)
         result, self.devID = self.interface.PassThruOpen()
 
         if debug:
-            result = self.interface.PassThruIoctl(Handle=0, IoctlID=Ioctl_Flags.TX_IOCTL_SET_DLL_DEBUG_FLAGS,
-                                                  ioctlInput=Ioctl_Flags.TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS)
+            self.result = self.interface.PassThruIoctl(0,
+                                                       Ioctl_Flags.TX_IOCTL_SET_DLL_DEBUG_FLAGS,
+                                                       SCONFIG_LIST([(0, Ioctl_Flags.TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS.value)])
+                                                       )
+            self.log_last_operation("PassThruIoctl SET_DLL_DEBUG")
 
         # Get the firmeware and DLL version etc, mainly for debugging output
         self.result, self.firmwareVersion, self.dllVersion, self.apiVersion = self.interface.PassThruReadVersion(self.devID)
@@ -589,10 +593,29 @@ class J2534Connection(BaseConnection):
 
         # get the channel ID of the interface (used for subsequent communication)
         self.result, self.channelID = self.interface.PassThruConnect(self.devID, self.protocol.value, self.baudrate)
+        self.log_last_operation("PassThruConnect")
+
+        configs = SCONFIG_LIST([
+            (Ioctl_ID.DATA_RATE.value, 500000),
+            (Ioctl_ID.LOOPBACK.value, 0),
+            (Ioctl_ID.ISO15765_BS.value, 0x20),
+            (Ioctl_ID.ISO15765_STMIN.value, 0),
+        ])
+        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.SET_CONFIG, configs)
+        self.log_last_operation("PassThruIoctl SET_CONFIG")
+
+        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_MSG_FILTERS)
+        self.log_last_operation("PassThruIoctl CLEAR_MSG_FILTERS")
 
         # Set the filters and clear the read buffer (filters will be set based on tx/rxids)
         self.result = self.interface.PassThruStartMsgFilter(self.channelID, self.protocol.value)
+        self.log_last_operation("PassThruStartMsgFilter")
+
         self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_RX_BUFFER)
+        self.log_last_operation("PassThruIoctl CLEAR_RX_BUFFER")
+
+        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_TX_BUFFER)
+        self.log_last_operation("PassThruIoctl CLEAR_TX_BUFFER")
 
         self.rxqueue = queue.Queue()
         self.exit_requested = False
@@ -616,24 +639,29 @@ class J2534Connection(BaseConnection):
         return self.opened
 
     def rxthread_task(self):
-
         while not self.exit_requested:
-
             try:
                 result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 1)
-
                 if data is not None:
                     self.rxqueue.put(data)
             except Exception:
                 self.logger.critical("Exiting J2534 rx thread")
                 self.exit_requested = True
 
+    def log_last_operation(self, exec_method):
+        res, pErrDescr = self.interface.PassThruGetLastError()
+        if self.result != Error_ID.ERR_SUCCESS:
+            self.logger.error("J2534 %s: %s %s" % (exec_method, self.result, pErrDescr))
+
+        elif self.debug:
+            self.logger.debug("J2534 %s: OK" % (exec_method))
+
     def close(self):
         self.exit_requested = True
         self.rxthread.join()
-        result = self.interface.PassThruDisconnect(self.channelID)
+        self.result = self.interface.PassThruDisconnect(self.channelID)
         self.opened = False
-        self.logger.info('J2534 Connection closed')
+        self.log_last_operation("Connection closed")
 
     def specific_send(self, payload):
         result = self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value)
