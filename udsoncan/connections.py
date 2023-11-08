@@ -6,6 +6,7 @@ import binascii
 import sys
 from abc import ABC, abstractmethod
 import time
+from typing import Union
 
 try:
     import can  # type:ignore
@@ -53,6 +54,8 @@ class BaseConnection(ABC):
 
         :returns: None
         """
+        if not self.is_open():
+            raise RuntimeError("Connection is not opened")
 
         if isinstance(data, Request) or isinstance(data, Response):
             payload = data.get_payload()
@@ -75,6 +78,9 @@ class BaseConnection(ABC):
         :returns: Received data
         :rtype: bytes or None
         """
+        if not self.is_open():
+            raise RuntimeError("Connection is not opened")
+        
         try:
             frame = self.specific_wait_frame(timeout=timeout)
         except Exception as e:
@@ -443,7 +449,115 @@ class PythonIsoTpConnection(BaseConnection):
     :type name: string
 
     """
+
+    subconn:Union["PythonIsoTpV1Connection", "PythonThreadedIsoTpConnection"]
+    def __init__(self, isotp_layer, name=None):
+        BaseConnection.__init__(self, name)
+        import isotp
+        if hasattr(isotp, 'ThreadedTransportLayer'):    # isotp v2.x
+            if isinstance(isotp_layer, isotp.ThreadedTransportLayer):
+                self.subconn=PythonThreadedIsoTpConnection(isotp_layer, name)
+            elif isinstance(isotp_layer, isotp.TransportLayer):
+                self.subconn=PythonIsoTpV1Connection(isotp_layer, name)
+            else:
+                raise ValueError("Invalid isotp layer object")
+        else:   # isotp v1.x
+            self.subconn=PythonIsoTpV1Connection(isotp_layer, name)
+    
+
+    def open(self, bus=None):
+        return self.subconn.open(bus)
+
+    def __enter__(self):
+        return self.subconn.__enter__()
+
+    def __exit__(self, type, value, traceback):
+        return self.subconn.__exit__(type, value, traceback)
+
+    def is_open(self):
+        return self.subconn.is_open()
+
+    def close(self):
+        return self.subconn.close()
+
+    def specific_send(self, payload):
+        return self.subconn.specific_send(payload)
+
+    def specific_wait_frame(self, timeout=2):
+        return self.subconn.specific_wait_frame(timeout)
+
+    def empty_rxqueue(self):
+        return self.subconn.empty_rxqueue()
+
+    def empty_txqueue(self):
+        return self.subconn.empty_txqueue()
+
+
+class PythonThreadedIsoTpConnection(BaseConnection):
     mtu = 4095
+
+    isotp_layer:"isotp.ThreadedTransportLayer"
+    opened:bool
+
+    def __init__(self, isotp_layer, name=None):
+        BaseConnection.__init__(self, name)
+        self.opened = False
+        self.isotp_layer = isotp_layer
+
+        assert isinstance(self.isotp_layer, isotp.ThreadedTransportLayer), 'isotp_layer must be a valid isotp.ThreadedTransportLayer '
+
+    def open(self, bus=None):
+        if bus is not None:
+            self.isotp_layer.set_bus(bus)
+        self.isotp_layer.start()
+        self.opened = True
+        self.logger.info('Connection opened')
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    def is_open(self):
+        return self.opened
+
+    def close(self):
+        self.isotp_layer.stop()
+        self.empty_rxqueue()
+        self.empty_txqueue()
+        self.opened = False
+        self.logger.info('Connection closed')
+
+    def specific_send(self, payload):
+        if self.mtu is not None:
+            if len(payload) > self.mtu:
+                self.logger.warning("Truncating payload to be set to a length of %d" % (self.mtu))
+                payload = payload[0:self.mtu]
+
+        self.isotp_layer.send(payload)
+
+    def specific_wait_frame(self, timeout:float=2):
+        return self.isotp_layer.recv(block=True, timeout=timeout)
+
+    def empty_rxqueue(self):
+        self.isotp_layer.stop_receiving()   # todo: not thread safe
+        self.isotp_layer.clear_rx_queue()
+
+    def empty_txqueue(self):
+        self.isotp_layer.stop_sending()     # todo: not thread safe
+        self.isotp_layer.clear_tx_queue()
+
+class PythonIsoTpV1Connection(BaseConnection):
+    mtu = 4095
+
+    toIsoTPQueue:"queue.Queue[bytes]"
+    fromIsoTPQueue:"queue.Queue[bytes]"
+    rxthread:threading.Thread
+    exit_requested:bool
+    opened:bool
+    isotp_layer:"isotp.TransportLayer"
 
     def __init__(self, isotp_layer, name=None):
         BaseConnection.__init__(self, name)
@@ -480,7 +594,8 @@ class PythonIsoTpConnection(BaseConnection):
         self.empty_rxqueue()
         self.empty_txqueue()
         self.exit_requested = True
-        self.rxthread.join()
+        if self.rxthread is not None:
+            self.rxthread.join()
         self.isotp_layer.reset()
         self.opened = False
         self.logger.info('Connection closed')
