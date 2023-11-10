@@ -2165,7 +2165,7 @@ class Client:
                     timeout_type_used = 'overall'
                     timeout_value = max(overall_timeout_time - time.time(), 0)
 
-                payload = self.conn.wait_frame(timeout=timeout_value, exception=True)
+                recv_payload = self.conn.wait_frame(timeout=timeout_value, exception=True)
             except TimeoutException:
                 if timeout_type_used == 'single_request':
                     timeout_name_to_report = 'P2* timeout' if using_p2_star else 'P2 timeout'
@@ -2178,13 +2178,13 @@ class Client:
             except Exception as e:
                 raise e
 
-            if timed_out:
+            if timed_out or recv_payload is None:
                 if spr_used:
                     return None
                 raise TimeoutException('Did not receive response in time. %s time has expired (timeout=%.3f sec)' %
                                        (timeout_name_to_report, timeout_value))
-
-            response = Response.from_payload(payload)
+    
+            response = Response.from_payload(recv_payload)
             self.last_response = response
             self.logger.debug("Received response from server")
 
