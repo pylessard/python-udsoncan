@@ -731,10 +731,10 @@ class J2534Connection(BaseConnection):
 
     """
 
-    interface: J2534
-    protocol: Protocol_ID
+    interface: "J2534"
+    protocol: "Protocol_ID"
     baudrate: int
-    result: Error_ID
+    result: "Error_ID"
     firmwareVersion: ctypes.Array[ctypes.c_char]
     dllVersion: ctypes.Array[ctypes.c_char]
     apiVersion: ctypes.Array[ctypes.c_char]
