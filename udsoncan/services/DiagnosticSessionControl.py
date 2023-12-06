@@ -98,9 +98,9 @@ class DiagnosticSessionControl(BaseService):
         )
 
         if (standard_version >= 2013):
-            if len(response.data) < 5:
+            if len(response.data) != 5:
                 raise InvalidResponseException(
-                    response, 'Response must contain 4 bytes of data representing the server timing requirements (P2 and P2* timeouts)')
+                    response, 'Response must contain 4 bytes of data representing the server timing requirements (P2 and P2* timeouts). Got %d bytes' % len(response.data))
 
             (a, b) = struct.unpack('>HH', response.data[1:])
             response.service_data.p2_server_max = (a) / 1000
