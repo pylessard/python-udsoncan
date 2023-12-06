@@ -266,7 +266,7 @@ class IsoTPSocketConnection(BaseConnection):
     Sends and receives data through an ISO-TP socket. Makes cleaner code than SocketConnection but offers no additional functionality.
     The `can-isotp module <https://github.com/pylessard/python-can-isotp>`_ must be installed in order to use this connection
 
-    :param interface: The can interface to use (example: `can0`)
+    :param interface: The can interface to use (example: ``can0``)
     :type interface: string
     :param rxid: The reception CAN id
     :type rxid: int 
@@ -559,6 +559,8 @@ class PythonIsoTpV2Connection(BaseConnection):
 
     def open(self, bus: Optional["can.BusABC"] = None) -> "PythonIsoTpV2Connection":
         if bus is not None:
+            if not hasattr(self.isotp_layer, 'set_bus'):
+                raise NotImplementedError("The IsoTP layer used does not have a set_bus method. Did you mean to use an isotp.CanStack ?")
             self.isotp_layer.set_bus(bus)
         self.isotp_layer.start()
         self.opened = True
@@ -593,11 +595,11 @@ class PythonIsoTpV2Connection(BaseConnection):
         return self.isotp_layer.recv(block=True, timeout=timeout)
 
     def empty_rxqueue(self) -> None:
-        self.isotp_layer.stop_receiving_threadsafe()
+        self.isotp_layer.stop_receiving()
         self.isotp_layer.clear_rx_queue()
 
     def empty_txqueue(self) -> None:
-        self.isotp_layer.stop_sending_threadsafe()
+        self.isotp_layer.stop_receiving()
         self.isotp_layer.clear_tx_queue()
 
 
@@ -624,6 +626,8 @@ class PythonIsoTpV1Connection(BaseConnection):
 
     def open(self, bus: Optional["can.BusABC"] = None) -> "PythonIsoTpV1Connection":
         if bus is not None:
+            if not hasattr(self.isotp_layer, 'set_bus'):
+                raise NotImplementedError("The IsoTP layer used does not have a set_bus method. Did you mean to use an isotp.CanStack ?")
             self.isotp_layer.set_bus(bus)
 
         self.exit_requested = False
