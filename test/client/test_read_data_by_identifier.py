@@ -64,6 +64,22 @@ class TestReadDataByIdentifier(ClientServerTest):
         values = response.service_data.values
         self.assertEqual(values[1], (0x1234,))
 
+    def test_rdbi_single_success_default_did(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x22\x00\x01")
+        self.conn.fromuserqueue.put(b"\x62\x00\x01\x12\x34")  # Positive response
+
+    def _test_rdbi_single_success_default_did(self):
+        self.udsclient.config["data_identifiers"] = {
+            'default': '>H',
+            2: '<H',
+            3: StubbedDidCodec
+        }
+        response = self.udsclient.read_data_by_identifier(didlist=1)
+        self.assertTrue(response.positive)
+        values = response.service_data.values
+        self.assertEqual(values[1], (0x1234,))
+
     def test_rdbi_single_success_spr_no_effect(self):
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b"\x22\x00\x01")

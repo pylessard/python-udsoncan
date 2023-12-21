@@ -26,33 +26,42 @@ def check_io_config(didlist: Union[int, List[int]], ioconfig: Dict[Any, Any]) ->
 
     for did in didlist:
         if did not in ioconfig:
-            raise ConfigError(key=did, msg='Actual Input/Output configuration contains no definition for data identifier 0x%04x' % did)
-        if isinstance(ioconfig[did], dict):  # IO Control services has that concept of composite DID. We define them with dicts.
-            if 'codec'not in ioconfig[did]:
-                raise ConfigError('codec', msg='Configuration for Input/Output identifier 0x%04x is missing a codec')
+            if 'default' in ioconfig:
+                selected_did_config = ioconfig['default']
+                didstr = '"default"'
+            else:
+                raise ConfigError(key=did, msg='Actual Input/Output configuration contains no definition for data identifier 0x%04x' % did)
+        else:
+            didstr = '0x%04x' % did
+            selected_did_config = ioconfig[did]
 
-            if 'mask' in ioconfig[did]:
-                mask_def = ioconfig[did]['mask']
+        ioconfig[did] = selected_did_config
+        if isinstance(selected_did_config, dict):  # IO Control services has that concept of composite DID. We define them with dicts.
+            if 'codec'not in selected_did_config:
+                raise ConfigError('codec', msg='Configuration for Input/Output identifier %s is missing a codec')
+
+            if 'mask' in selected_did_config:
+                mask_def = selected_did_config['mask']
                 for mask_name in mask_def:
                     if not isinstance(mask_def[mask_name], int):
-                        raise ValueError('In Input/Output configuration for did 0x%04x, mask "%s" is not an integer' % (did, mask_name))
+                        raise ValueError('In Input/Output configuration for did %s, mask "%s" is not an integer' % (didstr, mask_name))
 
                     if mask_def[mask_name] < 0:
-                        raise ValueError('In Input/Output configuration for did 0x%04x, mask "%s" is not a positive integer' % (did, mask_name))
+                        raise ValueError('In Input/Output configuration for did %s, mask "%s" is not a positive integer' % (didstr, mask_name))
 
-            if 'mask_size' in ioconfig[did]:
-                if not isinstance(ioconfig[did]['mask_size'], int):
-                    raise ValueError('mask_size in Input/Output configuration for did 0x%04x must be a valid integer' % (did))
+            if 'mask_size' in selected_did_config:
+                if not isinstance(selected_did_config['mask_size'], int):
+                    raise ValueError('mask_size in Input/Output configuration for did %s must be a valid integer' % (didstr))
 
-                if ioconfig[did]['mask_size'] < 0:
-                    raise ValueError('mask_size in Input/Output configuration for did 0x%04x must be greater than 0' % (did))
+                if selected_did_config['mask_size'] < 0:
+                    raise ValueError('mask_size in Input/Output configuration for did %s must be greater than 0' % (didstr))
 
-                if 'mask' in ioconfig[did]:
-                    mask_def = ioconfig[did]['mask']
+                if 'mask' in selected_did_config:
+                    mask_def = selected_did_config['mask']
                     for mask_name in mask_def:
-                        if mask_def[mask_name] > 2**(ioconfig[did]['mask_size'] * 8) - 1:
+                        if mask_def[mask_name] > 2**(selected_did_config['mask_size'] * 8) - 1:
                             raise ValueError(
-                                'In Input/Output configuration for did 0x%04x, mask "%s" cannot fit in %d bytes (defined by mask_size)' % (did, mask_name, ioconfig[did]['mask_size']))
+                                'In Input/Output configuration for did %s, mask "%s" cannot fit in %d bytes (defined by mask_size)' % (didstr, mask_name, selected_did_config['mask_size']))
 
         else:
             ioconfig[did] = {

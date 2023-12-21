@@ -68,7 +68,7 @@ class InputOutputControlByIdentifier(BaseService):
                      control_param: Optional[int] = None,
                      values: Optional[Union[List[Any], Dict[str, Any], IOValues]] = None,
                      masks: Optional[Union[List[str], Dict[str, bool], IOMasks, bool]] = None,
-                     ioconfig: Optional[Dict[int, Union[CodecDefinition, IOConfigEntry]]] = None
+                     ioconfig: Optional[IOConfig] = None
                      ) -> Request:
         """
         Generates a request for InputOutputControlByIdentifier
@@ -141,7 +141,9 @@ class InputOutputControlByIdentifier(BaseService):
         request = Request(service=cls)
 
         request.data = bytes()
-        ioconfig_validated = tools.check_io_config(did, ioconfig)  # IO dids are defined in client config.
+        # IO dids are defined in client config.
+        # ioconfig_validated will have a key for the selected did if it falls back on 'default' key
+        ioconfig_validated = tools.check_io_config(did, ioconfig)
         request.data += struct.pack('>H', did)
 
         # This parameter is optional according to standard
