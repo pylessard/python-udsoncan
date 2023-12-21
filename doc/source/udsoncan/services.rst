@@ -794,7 +794,7 @@ Authentication (0x29)
    :member-order: bysource
 
 make_request() parameters per sub function
-#########################################
+##########################################
 
 .. raw:: html
 
@@ -917,4 +917,3 @@ make_request() parameters per sub function
 
    </div>
 
--------
