@@ -105,6 +105,8 @@ See :ref:`an example <example_security_algo>`
       - ``string`` : The string will be used as a pack/unpack string when processing the data
       - ``DidCodec`` (class or instance) : The encode/decode method will be used to process the data
 
+    The special dictionnary key `'default'` can be used to specify a fallback codec if an operation is done on a codec not part of the configuration. Useful for scanning a range of DID
+
 .. _config_input_output:
 
 .. attribute:: input_output
@@ -124,6 +126,8 @@ See :ref:`an example <example_security_algo>`
          - ``mask`` : A dictionary mapping the mask name with a bit
          - ``mask_size`` : An integer indicating on how many bytes must the mask be encoded
 
+    The special dictionnary key `'default'` can be used to specify a fallback codec if an operation is done on a codec not part of the configuration. Useful for scanning a range of DID
+    
    See :ref:`this example<iocontrol_composite_did>` to see how IO codecs are defined.
 
 .. _config_tolerate_zero_padding:

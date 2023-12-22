@@ -13,7 +13,7 @@ SecurityAlgoType = Callable[[int, bytes, Any], bytes]
 
 
 CodecDefinition = Union[str, DidCodec, Type[DidCodec]]
-DIDConfig = Dict[int, CodecDefinition]
+DIDConfig = Dict[Union[int, str], CodecDefinition]
 
 
 class IOConfigEntry(TypedDict, total=False):
@@ -22,7 +22,7 @@ class IOConfigEntry(TypedDict, total=False):
     mask_size: Optional[int]
 
 
-IOConfig = Dict[int, Union[IOConfigEntry, CodecDefinition]]
+IOConfig = Dict[Union[int, str], Union[IOConfigEntry, CodecDefinition]]
 
 
 class ClientConfig(TypedDict, total=False):
@@ -36,7 +36,7 @@ class ClientConfig(TypedDict, total=False):
     dtc_snapshot_did_size: int
     server_address_format: Optional[int]
     server_memorysize_format: Optional[int]
-    data_identifiers: Dict[int, CodecDefinition]
+    data_identifiers: DIDConfig
     input_output: IOConfig
     request_timeout: float
     p2_timeout: float

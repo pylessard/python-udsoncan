@@ -70,14 +70,16 @@ class ReadDataByIdentifier(BaseService):
         didlist = cls.validate_didlist_input(didlist)
 
         req = Request(cls)
-        didconfig = check_did_config(didlist, didconfig)
+        # Return a validated did config. Format may change, entries might be added if default value is set.
+        didconfig_validated = check_did_config(didlist, didconfig)
 
         did_reading_all_data = None
         for did in didlist:
-            if did not in didconfig:    # Already checked in check_did_config. Paranoid check
+            if did not in didconfig_validated:    # Already checked in check_did_config. Paranoid check
                 raise ConfigError(key=did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
 
-            codec = make_did_codec_from_config(didconfig[did])  # Make sure the config is good before sending the request. This method can raise.
+            # Make sure the config is good before sending the request. This method can raise.
+            codec = make_did_codec_from_config(didconfig_validated[did])
 
             try:
                 len(codec)  # Validate the length function. May raise
@@ -123,7 +125,7 @@ class ReadDataByIdentifier(BaseService):
             raise InvalidResponseException(response, "No data in response")
 
         didlist = cls.validate_didlist_input(didlist)
-        didconfig = check_did_config(didlist, didconfig)
+        didconfig_validated = check_did_config(didlist, didconfig)
 
         response.service_data = cls.ResponseData(
             values={}
@@ -141,14 +143,14 @@ class ReadDataByIdentifier(BaseService):
                 raise InvalidResponseException(response, "Response given by server is incomplete.")
 
             did = struct.unpack('>H', response.data[offset:offset + 2])[0]  # Get the DID number
-            if did == 0 and did not in didconfig and tolerate_zero_padding:  # We read two zeros and that is not a DID bu we accept that. So we're done.
+            if did == 0 and did not in didconfig_validated and tolerate_zero_padding:  # We read two zeros and that is not a DID bu we accept that. So we're done.
                 if response.data[offset:] == b'\x00' * (len(response.data) - offset):
                     break
 
-            if did not in didconfig:  # Already checked in check_did_config. Paranoid check
+            if did not in didconfig_validated:  # Already checked in check_did_config. Paranoid check
                 raise ConfigError(key=did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
 
-            codec = make_did_codec_from_config(didconfig[did])
+            codec = make_did_codec_from_config(didconfig_validated[did])
             offset += 2
 
             try:

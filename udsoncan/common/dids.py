@@ -6,6 +6,7 @@ __all__ = [
 ]
 
 import inspect
+from copy import deepcopy
 from udsoncan.exceptions import ConfigError
 from udsoncan.typing import CodecDefinition, DIDConfig, IOConfigEntry
 from udsoncan.common.DidCodec import DidCodec
@@ -175,13 +176,17 @@ def check_did_config(didlist: Union[int, List[int]], didconfig: Optional[Dict]) 
     if didconfig is None:
         raise ConfigError("didconfig is not set")
     didlist = [didlist] if not isinstance(didlist, list) else didlist
+    didconfig = deepcopy(didconfig)
     if 'data_identifiers' in didconfig:
         didconfig = didconfig['data_identifiers']
 
     assert didconfig is not None
     for did in didlist:
         if did not in didconfig:
-            raise ConfigError(did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
+            if 'default' in didconfig:
+                didconfig[did] = didconfig['default']
+            else:
+                raise ConfigError(did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
 
     return cast(DIDConfig, didconfig)
 

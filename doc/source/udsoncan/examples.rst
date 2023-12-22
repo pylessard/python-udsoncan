@@ -211,6 +211,7 @@ This example shows how to configure the client with a DID configuration and requ
 
    config = dict(udsoncan.configs.default_client_config)
    config['data_identifiers'] = {
+      'default' : '>H',                      # Default codec is a struct.pack/unpack string. 16bits little endian
       0x1234 : MyCustomCodecThatShiftBy4,    # Uses own custom defined codec. Giving the class is ok
       0x1235 : MyCustomCodecThatShiftBy4(),  # Same as 0x1234, giving an instance is good also
       0xF190 : udsoncan.AsciiCodec(15)       # Codec that read ASCII string. We must tell the length of the string
