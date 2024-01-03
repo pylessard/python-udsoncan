@@ -545,7 +545,6 @@ class PythonIsoTpConnection(BaseConnection):
 
 
 class PythonIsoTpV2Connection(BaseConnection):
-    mtu = 4095
 
     isotp_layer: "isotp.TransportLayer"
     opened: bool
@@ -557,11 +556,7 @@ class PythonIsoTpV2Connection(BaseConnection):
 
         assert isinstance(self.isotp_layer, isotp.TransportLayer), 'isotp_layer must be a valid isotp.TransportLayer '
 
-    def open(self, bus: Optional["can.BusABC"] = None) -> "PythonIsoTpV2Connection":
-        if bus is not None:
-            if not hasattr(self.isotp_layer, 'set_bus'):
-                raise NotImplementedError("The IsoTP layer used does not have a set_bus method. Did you mean to use an isotp.CanStack ?")
-            self.isotp_layer.set_bus(bus)
+    def open(self) -> "PythonIsoTpV2Connection":
         self.isotp_layer.start()
         self.opened = True
         self.logger.info('Connection opened')
@@ -584,11 +579,6 @@ class PythonIsoTpV2Connection(BaseConnection):
         self.logger.info('Connection closed')
 
     def specific_send(self, payload: bytes, timeout: float = 5) -> None:
-        if self.mtu is not None:
-            if len(payload) > self.mtu:
-                self.logger.warning("Truncating payload to be set to a length of %d" % (self.mtu))
-                payload = payload[0:self.mtu]
-
         self.isotp_layer.send(payload, send_timeout=timeout)
 
     def specific_wait_frame(self, timeout: float = 2) -> Optional[bytes]:
@@ -599,13 +589,11 @@ class PythonIsoTpV2Connection(BaseConnection):
         self.isotp_layer.clear_rx_queue()
 
     def empty_txqueue(self) -> None:
-        self.isotp_layer.stop_receiving()
+        self.isotp_layer.stop_sending()
         self.isotp_layer.clear_tx_queue()
 
 
 class PythonIsoTpV1Connection(BaseConnection):
-    mtu = 4095
-
     toIsoTPQueue: "queue.Queue[bytes]"
     fromIsoTPQueue: "queue.Queue[bytes]"
     rxthread: Optional[threading.Thread]
@@ -624,12 +612,7 @@ class PythonIsoTpV1Connection(BaseConnection):
 
         assert isinstance(self.isotp_layer, isotp.TransportLayerLogic), 'isotp_layer must be a valid isotp.TransportLayerLogic '
 
-    def open(self, bus: Optional["can.BusABC"] = None) -> "PythonIsoTpV1Connection":
-        if bus is not None:
-            if not hasattr(self.isotp_layer, 'set_bus'):
-                raise NotImplementedError("The IsoTP layer used does not have a set_bus method. Did you mean to use an isotp.CanStack ?")
-            self.isotp_layer.set_bus(bus)
-
+    def open(self) -> "PythonIsoTpV1Connection":
         self.exit_requested = False
         self.rxthread = threading.Thread(target=self.rxthread_task, daemon=True)
         self.rxthread.start()
@@ -657,11 +640,6 @@ class PythonIsoTpV1Connection(BaseConnection):
         self.logger.info('Connection closed')
 
     def specific_send(self, payload: bytes, timeout: float = 5):
-        if self.mtu is not None:
-            if len(payload) > self.mtu:
-                self.logger.warning("Truncating payload to be set to a length of %d" % (self.mtu))
-                payload = payload[0:self.mtu]
-
         self.toIsoTPQueue.put(bytearray(payload))  # isotp.protocol.TransportLayer uses byte array. udsoncan is strict on bytes format
 
     def specific_wait_frame(self, timeout: float = 2) -> Optional[bytes]:

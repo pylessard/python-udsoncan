@@ -71,10 +71,12 @@ In this example, we show how to use :class:`PythonIsoTpConnection<udsoncan.conne
 Note that, in order to run this code, both ``python-can`` and ``can-isotp`` must be installed.
 
 .. code-block:: python
-
-   from can.interfaces.vector import VectorBus
+   
+   import can
+   import can.interfaces.vector import VectorBus
    from udsoncan.connections import PythonIsoTpConnection
    from udsoncan.client import Client
+   import udsoncan.configs
    import isotp
 
    # Refer to isotp documentation for full details about parameters
@@ -95,15 +97,18 @@ Note that, in order to run this code, both ``python-can`` and ``can-isotp`` must
     'rate_limit_enable': False,             # Disable the rate limiter
     'rate_limit_max_bitrate': 1000000,      # Ignored when rate_limit_enable=False. Sets the max bitrate when rate_limit_enable=True
     'rate_limit_window_size': 0.2,          # Ignored when rate_limit_enable=False. Sets the averaging window size for bitrate calculation when rate_limit_enable=True
-    'listen_mode': False                    # Does not use the listen_mode which prevent transmission.
+    'listen_mode': False,                   # Does not use the listen_mode which prevent transmission.
    }
 
+   uds_config = udsoncan.configs.default_client_config.copy()
+
    bus = VectorBus(channel=0, bitrate=500000)                                          # Link Layer (CAN protocol)
+   notifier = can.Notifier(bus, [can.Printer()])                                       # Add a debug listener that print all messages
    tp_addr = isotp.Address(isotp.AddressingMode.Normal_11bits, txid=0x123, rxid=0x456) # Network layer addressing scheme
-   stack = isotp.CanStack(bus=bus, address=tp_addr, params=isotp_params)               # Network/Transport layer (IsoTP protocol)
-   stack.set_sleep_timing(0, 0)                                                        # Speed First (do not sleep)
+   #stack = isotp.CanStack(bus=bus, address=tp_addr, params=isotp_params)              # isotp v1.x has no notifier support
+   stack = isotp.NotifierBasedCanStack(bus=bus, notifier=notifier, address=tp_addr, params=isotp_params)  # Network/Transport layer (IsoTP protocol). Register a new listenenr 
    conn = PythonIsoTpConnection(stack)                                                 # interface between Application and Transport layer
-   with Client(conn, request_timeout=1) as client:                                     # Application layer (UDS protocol)
+   with Client(conn, config=uds_config) as client:                                     # Application layer (UDS protocol)
       client.change_session(1)   
       # ...
 
