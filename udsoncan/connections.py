@@ -511,6 +511,8 @@ class PythonIsoTpConnection(BaseConnection):
                     self.subconn = PythonIsoTpV1Connection(isotp_layer, name)
                 else:
                     raise ValueError("Invalid isotp layer object")
+            else:
+                raise NotImplementedError("Unsupported isotp version")
         else:   # isotp v1.x
             self.subconn = PythonIsoTpV1Connection(isotp_layer, name)
 
@@ -534,7 +536,7 @@ class PythonIsoTpConnection(BaseConnection):
     def specific_send(self, payload: bytes, timeout: float = 5) -> None:
         self.subconn.specific_send(payload, timeout)
 
-    def specific_wait_frame(self, timeout: float = 2):
+    def specific_wait_frame(self, timeout: float = 2) -> Optional[bytes]:
         return self.subconn.specific_wait_frame(timeout)
 
     def empty_rxqueue(self) -> None:
@@ -610,7 +612,11 @@ class PythonIsoTpV1Connection(BaseConnection):
         self.opened = False
         self.isotp_layer = isotp_layer
 
-        assert isinstance(self.isotp_layer, isotp.TransportLayerLogic), 'isotp_layer must be a valid isotp.TransportLayerLogic '
+        # isotp v1 TransportLayer == isotpv2.TransportLayerLogic
+        if hasattr(isotp, 'TransportLayerLogic'):
+            assert isinstance(self.isotp_layer, isotp.TransportLayerLogic), 'isotp_layer must be a valid isotp.TransportLayerLogic'
+        else:
+            assert isinstance(self.isotp_layer, isotp.TransportLayer), 'isotp_layer must be a valid isotp.isotp.TransportLayer'
 
     def open(self) -> "PythonIsoTpV1Connection":
         self.exit_requested = False
