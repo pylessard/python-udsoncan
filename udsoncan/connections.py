@@ -514,8 +514,8 @@ class PythonIsoTpConnection(BaseConnection):
         else:   # isotp v1.x
             self.subconn = PythonIsoTpV1Connection(isotp_layer, name)
 
-    def open(self, bus: Optional["can.BusABC"] = None) -> "PythonIsoTpConnection":
-        self.subconn.open(bus)
+    def open(self) -> "PythonIsoTpConnection":
+        self.subconn.open()
         return self
 
     def __enter__(self) -> "PythonIsoTpConnection":
@@ -654,16 +654,13 @@ class PythonIsoTpV1Connection(BaseConnection):
             timedout = True
 
         if timedout:
-            raise TimeoutException("Did not receive frame IsoTP Transport layer in time (timeout=%s sec)" % timeout)
+            raise TimeoutException("Did not receive IsoTP frame from the Transport layer in time (timeout=%s sec)" % timeout)
 
         if frame is None:
             return None
-        if self.mtu is not None:
-            if frame is not None and len(frame) > self.mtu:
-                self.logger.warning("Truncating received payload to a length of %d" % (self.mtu))
-                frame = frame[0:self.mtu]
 
-        return bytes(frame)  # isotp.protocol.TransportLayer uses bytearray. udsoncan is strict on bytes format
+        # isotp.protocol.TransportLayer uses bytearray. udsoncan is strict on bytes format
+        return bytes(frame)
 
     def empty_rxqueue(self) -> None:
         while not self.fromIsoTPQueue.empty():
@@ -717,9 +714,9 @@ class J2534Connection(BaseConnection):
     protocol: "Protocol_ID"
     baudrate: int
     result: "Error_ID"
-    firmwareVersion: ctypes.Array[ctypes.c_char]
-    dllVersion: ctypes.Array[ctypes.c_char]
-    apiVersion: ctypes.Array[ctypes.c_char]
+    firmwareVersion: "ctypes.Array[ctypes.c_char]"
+    dllVersion: "ctypes.Array[ctypes.c_char]"
+    apiVersion: "ctypes.Array[ctypes.c_char]"
     rxqueue: "queue.Queue[bytes]"
     exit_requested: bool
     opened: bool
@@ -897,7 +894,7 @@ class FakeConnection(BaseConnection):
     def specific_send(self, payload: bytes, timeout: float = 5):
         self.rxqueue.put(self.ResponseData[payload])
 
-    def specific_wait_frame(self, timeout: float = 4) -> Optional[bytes]:
+    def specific_wait_frame(self, timeout: float = 5) -> Optional[bytes]:
         if not self.opened:
             raise RuntimeError("Fake Connection is not open")
 
@@ -905,8 +902,6 @@ class FakeConnection(BaseConnection):
         frame = None
         try:
             frame = self.rxqueue.get(block=True, timeout=timeout)
-            # frame = self.rxqueue.get(block=True, timeout=5)
-
         except queue.Empty:
             timedout = True
 
