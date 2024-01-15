@@ -2166,6 +2166,8 @@ class Client:
                     timeout_value = max(overall_timeout_time - time.time(), 0)
 
                 recv_payload = self.conn.wait_frame(timeout=timeout_value, exception=True)
+                if recv_payload is None:
+                    timeout_name_to_report = 'No payload received'
             except TimeoutException:
                 if timeout_type_used == 'single_request':
                     timeout_name_to_report = 'P2* timeout' if using_p2_star else 'P2 timeout'
