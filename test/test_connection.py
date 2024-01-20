@@ -33,7 +33,8 @@ class TestIsoTPSocketConnection(UdsTest):
         self.tpsock2 = StubbedIsoTPSocket(timeout=0.1)
 
     def test_open(self):
-        conn = IsoTPSocketConnection(interface='vcan0', rxid=0x001, txid=0x002, tpsock=self.tpsock1, name='unittest')
+        addr = isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=0x001, txid=0x002)
+        conn = IsoTPSocketConnection(interface='vcan0', address=addr, tpsock=self.tpsock1, name='unittest')
         self.assertFalse(conn.is_open())
         conn.open()
         self.assertTrue(conn.is_open())
@@ -41,14 +42,16 @@ class TestIsoTPSocketConnection(UdsTest):
         self.assertFalse(conn.is_open())
 
     def test_transmit(self):
-        conn1 = IsoTPSocketConnection(interface='vcan0', rxid=0x100, txid=0x101, tpsock=self.tpsock1, name='unittest')
-        conn2 = IsoTPSocketConnection(interface='vcan0', rxid=0x101, txid=0x100, tpsock=self.tpsock2, name='unittest')
+        addr1 = isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=0x100, txid=0x101)
+        addr2 = isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=0x101, txid=0x100)
+        conn1 = IsoTPSocketConnection(interface='vcan0', address=addr1, tpsock=self.tpsock1, name='unittest')
+        conn2 = IsoTPSocketConnection(interface='vcan0', address=addr2, tpsock=self.tpsock2, name='unittest')
 
         with conn1.open():
             with conn2.open():
                 payload1 = b"\x00\x01\x02\x03\x04"
                 conn1.send(payload1)
-                payload2 = conn2.wait_frame(timeout=0.3)
+                payload2 = conn2.wait_frame(timeout=0.3, exception=True)
                 self.assertEqual(payload1, payload2)
 
 

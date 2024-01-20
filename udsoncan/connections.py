@@ -268,52 +268,41 @@ class IsoTPSocketConnection(BaseConnection):
 
     :param interface: The can interface to use (example: ``can0``)
     :type interface: string
-    :param rxid: The reception CAN id
-    :type rxid: int 
-    :param txid: The transmission CAN id
-    :type txid: int
+    :param address: The address used to bind the the socket. Before 1.21, txid/rxid were needed here, this has changed with v1.21
+    :type address: ``isotp.Address`` or ``isotp.AsymmetricAddress`` 
     :param name: This name is included in the logger name so that its output can be redirected. The logger name will be ``Connection[<name>]``
     :type name: string
     :param tpsock: An optional ISO-TP socket to use instead of creating one.
     :type tpsock: isotp.socket
-    :param args: Optional parameters list passed to ISO-TP socket binding method.
-    :type args: list
-    :param kwargs: Optional parameters dictionary passed to ISO-TP socket binding method.
-    :type kwargs: dict
 
     """
 
     interface: str
-    rxid: int
-    txid: int
+    address: Union["isotp.Address", "isotp.AsymmetricAddress"]
     rxqueue: "queue.Queue[bytes]"
     exit_requested: bool
     opened: bool
-    tpsock_bind_args: Tuple
-    tpsock_bind_kwargs: Dict[str, Any]
-
-    # todo : Fix the broken interface that duplicates the address here.
 
     def __init__(self,
                  interface: str,
-                 rxid: int,
-                 txid: int,
+                 address: Union["isotp.Address", "isotp.AsymmetricAddress"],
                  name: Optional[str] = None,
                  tpsock: Optional["isotp.socket"] = None,
-                 *args,
                  **kwargs
                  ):
 
         BaseConnection.__init__(self, name)
 
         self.interface = interface
-        self.rxid = rxid
-        self.txid = txid
+        self.address = address
         self.rxqueue = queue.Queue()
         self.exit_requested = False
         self.opened = False
-        self.tpsock_bind_args = args
-        self.tpsock_bind_kwargs = kwargs
+
+        # Lives with the past.
+        if 'txid' in kwargs or 'rxid' in kwargs:
+            raise RuntimeError(
+                "Provide an isotp.Address to the %s. The interface has changed in a non-backward compatible way and this is now required." % self.__class__.__name__)
 
         if tpsock is None:
             if 'isotp' not in sys.modules:
@@ -326,7 +315,7 @@ class IsoTPSocketConnection(BaseConnection):
             self.tpsock = tpsock
 
     def open(self) -> "IsoTPSocketConnection":
-        self.tpsock.bind(self.interface, rxid=self.rxid, txid=self.txid, *self.tpsock_bind_args, **self.tpsock_bind_kwargs)
+        self.tpsock.bind(self.interface, address=self.address)
         self.exit_requested = False
         self.rxthread = threading.Thread(target=self.rxthread_task, daemon=True)
         self.rxthread.start()
