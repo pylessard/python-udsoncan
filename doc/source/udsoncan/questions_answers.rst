@@ -77,4 +77,24 @@ What makes a DTC permanent?
 How can I contribute?
 ---------------------
 
-Create a Github issue, fork the project, propose a pull request and I will review it; that's the best way.
+.. epigraph::
+
+    Create a Github issue, fork the project, propose a pull request and I will review it; that's the best way.
+
+-----
+
+My IsoTPSocketConnection raises an error after updating udsoncan
+----------------------------------------------------------------
+
+.. epigraph::
+
+    With a breaking change of the isotp v2 socket module, it was necessary to change the signature of the :class:`IsoTPSocketConnection<udsoncan.connections.IsoTPSocketConnection>`. 
+    The change has been carried in v1.21.2. It is not possible to pass ``rxid`` and ``txid`` parameter. A full ``isotp.Address`` must be provided.
+
+.. code-block:: python
+    
+    # Before 1.21
+    IsoTPSocketConnection('vcan0', rxid=123, txid=456)  
+
+    # After 1.21
+    IsoTPSocketConnection('vcan0', isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=123, txid=456)) 
