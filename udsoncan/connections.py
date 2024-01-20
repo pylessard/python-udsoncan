@@ -54,7 +54,7 @@ class BaseConnection(ABC):
 
         self.logger = logging.getLogger(self.name)
 
-    def send(self, data: Union[bytes, Request, Response], timeout: float = 5) -> None:
+    def send(self, data: Union[bytes, Request, Response], timeout: Optional[float] = None) -> None:
         """Sends data to the underlying transport protocol
 
         :param data: The data or object to send. If a Request or Response is given, the value returned by get_payload() will be sent.
@@ -78,7 +78,7 @@ class BaseConnection(ABC):
         else:
             self.specific_send(payload)
 
-    def wait_frame(self, timeout: float = 2, exception: bool = False) -> Optional[bytes]:
+    def wait_frame(self, timeout: Optional[float] = None, exception: bool = False) -> Optional[bytes]:
         """Waits for the reception of a frame of data from the underlying transport protocol
 
         :param timeout: The maximum amount of time to wait before giving up in seconds
@@ -112,7 +112,7 @@ class BaseConnection(ABC):
         return self
 
     @abstractmethod
-    def specific_send(self, payload: bytes, timeout: float = 5) -> None:
+    def specific_send(self, payload: bytes, timeout: Optional[float] = None) -> None:
         """The implementation of the send method.
 
         :param payload: Data to send
@@ -123,7 +123,7 @@ class BaseConnection(ABC):
         pass
 
     @abstractmethod
-    def specific_wait_frame(self, timeout: float = 5) -> Optional[bytes]:
+    def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         """The implementation of the ``wait_frame`` method. 
 
         :param timeout: The maximum amount of time to wait before giving up
@@ -236,11 +236,11 @@ class SocketConnection(BaseConnection):
         self.opened = False
         self.logger.info('Connection closed')
 
-    def specific_send(self, payload: bytes, timeout: float = 5) -> None:
+    def specific_send(self, payload: bytes, timeout: Optional[float] = None) -> None:
         # timeout not used for generic sockets
         self.sock.send(payload)
 
-    def specific_wait_frame(self, timeout: float = 2) -> Optional[bytes]:
+    def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         if not self.opened:
             raise RuntimeError("Connection is not open")
 
@@ -362,10 +362,10 @@ class IsoTPSocketConnection(BaseConnection):
         self.opened = False
         self.logger.info('Connection closed')
 
-    def specific_send(self, payload: bytes, timeout: float = 5) -> None:
+    def specific_send(self, payload: bytes, timeout: Optional[float] = None) -> None:
         self.tpsock.send(payload)
 
-    def specific_wait_frame(self, timeout: float = 2) -> Optional[bytes]:
+    def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         if not self.opened:
             raise RuntimeError("Connection is not open")
 
@@ -440,7 +440,7 @@ class QueueConnection(BaseConnection):
         self.opened = False
         self.logger.info('Connection closed')
 
-    def specific_send(self, payload: bytes, timeout: float = 5) -> None:
+    def specific_send(self, payload: bytes, timeout: Optional[float] = None) -> None:
         if self.mtu is not None:
             if len(payload) > self.mtu:
                 self.logger.warning("Truncating payload to be set to a length of %d" % (self.mtu))
@@ -448,7 +448,7 @@ class QueueConnection(BaseConnection):
 
         self.touserqueue.put(payload, block=True, timeout=timeout)
 
-    def specific_wait_frame(self, timeout: float = 2) -> Optional[bytes]:
+    def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         if not self.opened:
             raise RuntimeError("Connection is not open")
 
@@ -533,10 +533,10 @@ class PythonIsoTpConnection(BaseConnection):
     def close(self) -> None:
         return self.subconn.close()
 
-    def specific_send(self, payload: bytes, timeout: float = 5) -> None:
+    def specific_send(self, payload: bytes, timeout: Optional[float] = None) -> None:
         self.subconn.specific_send(payload, timeout)
 
-    def specific_wait_frame(self, timeout: float = 2) -> Optional[bytes]:
+    def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         return self.subconn.specific_wait_frame(timeout)
 
     def empty_rxqueue(self) -> None:
@@ -580,11 +580,18 @@ class PythonIsoTpV2Connection(BaseConnection):
         self.opened = False
         self.logger.info('Connection closed')
 
-    def specific_send(self, payload: bytes, timeout: float = 5) -> None:
+    def specific_send(self, payload: bytes, timeout: Optional[float] = None) -> None:
         self.isotp_layer.send(payload, send_timeout=timeout)
 
-    def specific_wait_frame(self, timeout: float = 2) -> Optional[bytes]:
-        return self.isotp_layer.recv(block=True, timeout=timeout)
+    def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
+        if not self.opened:
+            raise RuntimeError("Connection is not opened")
+
+        frame = self.isotp_layer.recv(block=True, timeout=timeout)
+        if frame is None:
+            raise TimeoutException("Did not receive IsoTP frame from the Transport layer in time (timeout=%s sec)" % timeout)
+
+        return bytes(frame)
 
     def empty_rxqueue(self) -> None:
         self.isotp_layer.stop_receiving()
@@ -645,10 +652,10 @@ class PythonIsoTpV1Connection(BaseConnection):
         self.opened = False
         self.logger.info('Connection closed')
 
-    def specific_send(self, payload: bytes, timeout: float = 5):
+    def specific_send(self, payload: bytes, timeout: Optional[float] = None):
         self.toIsoTPQueue.put(bytearray(payload))  # isotp.protocol.TransportLayer uses byte array. udsoncan is strict on bytes format
 
-    def specific_wait_frame(self, timeout: float = 2) -> Optional[bytes]:
+    def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         if not self.opened:
             raise RuntimeError("Connection is not open")
 
@@ -830,10 +837,12 @@ class J2534Connection(BaseConnection):
         self.opened = False
         self.log_last_operation("Connection closed")
 
-    def specific_send(self, payload: bytes, timeout: float = 5):
+    def specific_send(self, payload: bytes, timeout: Optional[float] = None):
+        if timeout is None:
+            timeout = 0
         result = self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value, Timeout=int(timeout * 1000))
 
-    def specific_wait_frame(self, timeout: float = 4) -> Optional[bytes]:
+    def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         if not self.opened:
             raise RuntimeError("J2534 Connection is not open")
 
@@ -841,7 +850,6 @@ class J2534Connection(BaseConnection):
         frame = None
         try:
             frame = self.rxqueue.get(block=True, timeout=timeout)
-
         except queue.Empty:
             timedout = True
 
@@ -897,10 +905,10 @@ class FakeConnection(BaseConnection):
         self.opened = False
         self.logger.info('Fake Connection closed')
 
-    def specific_send(self, payload: bytes, timeout: float = 5):
+    def specific_send(self, payload: bytes, timeout: Optional[float] = None):
         self.rxqueue.put(self.ResponseData[payload])
 
-    def specific_wait_frame(self, timeout: float = 5) -> Optional[bytes]:
+    def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         if not self.opened:
             raise RuntimeError("Fake Connection is not open")
 
@@ -960,12 +968,12 @@ class SyncAioIsotpConnection(BaseConnection):
         self.conn = None
         self.opened = False
 
-    def specific_send(self, payload: bytes, timeout: float = 5):
+    def specific_send(self, payload: bytes, timeout: Optional[float] = None) -> None:
         if self.conn is None or not self.opened:
             raise RuntimeError("Connection is not opened")
         self.conn.send(payload)
 
-    def specific_wait_frame(self, timeout: float = 2) -> Optional[bytes]:
+    def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         if not self.opened or self.conn is None:
             raise RuntimeError("Connection is not open")
 

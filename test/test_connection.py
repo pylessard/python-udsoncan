@@ -12,7 +12,7 @@ try:
     import isotp
     import can
     s = isotp.socket()
-    s.bind(_interface_name,rxid=1,txid=2)
+    s.bind(_interface_name, isotp.Address(rxid=1, txid=2))
     s.close()
     _STACK_POSSIBLE = True
 except Exception as e:
@@ -24,6 +24,7 @@ try:
     _AISOTP_POSSIBLE = True
 except Exception as e:
     _AISOTP_POSSIBLE = False
+
 
 class TestIsoTPSocketConnection(UdsTest):
 
@@ -50,9 +51,10 @@ class TestIsoTPSocketConnection(UdsTest):
                 payload2 = conn2.wait_frame(timeout=0.3)
                 self.assertEqual(payload1, payload2)
 
+
 class TestSocketConnection(UdsTest):
     def server_sock_thread_task(self):
-        self.thread_started=True
+        self.thread_started = True
         self.sock1, addr = self.server_sock.accept()
 
     def setUp(self):
@@ -112,6 +114,7 @@ class TestSocketConnection(UdsTest):
                 payload2 = conn2.wait_frame(timeout=1, exception=True)
                 self.assertEqual(payload1, payload2)
 
+
 class TestQueueConnection(UdsTest):
     def setUp(self):
         self.conn = QueueConnection(name='unittest')
@@ -136,7 +139,7 @@ class TestQueueConnection(UdsTest):
         self.assertEqual(frame, payload)
 
     def test_truncate(self):
-        payload = b"\x00\x01\x02\x03"*5000
+        payload = b"\x00\x01\x02\x03" * 5000
         self.conn.send(payload)
         frame = self.conn.touserqueue.get()
         self.assertEqual(len(frame), 4095)
@@ -161,15 +164,16 @@ class TestQueueConnection(UdsTest):
 
         self.assertTrue(self.conn.touserqueue.empty())
 
+
 @unittest.skipIf(_STACK_POSSIBLE == False, 'Cannot test TestPythonIsoTpConnection. %s' % _STACK_UNVAILABLE_REASON)
 class TestPythonIsoTpConnection(UdsTest):
     def __init__(self, *args, **kwargs):
         UdsTest.__init__(self, *args, **kwargs)
         if not hasattr(self.__class__, '_next_id'):
-            self.__class__._next_id=1
+            self.__class__._next_id = 1
 
         self.stack_txid = self.__class__._next_id
-        self.stack_rxid = self.__class__._next_id +1
+        self.stack_rxid = self.__class__._next_id + 1
         self.__class__._next_id += 2
 
     def make_bus(self):
@@ -177,32 +181,31 @@ class TestPythonIsoTpConnection(UdsTest):
 
     def setUp(self):
         self.vcan0_bus = self.make_bus()
+        self.reader = can.BufferedReader()
+        self.notifier = can.Notifier(self.vcan0_bus, [self.reader])
         addr = isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=self.stack_rxid, txid=self.stack_txid)
-        self.conn = PythonIsoTpConnection(isotp.CanStack(bus=self.vcan0_bus, address=addr), name='unittest')
+        self.conn = PythonIsoTpConnection(isotp.NotifierBasedCanStack(bus=self.vcan0_bus, notifier=self.notifier, address=addr), name='unittest')
         self.conn.open()
 
     def test_open(self):
         self.assertTrue(self.conn.is_open())
 
     def test_receive(self):
-        self.vcan0_bus.send(can.Message(arbitration_id = self.stack_rxid, data =  b"\x03\x01\x02\x03", is_extended_id = False))
+        self.vcan0_bus.send(can.Message(arbitration_id=self.stack_rxid, data=b"\x03\x01\x02\x03", is_extended_id=False))
         frame = self.conn.wait_frame(timeout=1)
         self.assertEqual(frame, b"\x01\x02\x03")
 
     def test_send(self):
         self.conn.send(b"\xAA\xBB\xCC\xDD\xEE\xFF")
-        t1 = time.time()
-        msg = self.vcan0_bus.recv(1)
+        msg = self.reader.get_message(1)
         self.assertIsNotNone(msg)
         self.assertEqual(msg.data, b'\x06\xAA\xBB\xCC\xDD\xEE\xFF')
 
     def test_reopen(self):
         self.conn.send(b"\x0A\x0B\x0C\x0D")
-        self.vcan0_bus.send(can.Message(arbitration_id = self.stack_rxid, data =  b"\x03\x01\x02\x03", is_extended_id = False))
+        self.vcan0_bus.send(can.Message(arbitration_id=self.stack_rxid, data=b"\x03\x01\x02\x03", is_extended_id=False))
         self.conn.close()
-        self.vcan0_bus.shutdown()
-        self.vcan0_bus = self.make_bus()
-        self.conn.open(bus=self.vcan0_bus)
+        self.conn.open()
 
         with self.assertRaises(TimeoutException):
             self.conn.wait_frame(timeout=0.05, exception=True)
@@ -211,7 +214,9 @@ class TestPythonIsoTpConnection(UdsTest):
 
     def tearDown(self):
         self.conn.close()
+        self.notifier.stop()
         self.vcan0_bus.shutdown()
+
 
 @unittest.skipIf(_AISOTP_POSSIBLE == False, "aisotp module is not present.")
 class TestSyncAioIsotpConnection(UdsTest):
@@ -232,7 +237,7 @@ class TestSyncAioIsotpConnection(UdsTest):
     def test_transmit(self):
         conn0 = SyncAioIsotpConnection(interface="virtual", channel=0, bitrate=500000, rx_id=0x123, tx_id=0x456, name="unittest")
         conn1 = SyncAioIsotpConnection(interface="virtual", channel=0, bitrate=500000, rx_id=0x456, tx_id=0x123, name="unittest")
-    
+
         with conn0.open():
             with conn1.open():
                 tx_data = bytes([i for i in range(256)])
