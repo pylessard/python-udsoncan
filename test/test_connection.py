@@ -7,6 +7,12 @@ import time
 import unittest
 
 try:
+    import isotp
+    _isotp_module_available = True
+except ImportError:
+    _isotp_module_available = False
+
+try:
     _STACK_UNVAILABLE_REASON = ''
     _interface_name = 'vcan0'
     import isotp
@@ -32,6 +38,7 @@ class TestIsoTPSocketConnection(UdsTest):
         self.tpsock1 = StubbedIsoTPSocket(timeout=0.1)
         self.tpsock2 = StubbedIsoTPSocket(timeout=0.1)
 
+    @unittest.skipIf(_isotp_module_available == False, "Missing isotp module")
     def test_open(self):
         addr = isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=0x001, txid=0x002)
         conn = IsoTPSocketConnection(interface='vcan0', address=addr, tpsock=self.tpsock1, name='unittest')
@@ -41,6 +48,7 @@ class TestIsoTPSocketConnection(UdsTest):
         conn.close()
         self.assertFalse(conn.is_open())
 
+    @unittest.skipIf(_isotp_module_available == False, "Missing isotp module")
     def test_transmit(self):
         addr1 = isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=0x100, txid=0x101)
         addr2 = isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=0x101, txid=0x100)
