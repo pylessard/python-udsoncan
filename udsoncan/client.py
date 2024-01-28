@@ -2107,7 +2107,7 @@ class Client:
 
     def send_request(self, request: Request, timeout: int = -1) -> Optional[Response]:
         if request.service is None:
-            raise ValueError("REquest has no service")
+            raise ValueError("Request has no service")
 
         if timeout < 0:
             # Timeout not provided by user: defaults to Client request_timeout value
