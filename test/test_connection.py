@@ -1,6 +1,5 @@
 from test.UdsTest import UdsTest
 from udsoncan.connections import *
-from test.stub import StubbedIsoTPSocket
 import socket
 import threading
 import time
@@ -32,13 +31,13 @@ except Exception as e:
     _AISOTP_POSSIBLE = False
 
 
+@unittest.skipIf(_isotp_module_available == False, "isotp module not available")
 class TestIsoTPSocketConnection(UdsTest):
 
     def setUp(self):
-        self.tpsock1 = StubbedIsoTPSocket(timeout=0.1)
-        self.tpsock2 = StubbedIsoTPSocket(timeout=0.1)
+        self.tpsock1 = isotp.socket()
+        self.tpsock2 = isotp.socket()
 
-    @unittest.skipIf(_isotp_module_available == False, "Missing isotp module")
     def test_open(self):
         addr = isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=0x001, txid=0x002)
         conn = IsoTPSocketConnection(interface='vcan0', address=addr, tpsock=self.tpsock1, name='unittest')
@@ -48,7 +47,6 @@ class TestIsoTPSocketConnection(UdsTest):
         conn.close()
         self.assertFalse(conn.is_open())
 
-    @unittest.skipIf(_isotp_module_available == False, "Missing isotp module")
     def test_transmit(self):
         addr1 = isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=0x100, txid=0x101)
         addr2 = isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=0x101, txid=0x100)
@@ -62,14 +60,18 @@ class TestIsoTPSocketConnection(UdsTest):
                 payload2 = conn2.wait_frame(timeout=0.3, exception=True)
                 self.assertEqual(payload1, payload2)
 
+    def tearDown(self) -> None:
+        self.tpsock1.close()
+        self.tpsock2.close()
+
 
 class TestSocketConnection(UdsTest):
     def server_sock_thread_task(self):
-        self.thread_started = True
+        self.started_event.set()
         self.sock1, addr = self.server_sock.accept()
 
     def setUp(self):
-        self.thread_started = False
+        self.started_event = threading.Event()
         self.server_sock_thread = threading.Thread(target=self.server_sock_thread_task)
 
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -83,17 +85,15 @@ class TestSocketConnection(UdsTest):
         self.server_sock.listen(1)
         self.server_sock_thread.start()
 
-        t1 = time.time()
-        while not self.thread_started:
-            if (time.time() - t1) > 0.5:
-                raise RuntimeError('Timeout while connecting sockets together.')
-            time.sleep(0.01)
-        time.sleep(0.01)
+        self.started_event.wait(0.5)
+        if not self.started_event.is_set():
+            raise RuntimeError('Timeout while connecting sockets together.')
+        time.sleep(0.01)    # Handle race condition like an amateur
 
         self.sock2.connect(self.server_sock.getsockname())
-        t1 = time.time()
+        t1 = time.monotonic()
         while self.sock1 is None:
-            if (time.time() - t1) > 0.5:
+            if (time.monotonic() - t1) > 0.5:
                 raise RuntimeError('Timeout while connecting sockets together.')
 
     def tearDown(self):
@@ -124,6 +124,55 @@ class TestSocketConnection(UdsTest):
                 conn1.send(payload1)
                 payload2 = conn2.wait_frame(timeout=1, exception=True)
                 self.assertEqual(payload1, payload2)
+
+
+class TestSocketConnectionBlocking(UdsTest):
+    def server_sock_thread_task(self):
+        self.started_event.set()
+        # Race condition here.
+        self.sock1, addr = self.server_sock.accept()
+
+    def setUp(self):
+        self.started_event = threading.Event()
+        self.server_sock_thread = threading.Thread(target=self.server_sock_thread_task)
+
+        self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_sock.setblocking(True)
+        self.sock1 = None
+        self.sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        self.server_sock.bind(('127.0.0.1', 0))
+        self.server_sock.listen(1)
+        self.server_sock_thread.start()
+
+        self.started_event.wait(0.5)
+        if not self.started_event.is_set():
+            raise RuntimeError('Timeout while connecting sockets together.')
+        time.sleep(0.01)    # Handle race condition like an amateur
+
+        self.sock2.connect(self.server_sock.getsockname())
+        t1 = time.monotonic()
+        while self.sock1 is None:
+            if (time.monotonic() - t1) > 0.5:
+                raise RuntimeError('Timeout while connecting sockets together.')
+
+    def test_open_close_no_block(self):
+        conn = SocketConnection(self.sock1, name='unittest')
+        self.assertFalse(conn.is_open())
+        conn.open()
+        self.assertTrue(conn.is_open())
+        conn.close()
+        self.assertFalse(conn.is_open())
+
+    def tearDown(self):
+        if isinstance(self.sock1, socket.socket):
+            self.sock1.close()
+
+        if isinstance(self.sock2, socket.socket):
+            self.sock2.close()
+
+        if isinstance(self.server_sock, socket.socket):
+            self.server_sock.close()
 
 
 class TestQueueConnection(UdsTest):
