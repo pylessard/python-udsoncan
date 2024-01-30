@@ -8,7 +8,7 @@ from udsoncan.BaseService import BaseService, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode
 import udsoncan.tools as tools
 
-from typing import Dict, Any, Union, List, cast
+from typing import Dict, Any, Union, List, cast, Optional
 
 
 class ReadDataByIdentifier(BaseService):
@@ -53,14 +53,14 @@ class ReadDataByIdentifier(BaseService):
         return [dids] if not isinstance(dids, list) else dids
 
     @classmethod
-    def make_request(cls, didlist: Union[int, List[int]], didconfig: DIDConfig) -> Request:
+    def make_request(cls, didlist: Union[int, List[int]], didconfig: Optional[DIDConfig]) -> Request:
         """
         Generates a request for ReadDataByIdentifier
 
         :param didlist: List of data identifier to read.
         :type didlist: list[int]
 
-        :param didconfig: Definition of DID codecs. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<DidCodec>` class or pack/unpack string 
+        :param didconfig: Optional definition of DID codecs for validation. Dictionary mapping a DID (int) to a valid :ref:`DidCodec<DidCodec>` class or pack/unpack string 
         :type didconfig: dict[int] = :ref:`DidCodec<DidCodec>`
 
         :raises ValueError: If parameters are out of range, missing or wrong type
@@ -70,27 +70,28 @@ class ReadDataByIdentifier(BaseService):
         didlist = cls.validate_didlist_input(didlist)
 
         req = Request(cls)
-        # Return a validated did config. Format may change, entries might be added if default value is set.
-        didconfig_validated = check_did_config(didlist, didconfig)
+        if didconfig is not None:
+            # Return a validated did config. Format may change, entries might be added if default value is set.
+            didconfig_validated = check_did_config(didlist, didconfig)
 
-        did_reading_all_data = None
-        for did in didlist:
-            if did not in didconfig_validated:    # Already checked in check_did_config. Paranoid check
-                raise ConfigError(key=did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
+            did_reading_all_data = None
+            for did in didlist:
+                if did not in didconfig_validated:    # Already checked in check_did_config. Paranoid check
+                    raise ConfigError(key=did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
 
-            # Make sure the config is good before sending the request. This method can raise.
-            codec = make_did_codec_from_config(didconfig_validated[did])
+                # Make sure the config is good before sending the request. This method can raise.
+                codec = make_did_codec_from_config(didconfig_validated[did])
 
-            try:
-                len(codec)  # Validate the length function. May raise
-                if did_reading_all_data is not None:
-                    raise ValueError('Did 0x%04X is configured to read the rest of the payload (__len__ raisong ReadAllRemainingData), but a subsequent DID is requested (0x%04x)' % (
-                        did_reading_all_data, did))
-            except DidCodec.ReadAllRemainingData:
-                if did_reading_all_data is not None:
-                    raise ValueError('It is impossible to read 2 DIDs configured to read the rest of the payload (__len__ raising ReadAllRemainingData). Dids are : 0x%04X and 0x%04X' % (
-                        did_reading_all_data, did))
-                did_reading_all_data = did
+                try:
+                    len(codec)  # Validate the length function. May raise
+                    if did_reading_all_data is not None:
+                        raise ValueError('Did 0x%04X is configured to read the rest of the payload (__len__ raisong ReadAllRemainingData), but a subsequent DID is requested (0x%04x)' % (
+                            did_reading_all_data, did))
+                except DidCodec.ReadAllRemainingData:
+                    if did_reading_all_data is not None:
+                        raise ValueError('It is impossible to read 2 DIDs configured to read the rest of the payload (__len__ raising ReadAllRemainingData). Dids are : 0x%04X and 0x%04X' % (
+                            did_reading_all_data, did))
+                    did_reading_all_data = did
 
         req.data = struct.pack('>' + 'H' * len(didlist), *didlist)  # Encode list of DID
 

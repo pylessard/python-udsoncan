@@ -237,7 +237,7 @@ class TestPythonIsoTpConnection(UdsTest):
         self.__class__._next_id += 2
 
     def make_bus(self):
-        return can.interface.Bus(bustype='socketcan', channel='vcan0', bitrate=500000, receive_own_messages=True)
+        return can.Bus(interface='socketcan', channel='vcan0', bitrate=500000, receive_own_messages=True)
 
     def setUp(self):
         self.vcan0_bus = self.make_bus()

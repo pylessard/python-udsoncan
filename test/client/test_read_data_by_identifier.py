@@ -64,6 +64,17 @@ class TestReadDataByIdentifier(ClientServerTest):
         values = response.service_data.values
         self.assertEqual(values[1], (0x1234,))
 
+    def test_peek_rdbi_single_success(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x22\x11\x22")
+        self.conn.fromuserqueue.put(b"\x62\x11\x22\x12\x34")  # Positive response
+
+    def _test_peek_rdbi_single_success(self):
+        response = self.udsclient.test_data_identifier(0x1122)  # not in config, but this is OK
+        self.assertTrue(response.positive)
+        self.assertIsNone(response.service_data)
+        self.assertEqual(response.data, b"\x11\x22\x12\x34")
+
     def test_rdbi_single_success_default_did(self):
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b"\x22\x00\x01")
@@ -105,6 +116,16 @@ class TestReadDataByIdentifier(ClientServerTest):
         self.assertEqual(values[2], (0x7856,))
         self.assertEqual(values[3], 0x10)
         self.assertEqual(values[4], 'abcde')
+
+    def test_peek_rdbi_multiple_success(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x22\x11\x22\x33\x44")
+        self.conn.fromuserqueue.put(b"\x62\xaa")  # Positive response, content can be invalid. we don't check with the peek method
+
+    def _test_peek_rdbi_multiple_success(self):
+        response = self.udsclient.test_data_identifier([0x1122, 0x3344])
+        self.assertTrue(response.positive)
+        self.assertIsNone(response.service_data)
 
     def test_rdbi_multiple_zero_padding1_success(self):
         data = b'\x62\x00\x01\x12\x34\x00\x02\x56\x78\x00\x03\x11'
@@ -263,6 +284,39 @@ class TestReadDataByIdentifier(ClientServerTest):
         response = self.udsclient.read_data_by_identifier(didlist=1)
         self.assertTrue(response.valid)
         self.assertTrue(response.unexpected)
+
+    def test_peek_rdbi_wrongservice_exception(self):
+        self.wait_request_and_respond(b"\x50\x00\x01\x12\x34")  # Valid service, but not the one requested
+
+    def _test_peek_rdbi_wrongservice_exception(self):
+        with self.assertRaises(UnexpectedResponseException) as handle:
+            self.udsclient.test_data_identifier(0x1122)
+
+    def test_peek_rdbi_wrongservice_no_exception(self):
+        self.wait_request_and_respond(b"\x50\x00\x01\x12\x34")  # Valid service, but not the one requested
+
+    def _test_peek_rdbi_wrongservice_no_exception(self):
+        self.udsclient.config['exception_on_unexpected_response'] = False
+        response = self.udsclient.test_data_identifier(0x1122)
+        self.assertTrue(response.valid)
+        self.assertTrue(response.unexpected)
+
+    def test_peek_rdbi_negative_exception(self):
+        self.wait_request_and_respond(b"\x7F\x22\x10")  # general reject
+
+    def _test_peek_rdbi_negative_exception(self):
+        with self.assertRaises(NegativeResponseException) as handle:
+            self.udsclient.test_data_identifier(0x1122)
+
+    def test_peek_rdbi_negative_no_exception(self):
+        self.wait_request_and_respond(b"\x7F\x22\x10")  # general reject
+
+    def _test_peek_rdbi_negative_no_exception(self):
+        self.udsclient.config['exception_on_negative_response'] = False
+        response = self.udsclient.test_data_identifier(0x1122)
+        self.assertTrue(response.valid)
+        self.assertFalse(response.unexpected)
+        self.assertFalse(response.positive)
 
     def test_no_config(self):
         pass

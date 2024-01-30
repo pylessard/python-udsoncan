@@ -388,6 +388,8 @@ Methods by services
 #################################################
 
 .. automethod:: udsoncan.client.Client.read_data_by_identifier
+.. automethod:: udsoncan.client.Client.read_data_by_identifier_first
+.. automethod:: udsoncan.client.Client.test_data_identifier
 
 -------------
 

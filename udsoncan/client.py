@@ -422,6 +422,27 @@ class Client:
         return None
 
     @standard_error_management
+    def test_data_identifier(self, didlist: Union[int, List[int]]) -> Optional[Response]:
+        """
+            Sends a request for the ReadDataByIdentifier and returns blindly the received response without parsing.
+            The requested DIDs do not have to be inside the client list of supported DID.
+            This method can be useful for testing if a DID exists on an ECU
+
+            :Effective configuration: ``exception_on_<type>_response``
+
+            :param didlist: The DIDs to peek
+            :type didlist: list[int] 
+
+            :return: The raw server response. The response will not be parsed by any service, causing ``service_data`` to always be ``None``
+            :rtype: :ref:`Response<Response>`
+
+        """
+        # Do the validation. No need to read return value as we enforced a single DID already
+        didlist = services.ReadDataByIdentifier.validate_didlist_input(didlist)
+        req = services.ReadDataByIdentifier.make_request(didlist=didlist, didconfig=None)  # No config
+        return self.send_request(req)
+
+    @standard_error_management
     def read_data_by_identifier(self, didlist: Union[int, List[int]]) -> Optional[services.ReadDataByIdentifier.InterpretedResponse]:
         """
         Requests a value associated with a data identifier (DID) through the :ref:`ReadDataByIdentifier<ReadDataByIdentifier>` service.
