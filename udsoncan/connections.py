@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 import time
 from typing import Union, Any, Dict
 import ctypes
+import selectors
 
 try:
     import can  # type:ignore
@@ -198,7 +199,6 @@ class SocketConnection(BaseConnection):
         self.opened = False
         self.rxthread = None
         self.sock = sock
-        self.sock.settimeout(0.1)  # for recv
         self.bufsize = bufsize
 
     def open(self) -> "SocketConnection":
@@ -219,13 +219,15 @@ class SocketConnection(BaseConnection):
         return self.opened
 
     def rxthread_task(self) -> None:
+        sel = selectors.DefaultSelector()
+        sel.register(self.sock, selectors.EVENT_READ)
         while not self.exit_requested:
             try:
-                data = self.sock.recv(self.bufsize)
-                if data is not None:
-                    self.rxqueue.put(data)
-            except socket.timeout:
-                pass
+                events = sel.select(timeout=0.2)
+                if events:
+                    data = self.sock.recv(self.bufsize)
+                    if data is not None:
+                        self.rxqueue.put(data)
             except Exception:
                 self.exit_requested = True
 
@@ -333,13 +335,15 @@ class IsoTPSocketConnection(BaseConnection):
         return self.tpsock.bound
 
     def rxthread_task(self) -> None:
+        sel = selectors.DefaultSelector()
+        sel.register(self.tpsock._socket, selectors.EVENT_READ)
         while not self.exit_requested:
             try:
-                data = self.tpsock.recv()
-                if data is not None:
-                    self.rxqueue.put(data)
-            except socket.timeout:
-                pass
+                events = sel.select(timeout=0.2)
+                if events:
+                    data = self.tpsock.recv()
+                    if data is not None:
+                        self.rxqueue.put(data)
             except Exception:
                 self.exit_requested = True
 
