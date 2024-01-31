@@ -1,9 +1,8 @@
-from udsoncan.client import Client
-from udsoncan import services
 from udsoncan.exceptions import *
 from udsoncan import DidCodec
-from udsoncan import IOValues, IOMasks
+from udsoncan import IOValues
 import struct
+from copy import deepcopy
 
 from test.ClientServerTest import ClientServerTest
 
@@ -94,10 +93,12 @@ class TestIOControl(ClientServerTest):
             'default': StubbedCodec
         }
 
+        original_config = deepcopy(self.udsclient.config)
         response = self.udsclient.io_control(control_param=1, did=0x132)  # Reset to default
         self.assertEqual(response.service_data.control_param_echo, 1)
         self.assertEqual(response.service_data.did_echo, 0x132)
         self.assertEqual(response.service_data.decoded_data, 0x4A)  # 0x4B-1 as defined by codec decode method
+        self.assertEqual(self.udsclient.config, original_config)
 
     def test_io_control_variable_size_codec(self):
         request = self.conn.touserqueue.get(timeout=0.2)

@@ -1,9 +1,7 @@
-from udsoncan.client import Client
-from udsoncan import services
 from udsoncan.exceptions import *
 from udsoncan import DidCodec, AsciiCodec
 import struct
-
+from copy import deepcopy
 from test.ClientServerTest import ClientServerTest
 
 
@@ -86,10 +84,12 @@ class TestReadDataByIdentifier(ClientServerTest):
             2: '<H',
             3: StubbedDidCodec
         }
+        original_config = deepcopy(self.udsclient.config)
         response = self.udsclient.read_data_by_identifier(didlist=1)
         self.assertTrue(response.positive)
         values = response.service_data.values
         self.assertEqual(values[1], (0x1234,))
+        self.assertEqual(original_config, self.udsclient.config)    # MAke sure it is not changed
 
     def test_rdbi_single_success_spr_no_effect(self):
         request = self.conn.touserqueue.get(timeout=0.2)

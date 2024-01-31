@@ -1,4 +1,4 @@
-from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier, MemoryLocation, CommunicationType, Baudrate, IOMasks, Dtc, DidCodec, AsciiCodec, Filesize, DynamicDidDefinition, make_did_codec_from_config
+from udsoncan import DataFormatIdentifier, AddressAndLengthFormatIdentifier, MemoryLocation, CommunicationType, Baudrate, IOMasks, Dtc, DidCodec, AsciiCodec, Filesize, DynamicDidDefinition, make_did_codec_from_definition
 from test.UdsTest import UdsTest
 import struct
 
@@ -439,7 +439,7 @@ class TestCodec(UdsTest):
             codec.decode(b"asd")
 
         with self.assertRaises(ValueError):
-            make_did_codec_from_config("")
+            make_did_codec_from_definition("")
 
     def test_ascii_codec(self):
         codec = AsciiCodec(10)

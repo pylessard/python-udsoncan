@@ -2,7 +2,8 @@ __all__ = [
     'DataIdentifier',
     'CodecDefinition',
     'check_did_config',
-    'make_did_codec_from_config'
+    'fetch_codec_definition_from_config',
+    'make_did_codec_from_definition'
 ]
 
 import inspect
@@ -176,22 +177,30 @@ def check_did_config(didlist: Union[int, List[int]], didconfig: Optional[Dict]) 
     if didconfig is None:
         raise ConfigError("didconfig is not set")
     didlist = [didlist] if not isinstance(didlist, list) else didlist
-    didconfig = deepcopy(didconfig)
+
     if 'data_identifiers' in didconfig:
         didconfig = didconfig['data_identifiers']
 
     assert didconfig is not None
     for did in didlist:
         if did not in didconfig:
-            if 'default' in didconfig:
-                didconfig[did] = didconfig['default']
-            else:
+            if 'default' not in didconfig:
                 raise ConfigError(did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
 
     return cast(DIDConfig, didconfig)
 
 
-def make_did_codec_from_config(didconfig: Union[CodecDefinition, IOConfigEntry]) -> DidCodec:
+def fetch_codec_definition_from_config(did: int, didconfig: DIDConfig) -> CodecDefinition:
+    """Fetch a DID codec definition from a user configuration supporting default codec for unknown DID"""
+    if did not in didconfig:
+        if 'default' in didconfig:
+            return didconfig['default']
+        else:
+            raise ConfigError(did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
+    return didconfig[did]
+
+
+def make_did_codec_from_definition(didconfig: Union[CodecDefinition, IOConfigEntry]) -> DidCodec:
     if isinstance(didconfig, DidCodec):  # the given object already is a DidCodec instance
         return didconfig
 
@@ -201,7 +210,7 @@ def make_did_codec_from_config(didconfig: Union[CodecDefinition, IOConfigEntry])
 
     # It could be that the codec is in a dict. (for io_control)
     if isinstance(didconfig, dict) and 'codec' in didconfig:
-        return make_did_codec_from_config(didconfig['codec'])
+        return make_did_codec_from_definition(didconfig['codec'])
 
     # The codec can be defined by a struct pack/unpack string
     if isinstance(didconfig, str):

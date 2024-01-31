@@ -1,5 +1,5 @@
 import struct
-from udsoncan import Dtc, check_did_config, make_did_codec_from_config, latest_standard, DIDConfig
+from udsoncan import Dtc, check_did_config, make_did_codec_from_definition, fetch_codec_definition_from_config, latest_standard, DIDConfig
 from udsoncan.Request import Request
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
@@ -652,7 +652,8 @@ class ReadDTCInformation(BaseService):
                     # Decode the data based on DID number.
                     snapshot.did = did
                     didconfig = check_did_config(did, didconfig)
-                    codec = make_did_codec_from_config(didconfig[did])
+                    codec_definition = fetch_codec_definition_from_config(did, didconfig)
+                    codec = make_did_codec_from_definition(codec_definition)
 
                     data_offset = dtc_snapshot_did_size
                     if len(remaining_data[data_offset:]) < len(codec):
@@ -735,7 +736,8 @@ class ReadDTCInformation(BaseService):
                     # Decode the data based on DID number.
                     snapshot.did = did
                     didconfig = check_did_config(did, didconfig)
-                    codec = make_did_codec_from_config(didconfig[did])
+                    codec_definition = fetch_codec_definition_from_config(did, didconfig)
+                    codec = make_did_codec_from_definition(codec_definition)
 
                     data_offset = dtc_snapshot_did_size
                     if len(remaining_data[data_offset:]) < len(codec):
