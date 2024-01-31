@@ -7,7 +7,7 @@ from udsoncan.exceptions import *
 from udsoncan.BaseService import BaseService, BaseSubfunction, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode
 import udsoncan.tools as tools
-from udsoncan.common.dids import make_did_codec_from_config
+from udsoncan.common.dids import make_did_codec_from_definition, fetch_codec_definition_from_config
 
 from typing import Optional, Any, Union, List, Dict, cast
 
@@ -142,15 +142,15 @@ class InputOutputControlByIdentifier(BaseService):
 
         request.data = bytes()
         # IO dids are defined in client config.
-        # ioconfig_validated will have a key for the selected did if it falls back on 'default' key
         ioconfig_validated = tools.check_io_config(did, ioconfig)
+        io_config_entry = tools.fetch_io_entry_from_config(did, ioconfig_validated)
         request.data += struct.pack('>H', did)
 
         # This parameter is optional according to standard
         if control_param is not None:
             request.data += struct.pack('B', control_param)
-
-        codec = make_did_codec_from_config(ioconfig_validated[did])  # Get IO codec from config
+       # tools.
+        codec = make_did_codec_from_definition(io_config_entry)  # Get IO codec from config
 
         if values is not None:
             request.data += codec.encode(*values.args, **values.kwargs)
@@ -158,8 +158,8 @@ class InputOutputControlByIdentifier(BaseService):
         if masks is not None:  # Skip the masks byte if none is given.
             if isinstance(masks, bool):
                 byte: bytes = b'\xFF' if masks == True else b'\x00'
-                if 'mask_size' in ioconfig_validated[did] and ioconfig_validated[did]['mask_size'] is not None:
-                    mask_size = ioconfig_validated[did]['mask_size']
+                if 'mask_size' in io_config_entry and io_config_entry['mask_size'] is not None:
+                    mask_size = io_config_entry['mask_size']
                     assert mask_size is not None    # mypy nitpick
                     request.data += (byte * mask_size)
                 else:
@@ -167,9 +167,9 @@ class InputOutputControlByIdentifier(BaseService):
                         'mask_size', msg='Given mask is boolean value, indicating that all mask should be set to same value, but no mask_size is defined in configuration. Cannot guess how many bits to set.')
 
             elif isinstance(masks, IOMasks):
-                if 'mask' not in ioconfig_validated[did]:
+                if 'mask' not in io_config_entry:
                     raise ConfigError('mask', msg='Cannot apply given mask. Input/Output configuration does not define their position (and size).')
-                masks_config = ioconfig_validated[did]['mask']
+                masks_config = io_config_entry['mask']
                 if masks_config is None:
                     masks_config = {}
 
@@ -184,8 +184,8 @@ class InputOutputControlByIdentifier(BaseService):
                         numeric_val |= masks_config[mask_name]
 
                 size = math.ceil(math.log(numeric_val + 1, 2) / 8.0)
-                if 'mask_size' in ioconfig_validated[did]:
-                    mask_size = ioconfig_validated[did]['mask_size']
+                if 'mask_size' in io_config_entry:
+                    mask_size = io_config_entry['mask_size']
                     if mask_size is not None:
                         size = mask_size
                 request.data += numeric_val.to_bytes(size, 'big')
@@ -235,7 +235,8 @@ class InputOutputControlByIdentifier(BaseService):
 
         did = response.service_data.did_echo
         ioconfig_validated = tools.check_io_config(did, ioconfig)  # IO DIDs are defined in client config.
-        codec = make_did_codec_from_config(ioconfig_validated[did])  # Get IO codec from config
+        io_config_entry = tools.fetch_io_entry_from_config(did, ioconfig_validated)  # Get requested did definition (given or default)
+        codec = make_did_codec_from_definition(io_config_entry)  # Get IO codec from config
 
         next_byte = 2
         if control_param is not None:

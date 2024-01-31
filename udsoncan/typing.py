@@ -1,5 +1,5 @@
 from udsoncan.common.DidCodec import DidCodec
-from typing import Dict, Optional, Any, Callable, Union, Type
+from typing import Dict, Optional, Any, Callable, Union, Type, Literal
 import sys
 
 if sys.version_info < (3, 8):
@@ -18,11 +18,11 @@ DIDConfig = Dict[Union[int, str], CodecDefinition]
 
 class IOConfigEntry(TypedDict, total=False):
     codec: CodecDefinition
-    mask: Optional[Dict[str, int]]
-    mask_size: Optional[int]
+    mask: Dict[str, int]
+    mask_size: int
 
 
-IOConfig = Dict[Union[int, str], Union[IOConfigEntry, CodecDefinition]]
+IOConfig = Dict[Union[int, Literal['default']], Union[IOConfigEntry, CodecDefinition]]
 
 
 class ClientConfig(TypedDict, total=False):

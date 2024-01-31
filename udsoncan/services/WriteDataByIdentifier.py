@@ -1,7 +1,7 @@
 import struct
 from udsoncan.Request import Request
 from udsoncan.Response import Response
-from udsoncan import DidCodec, check_did_config, make_did_codec_from_config, DIDConfig
+from udsoncan import DidCodec, check_did_config, make_did_codec_from_definition, fetch_codec_definition_from_config, DIDConfig
 from udsoncan.exceptions import *
 from udsoncan.BaseService import BaseService, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode
@@ -59,8 +59,9 @@ class WriteDataByIdentifier(BaseService):
         tools.validate_int(did, min=0, max=0xFFFF, name='Data Identifier')
         req = Request(cls)
         didconfig = check_did_config(did, didconfig=didconfig)  # Make sure all DIDs are correctly defined in client config
+        codec_definition = fetch_codec_definition_from_config(did, didconfig)
         req.data = struct.pack('>H', did)  # encode DID number
-        codec = make_did_codec_from_config(didconfig[did])
+        codec = make_did_codec_from_definition(codec_definition)
         if codec.__class__ == DidCodec and isinstance(value, tuple):
             req.data += codec.encode(*value)    # Fixes issue #29
         else:

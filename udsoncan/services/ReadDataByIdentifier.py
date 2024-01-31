@@ -1,6 +1,6 @@
 import struct
 
-from udsoncan import DidCodec, check_did_config, make_did_codec_from_config, DIDConfig
+from udsoncan import DidCodec, check_did_config, make_did_codec_from_definition, fetch_codec_definition_from_config, DIDConfig
 from udsoncan.Request import Request
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
@@ -72,15 +72,13 @@ class ReadDataByIdentifier(BaseService):
         req = Request(cls)
         if didconfig is not None:
             # Return a validated did config. Format may change, entries might be added if default value is set.
-            didconfig_validated = check_did_config(didlist, didconfig)
+            check_did_config(didlist, didconfig)
 
             did_reading_all_data = None
             for did in didlist:
-                if did not in didconfig_validated:    # Already checked in check_did_config. Paranoid check
-                    raise ConfigError(key=did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
-
                 # Make sure the config is good before sending the request. This method can raise.
-                codec = make_did_codec_from_config(didconfig_validated[did])
+                codec_definition = fetch_codec_definition_from_config(did, didconfig)
+                codec = make_did_codec_from_definition(codec_definition)
 
                 try:
                     len(codec)  # Validate the length function. May raise
@@ -148,10 +146,8 @@ class ReadDataByIdentifier(BaseService):
                 if response.data[offset:] == b'\x00' * (len(response.data) - offset):
                     break
 
-            if did not in didconfig_validated:  # Already checked in check_did_config. Paranoid check
-                raise ConfigError(key=did, msg='Actual data identifier configuration contains no definition for data identifier 0x%04x' % did)
-
-            codec = make_did_codec_from_config(didconfig_validated[did])
+            codec_definition = fetch_codec_definition_from_config(did, didconfig_validated)
+            codec = make_did_codec_from_definition(codec_definition)
             offset += 2
 
             try:
