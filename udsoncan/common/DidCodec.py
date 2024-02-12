@@ -58,7 +58,7 @@ class AsciiCodec(DidCodec):
     def __init__(self, string_len: int):
         self.string_len = string_len
 
-    def encode(self, string_ascii: Any) -> bytes:
+    def encode(self, string_ascii: Any) -> bytes:  # type: ignore
         if not isinstance(string_ascii, str):
             raise ValueError("AsciiCodec requires a string for encoding")
 

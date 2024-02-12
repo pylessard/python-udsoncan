@@ -14,20 +14,13 @@ from udsoncan.BaseService import BaseService
 
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
-from udsoncan.typing import ClientConfig
+from udsoncan.typing import ClientConfig, TypedDict
 import logging
 import binascii
 import functools
 import time
-import sys
 
 from typing import Callable, Optional, Union, Dict, List, Any, cast, Type
-
-if sys.version_info < (3, 8):
-    class TypedDict:
-        pass
-else:
-    from typing import TypedDict
 
 
 class SessionTiming(TypedDict):
