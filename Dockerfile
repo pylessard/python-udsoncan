@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     libssl-dev \
     build-essential \
+    make \
     libffi-dev \
     libreadline-dev \
     zlib1g-dev \
