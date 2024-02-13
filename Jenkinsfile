@@ -64,5 +64,12 @@ pipeline {
                 }
             }
         }
+        stage("Doc"){
+            steps {
+                sh '''
+                    cd doc && make html;
+                '''
+            }
+        }
     }
 }
