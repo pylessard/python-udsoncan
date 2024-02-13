@@ -13,13 +13,15 @@ pipeline {
             }
             stages {
                 stage ('Create venv') {
-                    sh '''
-                    python3.7 -m venv venv-3.7
-                    python3.8 -m venv venv-3.8
-                    python3.9 -m venv venv-3.9
-                    python3.10 -m venv venv-3.10
-                    python3.11 -m venv venv-3.11
-                    '''
+                    steps {
+                        sh '''
+                        python3.7 -m venv venv-3.7
+                        python3.8 -m venv venv-3.8
+                        python3.9 -m venv venv-3.9
+                        python3.10 -m venv venv-3.10
+                        python3.11 -m venv venv-3.11
+                        '''
+                    }
                 }
                 stage('Testing'){
                     parallel{
