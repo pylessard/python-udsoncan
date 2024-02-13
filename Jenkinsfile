@@ -67,7 +67,9 @@ pipeline {
         stage("Doc"){
             steps {
                 sh '''
-                    cd doc && make html;
+                which make
+                python 3.11 -m pip install doc/requirements.txt
+                make -C doc html
                 '''
             }
         }
