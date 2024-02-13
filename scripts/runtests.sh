@@ -16,7 +16,7 @@ fi
 set -x 
 
 python3 -m coverage run --data-file ${COV_DATAFILE} -m unittest -v
-#python3 -m mypy udsoncan 
+python3 -m mypy udsoncan 
 python3 -m coverage report --data-file ${COV_DATAFILE}
 python3 -m coverage html --data-file ${COV_DATAFILE} -d $HTML_COVDIR
   

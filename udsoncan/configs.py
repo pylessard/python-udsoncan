@@ -1,7 +1,8 @@
 from udsoncan.typing import ClientConfig
 from udsoncan import latest_standard
+from typing import cast
 
-default_client_config: ClientConfig = {
+default_client_config: ClientConfig = cast(ClientConfig, {
     'exception_on_negative_response': True,
     'exception_on_invalid_response': True,
     'exception_on_unexpected_response': True,
@@ -20,4 +21,4 @@ default_client_config: ClientConfig = {
     'standard_version': latest_standard,  # 2006, 2013, 2020
     'use_server_timing': True,
     'extended_data_size': None
-}
+})

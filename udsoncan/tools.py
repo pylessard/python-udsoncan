@@ -1,7 +1,7 @@
 from udsoncan.exceptions import ConfigError
 from udsoncan.BaseService import BaseService
 
-from udsoncan.typing import IOConfigEntry, IOConfig
+from udsoncan.typing import IOConfigEntry, IOConfig, CodecDefinition
 
 from typing import Any, Union, List, Dict, cast
 
@@ -23,9 +23,9 @@ def fetch_io_entry_from_config(did: int, ioconfig: IOConfig) -> IOConfigEntry:
         selected = ioconfig[did]
 
     if not isinstance(selected, dict):
-        selected = {
+        selected = cast(IOConfigEntry, {
             'codec': selected
-        }
+        })
     return selected
 
 
