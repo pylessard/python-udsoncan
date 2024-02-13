@@ -12,15 +12,33 @@ pipeline {
                 }
             }
             stages {
-                stage ('Create venv') {
-                    steps {
-                        sh '''
-                        python3.7 -m venv venv-3.7 && VENV_DIR=venv3.7 scripts/activate-venv.sh
-                        python3.8 -m venv venv-3.8 && VENV_DIR=venv3.8 scripts/activate-venv.sh
-                        python3.9 -m venv venv-3.9 && VENV_DIR=venv3.9 scripts/activate-venv.sh
-                        python3.10 -m venv venv-3.10 && VENV_DIR=venv3.10 scripts/activate-venv.sh
-                        python3.11 -m venv venv-3.11 && VENV_DIR=venv3.11 scripts/activate-venv.sh
-                        '''
+                stage ('Create venvs') {
+                    parallel{
+                        stage ('Python 3.11') {
+                            steps {
+                                sh 'python3.11 -m venv venv-3.11 && VENV_DIR=venv3.11 scripts/activate-venv.sh'
+                            }
+                        }
+                        stage ('Python 3.10') {
+                            steps {
+                                sh 'python3.10 -m venv venv-3.10 && VENV_DIR=venv3.10 scripts/activate-venv.sh'
+                            }
+                        }
+                        stage ('Python 3.9') {
+                            steps {
+                                sh 'python3.9 -m venv venv-3.9 && VENV_DIR=venv3.9 scripts/activate-venv.sh'
+                            }
+                        }
+                        stage ('Python 3.8') {
+                            steps {
+                                sh 'python3.8 -m venv venv-3.8 && VENV_DIR=venv3.8 scripts/activate-venv.sh'
+                            }
+                        }
+                        stage ('Python 3.7') {
+                            steps {
+                                sh 'python3.7 -m venv venv-3.7 && VENV_DIR=venv3.7 scripts/activate-venv.sh'
+                            }
+                        }
                     }
                 }
                 stage('Testing'){
