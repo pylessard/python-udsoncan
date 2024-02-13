@@ -3,7 +3,7 @@ from typing import Dict, Optional, Any, Callable, Union, Type
 import sys
 
 if sys.version_info < (3, 8):
-    class TypedDict:
+    class TypedDict(dict):
         def __init_subclass__(cls, *args, **kwargs):
             pass
 else:

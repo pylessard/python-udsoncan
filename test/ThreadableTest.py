@@ -1,9 +1,10 @@
 from test.UdsTest import UdsTest
 import threading
 import queue
-import _thread as thread
 
-#Class borrowed from Python Socket test suite.
+# Class borrowed from Python Socket test suite.
+
+
 class ThreadableTest(UdsTest):
     def __init__(self, *args, **kwargs):
         UdsTest.__init__(self, *args, **kwargs)
@@ -26,9 +27,10 @@ class ThreadableTest(UdsTest):
         # Do some munging to start the client test.
         methodname = self.id()
         i = methodname.rfind('.')
-        methodname = methodname[i+1:]
+        methodname = methodname[i + 1:]
         test_method = getattr(self, '_' + methodname)
-        self.client_thread = thread.start_new_thread(self.clientRun, (test_method,))
+        self.client_thread = threading.Thread(target=self.clientRun, args=(test_method,))
+        self.client_thread.start()
 
         try:
             self.__setUp()
@@ -81,5 +83,5 @@ class ThreadableTest(UdsTest):
                 self.clientTearDown()
         except BaseException as e:
             self.queue.put(e)
-        finally:			
-            thread.exit()
+        finally:
+            raise SystemExit()

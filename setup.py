@@ -9,9 +9,13 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='udsoncan',
-    packages=find_packages(exclude=['test']),
+    packages=find_packages(exclude=["test", "test.*"], include=['udsoncan', "udsoncan.*"]),
     package_data={
         '': ['*.conf'],
+    },
+    extras_require={
+        'test': ['mypy', 'coverage'],
+        'dev': ['mypy', 'ipdb', 'autopep8', 'coverage']
     },
     version='1.22.1',
     description='Implementation of the Unified Diagnostic Service (UDS) protocol (ISO-14229) used in the automotive industry.',

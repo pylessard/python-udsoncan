@@ -14,20 +14,13 @@ from udsoncan.BaseService import BaseService
 
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
-from udsoncan.typing import ClientConfig
+from udsoncan.typing import ClientConfig, TypedDict
 import logging
 import binascii
 import functools
 import time
-import sys
 
 from typing import Callable, Optional, Union, Dict, List, Any, cast, Type
-
-if sys.version_info < (3, 8):
-    class TypedDict:
-        pass
-else:
-    from typing import TypedDict
 
 
 class SessionTiming(TypedDict):
@@ -118,7 +111,7 @@ class Client:
         self.payload_override = Client.PayloadOverrider()
         self.last_response = None
 
-        self.session_timing = dict(p2_server_max=None, p2_star_server_max=None)
+        self.session_timing = cast(SessionTiming, dict(p2_server_max=None, p2_star_server_max=None))    # python 3.7 cast
 
         self.refresh_config()
 
