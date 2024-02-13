@@ -62,16 +62,17 @@ pipeline {
                         }
                     }
                 }
+                stage("Doc"){
+                    steps {
+                        sh '''
+                        which make
+                        python 3.11 -m pip install doc/requirements.txt
+                        make -C doc html
+                        '''
+                    }
+                }
             }
         }
-        stage("Doc"){
-            steps {
-                sh '''
-                which make
-                python 3.11 -m pip install doc/requirements.txt
-                make -C doc html
-                '''
-            }
-        }
+       
     }
 }
