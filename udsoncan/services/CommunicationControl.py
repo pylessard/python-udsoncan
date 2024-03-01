@@ -5,8 +5,10 @@ from udsoncan.exceptions import *
 from udsoncan.BaseService import BaseService, BaseSubfunction, BaseResponseData
 from udsoncan.ResponseCode import ResponseCode
 import udsoncan.tools as tools
+from udsoncan import latest_standard
+import struct
 
-from typing import cast, Union
+from typing import cast, Union, Optional
 
 
 class CommunicationControl(BaseService):
@@ -22,6 +24,8 @@ class CommunicationControl(BaseService):
         enableRxAndDisableTx = 1
         disableRxAndEnableTx = 2
         disableRxAndTx = 3
+        enableRxAndDisableTxWithEnhancedAddressInformation = 4
+        enableRxAndTxWithEnhancedAddressInformation = 5
 
     supported_negative_response = [ResponseCode.SubFunctionNotSupported,
                                    ResponseCode.IncorrectMessageLengthOrInvalidFormat,
@@ -55,7 +59,7 @@ class CommunicationControl(BaseService):
         return communication_type
 
     @classmethod
-    def make_request(cls, control_type: int, communication_type: CommunicationType) -> Request:
+    def make_request(cls, control_type: int, communication_type: CommunicationType, node_id: Optional[int] = None, standard_version=latest_standard) -> Request:
         """
         Generates a request for CommunicationControl
 
@@ -65,14 +69,46 @@ class CommunicationControl(BaseService):
         :param communication_type: The communication type requested.
         :type communication_type: :ref:`CommunicationType <CommunicationType>`, int, bytes
 
+        :param node_id: DTC memory identifier. This value is user defined and introduced in 2013 version of ISO-14229-1. 
+            Possible only when control type is ``enableRxAndDisableTxWithEnhancedAddressInformation`` or ``enableRxAndTxWithEnhancedAddressInformation``
+            Only added to the request payload when different from None. Default : None
+        :type node_id: int
+
+        :param standard_version: The version of the ISO-14229 (the year). eg. 2006, 2013, 2020
+        :type standard_version: int
+
         :raises ValueError: If parameters are out of range, missing or wrong type
         """
         tools.validate_int(control_type, min=0, max=0x7F, name='Control type')
+        if node_id is not None:
+            if standard_version < 2013:
+                raise NotImplementedError(
+                    'CommunicationControl with nodeIdentificationNumber is only possible with 2013 version of the standard or above.')
+
+            if control_type not in (
+                CommunicationControl.ControlType.enableRxAndDisableTxWithEnhancedAddressInformation,
+                CommunicationControl.ControlType.enableRxAndTxWithEnhancedAddressInformation
+            ):
+                raise ValueError('CommunicationControl with nodeIdentificationNumber is only possible when ControlType is either enableRxAndDisableTxWithEnhancedAddressInformation (%d) or enableRxAndTxWithEnhancedAddressInformation (%d)',
+                                 CommunicationControl.ControlType.enableRxAndDisableTxWithEnhancedAddressInformation, CommunicationControl.ControlType.enableRxAndTxWithEnhancedAddressInformation)
+
+            tools.validate_int(node_id, min=0, max=0xFFFF, name='nodeIdentificationNumber')
+
+        if control_type in (
+            CommunicationControl.ControlType.enableRxAndDisableTxWithEnhancedAddressInformation,
+            CommunicationControl.ControlType.enableRxAndTxWithEnhancedAddressInformation
+        ) and standard_version < 2013:
+            raise NotImplementedError(
+                'CommunicationControl with ControlType=%d is only possible with 2013 version of the standard or above.', (control_type))
 
         communication_type = cls.normalize_communication_type(communication_type)
         request = Request(service=cls, subfunction=control_type)
-        request.data = communication_type.get_byte()
+        payload = communication_type.get_byte()
 
+        if node_id is not None:
+            payload += struct.pack('>H', node_id)
+
+        request.data = payload
         return request
 
     @classmethod

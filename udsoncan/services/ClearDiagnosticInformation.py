@@ -38,6 +38,13 @@ class ClearDiagnosticInformation(BaseService):
         :param group: DTC mask ranging from 0 to 0xFFFFFF. 0xFFFFFF means all DTCs
         :type group: int
 
+        :param memory_selection: Number identifying the respective DTC memory. This value is user defined and introduced in 2013 version of ISO-14229-1. 
+            Only added to the request payload when different from None. Default : None
+        :type memory_selection: int
+
+        :param standard_version: The version of the ISO-14229 (the year). eg. 2006, 2013, 2020
+        :type standard_version: int
+
         :raises ValueError: If parameters are out of range, missing or wrong type
         """
         tools.validate_int(group, min=0, max=0xFFFFFF, name='Group of DTC')
