@@ -2,6 +2,7 @@ from udsoncan import services, CommunicationType
 from udsoncan.exceptions import *
 
 from test.ClientServerTest import ClientServerTest
+from udsoncan import latest_standard
 
 
 class TestCommunicationControl(ClientServerTest):
@@ -26,6 +27,18 @@ class TestCommunicationControl(ClientServerTest):
         self.assertEqual(response.service_data.control_type_echo, control_type)
 
         response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type.get_byte_as_int())
+        self.assertTrue(response.positive)
+        self.assertEqual(response.service_data.control_type_echo, control_type)
+
+    def test_comcontrol_enable_node_with_enhanced_addr_info(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x28\x05\x01\x12\x34")
+        self.conn.fromuserqueue.put(b"\x68\x05")  # Positive response
+
+    def _test_comcontrol_enable_node_with_enhanced_addr_info(self):
+        control_type = services.CommunicationControl.ControlType.enableRxAndTxWithEnhancedAddressInformation
+        com_type = CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True)
+        response = self.udsclient.communication_control(control_type=control_type, communication_type=com_type, node_id=0x1234)
         self.assertTrue(response.positive)
         self.assertEqual(response.service_data.control_type_echo, control_type)
 
@@ -148,3 +161,21 @@ class TestCommunicationControl(ClientServerTest):
 
         with self.assertRaises(ValueError):
             self.udsclient.communication_control(control_type=0, communication_type='x')
+
+        with self.assertRaises(ValueError):
+            self.udsclient.communication_control(
+                control_type=services.CommunicationControl.ControlType.enableRxAndDisableTxWithEnhancedAddressInformation,
+                communication_type=CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True))   # Missing node_id
+
+        with self.assertRaises(ValueError):
+            self.udsclient.communication_control(
+                control_type=services.CommunicationControl.ControlType.enableRxAndTxWithEnhancedAddressInformation,
+                communication_type=CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True))   # Missing node_id
+
+        with self.assertRaises(ValueError):
+            self.udsclient.config['standard_version'] = 2006
+            self.udsclient.communication_control(
+                control_type=services.CommunicationControl.ControlType.enableRxAndTxWithEnhancedAddressInformation,
+                communication_type=CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True),
+                node_id=0x1234)  # node_id not allowed
+        self.udsclient.config['standard_version'] = latest_standard
