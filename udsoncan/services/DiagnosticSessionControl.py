@@ -84,6 +84,9 @@ class DiagnosticSessionControl(BaseService):
         :param response: The received response to interpret
         :type response: :ref:`Response<Response>`
 
+        :param standard_version: The version of the ISO-14229 (the year). eg. 2006, 2013, 2020
+        :type standard_version: int
+
         :raises InvalidResponseException: If length of ``response.data`` is too short
         """
         if response.data is None:

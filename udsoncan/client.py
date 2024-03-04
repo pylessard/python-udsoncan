@@ -813,7 +813,8 @@ class Client:
     @standard_error_management
     def communication_control(self,
                               control_type: int,
-                              communication_type: Union[int, bytes, CommunicationType]
+                              communication_type: Union[int, bytes, CommunicationType],
+                              node_id: Optional[int] = None,
                               ) -> Optional[services.CommunicationControl.InterpretedResponse]:
         """
         Switches the transmission or reception of certain messages on/off with :ref:`CommunicationControl<CommunicationControl>` service.
@@ -826,15 +827,29 @@ class Client:
         :param communication_type: Indicates what section of the network and the type of message that should be affected by the command. Refer to :ref:`CommunicationType<CommunicationType>` for more details. If an `integer` or a `bytes` is given, the value will be decoded to create the required :ref:`CommunicationType<CommunicationType>` object
         :type communication_type: :ref:`CommunicationType<CommunicationType>`, bytes, int
 
+        :param node_id: DTC memory identifier (nodeIdentificationNumber). This value is user defined and introduced in 2013 version of ISO-14229-1. 
+            Possible only when control type is ``enableRxAndDisableTxWithEnhancedAddressInformation`` or ``enableRxAndTxWithEnhancedAddressInformation``
+            Only added to the request payload when different from None. Default : None
+        :type node_id: int
+
         :return: The server response parsed by :meth:`CommunicationControl.interpret_response<udsoncan.services.CommunicationControl.interpret_response>`
         :rtype: :ref:`Response<Response>`
         """
 
         communication_type = services.CommunicationControl.normalize_communication_type(communication_type)
 
-        request = services.CommunicationControl.make_request(control_type, communication_type)
-        self.logger.info('%s - ControlType=0x%02x (%s) - Sending request with a CommunicationType byte of 0x%02x (%s)' % (self.service_log_prefix(services.CommunicationControl),
-                         control_type, services.CommunicationControl.ControlType.get_name(control_type), communication_type.get_byte_as_int(), str(communication_type)))
+        request = services.CommunicationControl.make_request(
+            control_type, communication_type, node_id, standard_version=self.config['standard_version'])
+
+        self.logger.info('%s - ControlType=0x%02x (%s) - Sending request with a CommunicationType byte of 0x%02x (%s). nodeIdentificationNumber=%s ' % (
+            self.service_log_prefix(services.CommunicationControl),
+            control_type,
+            services.CommunicationControl.ControlType.get_name(control_type),
+            communication_type.get_byte_as_int(),
+            str(communication_type),
+            str(node_id)
+        )
+        )
 
         response = self.send_request(request)
         if response is None:
