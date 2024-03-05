@@ -66,7 +66,7 @@ class SecurityAccess(BaseService):
         Generates a request for SecurityAccess
 
         :param level: Service subfunction. The security level to unlock. Value ranging from 0 to 7F 
-                For mode=``RequestSeed`` (0), level must be an even value. For mode=``SendKey`` (1), level must be an odd value.
+                For mode=``RequestSeed`` (0), level must be an odd value. For mode=``SendKey`` (1), level must be an even value.
                 If the even/odd constraint is not respected, the level value will be corrected to properly set the LSB.
         :type level: int
 
