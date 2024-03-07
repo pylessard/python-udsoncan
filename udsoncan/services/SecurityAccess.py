@@ -51,12 +51,11 @@ class SecurityAccess(BaseService):
     @classmethod
     def normalize_level(cls, mode: int, level: int) -> int:
         cls.validate_mode(mode)
+        tools.validate_int(level, min=1, max=0x7E, name='Security level')
 
         if mode == cls.Mode.RequestSeed:
-            tools.validate_int(level, min=1, max=0x7F, name='Security level')
             return level if level % 2 == 1 else level - 1
         elif mode == cls.Mode.SendKey:
-            tools.validate_int(level, min=0, max=0x7E, name='Security level')
             return level if level % 2 == 0 else level + 1
 
         raise ValueError("Unsupported mode")

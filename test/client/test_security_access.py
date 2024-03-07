@@ -120,10 +120,10 @@ class TestRequestSeed(ClientServerTest):
 
     def _test_request_seed_bad_param(self):
         with self.assertRaises(ValueError):
-            self.udsclient.request_seed(0x80)
+            self.udsclient.request_seed(0)  # issue #220
 
         with self.assertRaises(ValueError):
-            self.udsclient.request_seed(0)  # issue #220
+            self.udsclient.request_seed(0x7f)  # issue #220
 
         with self.assertRaises(ValueError):
             self.udsclient.request_seed(-1)
@@ -223,6 +223,9 @@ class TestSendKey(ClientServerTest):
 
         with self.assertRaises(ValueError):
             self.udsclient.send_key(0x7F, b"\x11\x22\x33\x44")  # issue #220
+
+        with self.assertRaises(ValueError):
+            self.udsclient.send_key(0, b"\x11\x22\x33\x44")  # issue #220
 
         with self.assertRaises(ValueError):
             self.udsclient.send_key(-1, b"\x11\x22\x33\x44")
