@@ -3,6 +3,7 @@ from udsoncan.exceptions import *
 
 from test.ClientServerTest import ClientServerTest
 
+
 class TestRequestSeed(ClientServerTest):
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
@@ -10,7 +11,7 @@ class TestRequestSeed(ClientServerTest):
     def test_request_seed_success(self):
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b"\x27\x05")
-        self.conn.fromuserqueue.put(b"\x67\x05\x99\x88\x77\x66")	# Positive response
+        self.conn.fromuserqueue.put(b"\x67\x05\x99\x88\x77\x66")  # Positive response
 
     def _test_request_seed_success(self):
         response = self.udsclient.request_seed(0x05)
@@ -19,16 +20,16 @@ class TestRequestSeed(ClientServerTest):
     def test_request_seed_success_spr(self):
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b"\x27\x85")
-        self.conn.fromuserqueue.put('wait')	# Synchronize 
+        self.conn.fromuserqueue.put('wait')  # Synchronize
 
     def _test_request_seed_success_spr(self):
         with self.udsclient.suppress_positive_response:
             response = self.udsclient.request_seed(0x05)
             self.assertEqual(response, None)
-        self.conn.fromuserqueue.get(timeout=0.2)	#Avoid closing connection prematurely
+        self.conn.fromuserqueue.get(timeout=0.2)  # Avoid closing connection prematurely
 
     def test_request_seed_denied_exception(self):
-        self.wait_request_and_respond(b"\x7F\x27\x22")	# Conditions Not Correct
+        self.wait_request_and_respond(b"\x7F\x27\x22")  # Conditions Not Correct
 
     def _test_request_seed_denied_exception(self):
         with self.assertRaises(NegativeResponseException) as handle:
@@ -41,7 +42,7 @@ class TestRequestSeed(ClientServerTest):
         self.assertEqual(response.code, 0x22)
 
     def test_request_seed_denied_no_exception(self):
-        self.wait_request_and_respond(b"\x7F\x27\x22")	# Conditions Not Correct
+        self.wait_request_and_respond(b"\x7F\x27\x22")  # Conditions Not Correct
 
     def _test_request_seed_denied_no_exception(self):
         self.udsclient.config['exception_on_negative_response'] = False
@@ -53,14 +54,14 @@ class TestRequestSeed(ClientServerTest):
         self.assertEqual(response.code, 0x22)
 
     def test_request_seed_bad_subfn_exception(self):
-        self.wait_request_and_respond(b"\x67\x06\x99\x88\x77\x66")	# Positive response with wrong subfunction
+        self.wait_request_and_respond(b"\x67\x06\x99\x88\x77\x66")  # Positive response with wrong subfunction
 
     def _test_request_seed_bad_subfn_exception(self):
         with self.assertRaises(UnexpectedResponseException) as handle:
             self.udsclient.request_seed(0x05)
 
     def test_request_seed_bad_subfn_no_exception(self):
-        self.wait_request_and_respond(b"\x67\x06\x99\x88\x77\x66")	# Positive response with wrong subfunction
+        self.wait_request_and_respond(b"\x67\x06\x99\x88\x77\x66")  # Positive response with wrong subfunction
 
     def _test_request_seed_bad_subfn_no_exception(self):
         self.udsclient.config['exception_on_unexpected_response'] = False
@@ -69,14 +70,14 @@ class TestRequestSeed(ClientServerTest):
         self.assertTrue(response.unexpected)
 
     def test_request_seed_incomplete_response_exception(self):
-        self.wait_request_and_respond(b"\x67\x05")	# Positive response with no seed
+        self.wait_request_and_respond(b"\x67\x05")  # Positive response with no seed
 
     def _test_request_seed_incomplete_response_exception(self):
         with self.assertRaises(InvalidResponseException) as handle:
             self.udsclient.request_seed(0x05)
 
     def test_request_seed_incomplete_response_no_exception(self):
-        self.wait_request_and_respond(b"\x67\x05")	# Positive response with no seed
+        self.wait_request_and_respond(b"\x67\x05")  # Positive response with no seed
 
     def _test_request_seed_incomplete_response_no_exception(self):
         self.udsclient.config['exception_on_invalid_response'] = False
@@ -84,14 +85,14 @@ class TestRequestSeed(ClientServerTest):
         self.assertFalse(response.valid)
 
     def test_request_seed_invalidservice_exception(self):
-        self.wait_request_and_respond(b"\x00\x05") #Inexistent Service
+        self.wait_request_and_respond(b"\x00\x05")  # Inexistent Service
 
     def _test_request_seed_invalidservice_exception(self):
         with self.assertRaises(InvalidResponseException) as handle:
             self.udsclient.request_seed(0x05)
 
     def test_request_seed_invalidservice_no_exception(self):
-        self.wait_request_and_respond(b"\x00\x05") #Inexistent Service
+        self.wait_request_and_respond(b"\x00\x05")  # Inexistent Service
 
     def _test_request_seed_invalidservice_no_exception(self):
         self.udsclient.config['exception_on_invalid_response'] = False
@@ -99,14 +100,14 @@ class TestRequestSeed(ClientServerTest):
         self.assertFalse(response.valid)
 
     def test_request_seed_wrongservice_exception(self):
-        self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+        self.wait_request_and_respond(b"\x7E\x00")  # Valid but wrong service (Tester Present)
 
     def _test_request_seed_wrongservice_exception(self):
         with self.assertRaises(UnexpectedResponseException) as handle:
             self.udsclient.request_seed(0x05)
 
     def test_request_seed_wrongservice_no_exception(self):
-        self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+        self.wait_request_and_respond(b"\x7E\x00")  # Valid but wrong service (Tester Present)
 
     def _test_request_seed_wrongservice_no_exception(self):
         self.udsclient.config['exception_on_unexpected_response'] = False
@@ -119,7 +120,10 @@ class TestRequestSeed(ClientServerTest):
 
     def _test_request_seed_bad_param(self):
         with self.assertRaises(ValueError):
-            self.udsclient.request_seed(0x80)
+            self.udsclient.request_seed(0)  # issue #220
+
+        with self.assertRaises(ValueError):
+            self.udsclient.request_seed(0x7f)  # issue #220
 
         with self.assertRaises(ValueError):
             self.udsclient.request_seed(-1)
@@ -132,14 +136,14 @@ class TestSendKey(ClientServerTest):
     def test_send_key_success(self):
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b"\x27\x06\x11\x22\x33\x44")
-        self.conn.fromuserqueue.put(b"\x67\x06")	# Positive response
+        self.conn.fromuserqueue.put(b"\x67\x06")  # Positive response
 
     def _test_send_key_success(self):
-        response = self.udsclient.send_key(0x06,b"\x11\x22\x33\x44")
+        response = self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
         self.assertTrue(response.positive)
 
     def test_send_key_denied_exception(self):
-        self.wait_request_and_respond(b"\x7F\x27\x35")	# InvalidKey
+        self.wait_request_and_respond(b"\x7F\x27\x35")  # InvalidKey
 
     def _test_send_key_denied_exception(self):
         with self.assertRaises(NegativeResponseException) as handle:
@@ -152,7 +156,7 @@ class TestSendKey(ClientServerTest):
         self.assertEqual(response.code, 0x35)
 
     def test_send_key_denied_no_exception(self):
-        self.wait_request_and_respond(b"\x7F\x27\x35")	# InvalidKey
+        self.wait_request_and_respond(b"\x7F\x27\x35")  # InvalidKey
 
     def _test_send_key_denied_no_exception(self):
         self.udsclient.config['exception_on_negative_response'] = False
@@ -164,14 +168,14 @@ class TestSendKey(ClientServerTest):
         self.assertEqual(response.code, 0x35)
 
     def test_send_key_bad_subfn_exception(self):
-        self.wait_request_and_respond(b"\x67\x08\x99\x88\x77\x66")	# Positive response with wrong subfunction
+        self.wait_request_and_respond(b"\x67\x08\x99\x88\x77\x66")  # Positive response with wrong subfunction
 
     def _test_send_key_bad_subfn_exception(self):
         with self.assertRaises(UnexpectedResponseException) as handle:
             self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
 
     def test_send_key_bad_subfn_no_exception(self):
-        self.wait_request_and_respond(b"\x67\x08\x99\x88\x77\x66")	# Positive response with wrong subfunction
+        self.wait_request_and_respond(b"\x67\x08\x99\x88\x77\x66")  # Positive response with wrong subfunction
 
     def _test_send_key_bad_subfn_no_exception(self):
         self.udsclient.config['exception_on_unexpected_response'] = False
@@ -180,14 +184,14 @@ class TestSendKey(ClientServerTest):
         self.assertTrue(response.unexpected)
 
     def test_send_key_invalidservice_exception(self):
-        self.wait_request_and_respond(b"\x00\x06") #Inexistent Service
+        self.wait_request_and_respond(b"\x00\x06")  # Inexistent Service
 
     def _test_send_key_invalidservice_exception(self):
         with self.assertRaises(InvalidResponseException) as handle:
             self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
 
     def test_send_key_invalidservice_no_exception(self):
-        self.wait_request_and_respond(b"\x00\x06") #Inexistent Service
+        self.wait_request_and_respond(b"\x00\x06")  # Inexistent Service
 
     def _test_send_key_invalidservice_no_exception(self):
         self.udsclient.config['exception_on_invalid_response'] = False
@@ -195,14 +199,14 @@ class TestSendKey(ClientServerTest):
         self.assertFalse(response.valid)
 
     def test_send_key_wrongservice_exception(self):
-        self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+        self.wait_request_and_respond(b"\x7E\x00")  # Valid but wrong service (Tester Present)
 
     def _test_send_key_wrongservice_exception(self):
         with self.assertRaises(UnexpectedResponseException) as handle:
             self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
 
     def test_send_key_wrongservice_no_exception(self):
-        self.wait_request_and_respond(b"\x7E\x00") # Valid but wrong service (Tester Present)
+        self.wait_request_and_respond(b"\x7E\x00")  # Valid but wrong service (Tester Present)
 
     def _test_send_key_wrongservice_no_exception(self):
         self.udsclient.config['exception_on_unexpected_response'] = False
@@ -216,6 +220,12 @@ class TestSendKey(ClientServerTest):
     def _test_send_key_bad_param(self):
         with self.assertRaises(ValueError):
             self.udsclient.send_key(0x80, b"\x11\x22\x33\x44")
+
+        with self.assertRaises(ValueError):
+            self.udsclient.send_key(0x7F, b"\x11\x22\x33\x44")  # issue #220
+
+        with self.assertRaises(ValueError):
+            self.udsclient.send_key(0, b"\x11\x22\x33\x44")  # issue #220
 
         with self.assertRaises(ValueError):
             self.udsclient.send_key(-1, b"\x11\x22\x33\x44")
@@ -249,15 +259,15 @@ class TestUnlockSecurityService(ClientServerTest):
             self.assertEqual(request, b"\x27\x07")      # Request seed
             self.conn.fromuserqueue.put(b"\x67\x07\x11\x22\x33\x44")    # Positive response
             request = self.conn.touserqueue.get(timeout=0.2)
-            key = bytearray([(0x10 + 0x07+i + 0 + 0x11), (0x10 + 0x07+i + 1 + 0x22), (0x10 + 0x07+i + 2 + 0x33), (0x10 + 0x07+i + 3 + 0x44)])
+            key = bytearray([(0x10 + 0x07 + i + 0 + 0x11), (0x10 + 0x07 + i + 1 + 0x22), (0x10 + 0x07 + i + 2 + 0x33), (0x10 + 0x07 + i + 3 + 0x44)])
             self.assertEqual(request, b"\x27\x08" + bytes(key))
             self.conn.fromuserqueue.put(b"\x67\x08")    # Positive response
 
     def _test_unlock_success(self):
         self.udsclient.config['security_algo'] = self.dummy_algo
         self.udsclient.config['security_algo_params'] = 0x10
-        response = self.udsclient.unlock_security_access(0x07)  
-        response = self.udsclient.unlock_security_access(0x08)  
+        response = self.udsclient.unlock_security_access(0x07)
+        response = self.udsclient.unlock_security_access(0x08)
         self.assertTrue(response.positive)
 
     def test_unlock_already_unlocked(self):
@@ -267,7 +277,7 @@ class TestUnlockSecurityService(ClientServerTest):
     def _test_unlock_already_unlocked(self):
         self.udsclient.config['security_algo'] = self.dummy_algo
         self.udsclient.config['security_algo_params'] = 0x10
-        response = self.udsclient.unlock_security_access(0x07)  
+        response = self.udsclient.unlock_security_access(0x07)
         self.assertTrue(response.positive)
 
     def test_unlock_success_backward_compatibility(self):
@@ -282,22 +292,21 @@ class TestUnlockSecurityService(ClientServerTest):
     def _test_unlock_success_backward_compatibility(self):
         self.udsclient.config['security_algo'] = self.dummy_algo_backward_compatible
         self.udsclient.config['security_algo_params'] = 0xFF
-        response = self.udsclient.unlock_security_access(0x07)  
-        response = self.udsclient.unlock_security_access(0x08)  
+        response = self.udsclient.unlock_security_access(0x07)
+        response = self.udsclient.unlock_security_access(0x08)
         self.assertTrue(response.positive)
 
-
     def test_unlock_seed_fail_exception(self):
-        self.wait_request_and_respond(b"\x7F\x27\x11")  
+        self.wait_request_and_respond(b"\x7F\x27\x11")
 
     def _test_unlock_seed_fail_exception(self):
         self.udsclient.config['security_algo'] = self.dummy_algo
         self.udsclient.config['security_algo_params'] = 0xFF
         with self.assertRaises(NegativeResponseException):
-            response = self.udsclient.unlock_security_access(0x07)  
+            response = self.udsclient.unlock_security_access(0x07)
 
     def test_unlock_seed_fail_no_exception(self):
-        self.wait_request_and_respond(b"\x7F\x27\x11")  
+        self.wait_request_and_respond(b"\x7F\x27\x11")
 
     def _test_unlock_seed_fail_no_exception(self):
         self.udsclient.config['security_algo'] = self.dummy_algo
