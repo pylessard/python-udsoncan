@@ -24,6 +24,8 @@ if ! [[ -z "${BUILD_CONTEXT+x}" ]]; then
     fi
 fi
 
+pip3 cache info
+
 if ! pip3 show wheel 2>&1 >/dev/null; then
     log "Installing wheel..."
     pip3 install wheel
