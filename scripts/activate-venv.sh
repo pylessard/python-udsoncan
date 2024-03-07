@@ -29,6 +29,7 @@ if ! [[ -z "${BUILD_CONTEXT+x}" ]]; then
     if [[ "$BUILD_CONTEXT" == "ci" ]]; then
         MODULE_FEATURE="[test]" # Will cause testing tools to be installed.
         export PIP_CACHE_DIR=$VENV_ROOT/pip_cache   # Avoid concurrent cache access issue on CI
+        echo "PIP_CACHE_DIR=${PIP_CACHE_DIR}"
     fi
 fi
 
