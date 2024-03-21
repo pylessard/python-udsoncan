@@ -141,14 +141,16 @@ class ReadDataByIdentifier(BaseService):
                     break
                 raise InvalidResponseException(response, "Response given by server is incomplete.")
 
-            did = struct.unpack('>H', response.data[offset:offset + 2])[0]  # Get the DID number
+            if offset == 0:
+                did = struct.unpack('>H', response.data[offset:offset + 2])[0]  # Get the DID number
             if did == 0 and did not in didconfig_validated and tolerate_zero_padding:  # We read two zeros and that is not a DID bu we accept that. So we're done.
                 if response.data[offset:] == b'\x00' * (len(response.data) - offset):
                     break
 
             codec_definition = fetch_codec_definition_from_config(did, didconfig_validated)
             codec = make_did_codec_from_definition(codec_definition)
-            offset += 2
+            if offset == 0:
+                offset += 2
 
             try:
                 payload_size = len(codec)
@@ -162,6 +164,9 @@ class ReadDataByIdentifier(BaseService):
             subpayload = response.data[offset:offset + payload_size]
             offset += payload_size  # Codec must define a __len__ function that matches the encoded payload length.
             val = codec.decode(subpayload)
-            response.service_data.values[did] = val
+            if not response.service_data.values:
+                response.service_data.values[did] = val
+            else:
+                response.service_data.values[did] += val
 
         return cast(ReadDataByIdentifier.InterpretedResponse, response)
