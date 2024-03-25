@@ -252,7 +252,6 @@ class Client:
 
         :param level: The security level to unlock. If value is even, it will be converted to the corresponding odd value
         :type level: int 
-
         :param data: The data to send to the server (securityAccessDataRecord)
         :type data: bytes 
 
