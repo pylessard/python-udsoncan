@@ -245,7 +245,7 @@ class Authentication(BaseService):
             # ephemeralPublicKeyClient
             data = Authentication._append_byes_parameter(data, ephemeral_public_key_client, 'Ephemeral Public Key'
                                                                                             ' Client')
-
+#x
         elif authentication_task == Authentication.AuthenticationTask.transmitCertificate:
             tools.validate_int(certificate_evaluation_id, min=0, max=0xFFFF, name='Certificate Evaluation ID')
             # certificateEvaluationId
