@@ -79,6 +79,11 @@ class Authentication(BaseService):
 
         .. data:: needed_additional_parameter
             Indicate what additional parameters, if needed, are expected by the server.
+            
+
+        .. data:: length_of_challenge_client
+            Length parameter for proofOfOwnershipClient.
+
         """
         authentication_task_echo: int
         return_value: int
@@ -89,6 +94,7 @@ class Authentication(BaseService):
         session_key_info: Optional[bytes]
         algorithm_indicator: Optional[bytes]
         needed_additional_parameter: Optional[bytes]
+        length_of_challenge_client: Optional[bytes]
 
         def __init__(self, authentication_task_echo: int,
                      return_value: int,
@@ -98,7 +104,8 @@ class Authentication(BaseService):
                      proof_of_ownership_server: Optional[bytes] = None,
                      session_key_info: Optional[bytes] = None,
                      algorithm_indicator: Optional[bytes] = None,
-                     needed_additional_parameter: Optional[bytes] = None
+                     needed_additional_parameter: Optional[bytes] = None,
+                     length_of_challenge_client: Optional[bytes] = None
                      ):
             super().__init__(Authentication)
             self.authentication_task_echo = authentication_task_echo
@@ -110,6 +117,7 @@ class Authentication(BaseService):
             self.proof_of_ownership_server = proof_of_ownership_server
             self.algorithm_indicator = algorithm_indicator
             self.needed_additional_parameter = needed_additional_parameter
+            self.length_of_challenge_client = length_of_challenge_client
 
     class InterpretedResponse(Response):
         service_data: "Authentication.ResponseData"
@@ -152,6 +160,7 @@ class Authentication(BaseService):
                      certificate_data: Optional[bytes] = None,
                      proof_of_ownership_client: Optional[bytes] = None,
                      ephemeral_public_key_client: Optional[bytes] = None,
+                     length_of_challenge_client: Optional[bytes] = None,
                      additional_parameter: Optional[bytes] = None) -> Request:
         """
         Generates a request for Authentication
@@ -198,6 +207,10 @@ class Authentication(BaseService):
           as neededAdditionalParameter.
         :type additional_parameter: bytes or None
 
+        :param length_of_challenge_client: Length parameter for proofOfOwnershipClient.
+        :type length_of_challenge_client: bytes or None
+
+
         :raises ValueError: If parameters are out of range, missing or wrong type
         """
 
@@ -232,7 +245,7 @@ class Authentication(BaseService):
             # ephemeralPublicKeyClient
             data = Authentication._append_byes_parameter(data, ephemeral_public_key_client, 'Ephemeral Public Key'
                                                                                             ' Client')
-
+#x
         elif authentication_task == Authentication.AuthenticationTask.transmitCertificate:
             tools.validate_int(certificate_evaluation_id, min=0, max=0xFFFF, name='Certificate Evaluation ID')
             # certificateEvaluationId
@@ -244,12 +257,16 @@ class Authentication(BaseService):
                                      Authentication.AuthenticationTask.verifyProofOfOwnershipBidirectional):
             if not isinstance(algorithm_indicator, bytes) or len(algorithm_indicator) != 16:
                 raise ValueError(f'{algorithm_indicator!r} must be a bytes object of length 16')
+            if not isinstance(length_of_challenge_client, bytes) or len(length_of_challenge_client) != 2:
+                raise ValueError(f'{length_of_challenge_client!r} must be a bytes object of length 2')
             # algorithmIndicator
             data = algorithm_indicator
             # proofOfOwnershipClient
             data = Authentication._append_byes_parameter(data, proof_of_ownership_client, 'Proof Of Ownership Client')
             # challengeClient
             data = Authentication._append_byes_parameter(data, challenge_client, 'Challenge Client')
+            # lengthOfChallengeClient
+            data = Authentication._append_byes_parameter(data, length_of_challenge_client, 'Length Of Challenge Client')
             # additionalParameter
             data = Authentication._append_byes_parameter(data, additional_parameter, 'Additional Parameter')
 
