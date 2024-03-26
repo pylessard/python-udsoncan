@@ -2515,6 +2515,7 @@ class Client:
                        certificate_data: Optional[bytes] = None,
                        proof_of_ownership_client: Optional[bytes] = None,
                        ephemeral_public_key_client: Optional[bytes] = None,
+                       length_of_challenge_client: Optional[bytes] = None,
                        additional_parameter: Optional[bytes] = None) -> Optional[
             services.Authentication.InterpretedResponse]:
         """
@@ -2572,6 +2573,7 @@ class Client:
                                                        certificate_data,
                                                        proof_of_ownership_client,
                                                        ephemeral_public_key_client,
+                                                       length_of_challenge_client,
                                                        additional_parameter)
 
         self.logger.info(f'{self.service_log_prefix(services.Authentication)} - Sending request with authentication'

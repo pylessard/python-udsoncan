@@ -263,12 +263,16 @@ class Authentication(BaseService):
             data = algorithm_indicator
             # proofOfOwnershipClient
             data = Authentication._append_byes_parameter(data, proof_of_ownership_client, 'Proof Of Ownership Client')
+            
+            data = Authentication._append_byes_parameter(data, additional_parameter, 'Additional Parameter')
+            # lengthOfChallengeClient
+            
             # challengeClient
             data = Authentication._append_byes_parameter(data, challenge_client, 'Challenge Client')
-            # lengthOfChallengeClient
+            
             data = Authentication._append_byes_parameter(data, length_of_challenge_client, 'Length Of Challenge Client')
             # additionalParameter
-            data = Authentication._append_byes_parameter(data, additional_parameter, 'Additional Parameter')
+           
 
         return Request(service=cls, subfunction=authentication_task, data=data)
 
