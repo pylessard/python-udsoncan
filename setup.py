@@ -12,6 +12,7 @@ setup(
     packages=find_packages(exclude=["test", "test.*"], include=['udsoncan', "udsoncan.*"]),
     package_data={
         '': ['*.conf'],
+        'udsoncan' : ['py.typed']
     },
     extras_require={
         'test': ['mypy', 'coverage'],
