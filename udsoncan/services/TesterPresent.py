@@ -31,7 +31,7 @@ class TesterPresent(BaseService):
         service_data: "TesterPresent.ResponseData"
 
     @classmethod
-    def make_request(cls, suppress_response=True) -> Request:
+    def make_request(cls, suppress_response=False) -> Request:
         """
         Generates a request for TesterPresent
         """
