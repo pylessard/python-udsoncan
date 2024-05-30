@@ -368,7 +368,7 @@ class Client:
         return self.send_key._func_no_error_management(self, level, key)
 
     @standard_error_management
-    def tester_present(self) -> Optional[services.TesterPresent.InterpretedResponse]:
+    def tester_present(self, suppress_response=False) -> Optional[services.TesterPresent.InterpretedResponse]:
         """
         Sends a TesterPresent request to keep the session active.
 
@@ -377,7 +377,7 @@ class Client:
         :return: The server response parsed by :meth:`TesterPresent.interpret_response<udsoncan.services.TesterPresent.interpret_response>`
         :rtype: :ref:`Response<Response>`
         """
-        req = services.TesterPresent.make_request()
+        req = services.TesterPresent.make_request(suppress_response=suppress_response)
         assert req.subfunction is not None
 
         self.logger.info('%s - Sending TesterPresent request' % (self.service_log_prefix(services.TesterPresent)))
