@@ -2179,19 +2179,19 @@ class Client:
 
         done_receiving = False
         if respect_overall_timeout:
-            overall_timeout_time = time.time() + overall_timeout
+            overall_timeout_time = time.monotonic() + overall_timeout
 
         timed_out = False
         while not done_receiving and not timed_out:
             done_receiving = True
             self.logger.debug("Waiting for server response")
 
-            if not respect_overall_timeout or (respect_overall_timeout and time.time() + single_request_timeout < overall_timeout_time):
+            if not respect_overall_timeout or (respect_overall_timeout and time.monotonic() + single_request_timeout < overall_timeout_time):
                 timeout_type_used = 'single_request'
                 timeout_value = single_request_timeout
             else:
                 timeout_type_used = 'overall'
-                timeout_value = max(overall_timeout_time - time.time(), 0)
+                timeout_value = max(overall_timeout_time - time.monotonic(), 0)
 
             try:
                 recv_payload = self.conn.wait_frame(timeout=timeout_value, exception=True)
@@ -2205,13 +2205,16 @@ class Client:
                     return None
                 if timeout_type_used == 'single_request':
                     timeout_name_to_report = 'P2* timeout' if using_p2_star else 'P2 timeout'
+                    timeout_value_to_report = single_request_timeout
                 elif timeout_type_used == 'overall':
                     timeout_name_to_report = 'Global request timeout'
+                    timeout_value_to_report = overall_timeout
                 else:  # Shouldn't go here.
                     timeout_name_to_report = 'Timeout'
+                    timeout_value_to_report = timeout_value
 
                 raise TimeoutException('Did not receive response in time. %s time has expired (timeout=%.3f sec)' %
-                                       (timeout_name_to_report, timeout_value))
+                                       (timeout_name_to_report, float(timeout_value_to_report)))
 
             response = Response.from_payload(recv_payload)
             self.last_response = response
