@@ -21,6 +21,10 @@ from udsoncan.common.Routine import *
 from udsoncan.common.Units import *
 from udsoncan.typing import *
 
+__version__ = '1.23.1'
+__license__ = 'MIT'
+__author__ = 'Pier-Yves Lessard'
+
 latest_standard = 2020
 __default_log_config_file = path.join(path.dirname(path.abspath(__file__)), 'logging.conf')
 
