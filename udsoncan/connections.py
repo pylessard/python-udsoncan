@@ -735,15 +735,24 @@ class J2534Connection(BaseConnection):
         txFlags = TxStatusFlag.ISO15765_CAN_ID_29.value if txid >> 11 else TxStatusFlag.ISO15765_CAN_ID_11.value
 
         # Set up a J2534 interface using the DLL provided
-        self.interface = J2534(windll=windll, rxid=rxid, txid=txid, txFlags=txFlags)
+        try:
+            self.interface = J2534(windll=windll, rxid=rxid, txid=txid, txFlags=txFlags)
+        except FileNotFoundError:
+            raise RuntimeError('DLL not found')
 
         # Set the protocol to ISO15765, Baud rate to 500000
         self.protocol = Protocol_ID.ISO15765
         self.baudrate = 500000
         self.debug = debug
 
-        # Open the interface (connect to the DLL)
-        result, self.devID = self.interface.PassThruOpen()
+        try:
+            # Open the interface (connect to the DLL)
+            self.result, self.devID = self.interface.PassThruOpen()
+            self.log_last_operation("PassThruOpen", with_raise=True)
+        except WindowsError as e:
+            if e.errno in [0x16, 0xe06d7363]:
+                raise RuntimeError('Device alredy used')
+            raise e
 
         if debug:
             self.result = self.interface.PassThruIoctl(0,
@@ -759,7 +768,7 @@ class J2534Connection(BaseConnection):
 
         # get the channel ID of the interface (used for subsequent communication)
         self.result, self.channelID = self.interface.PassThruConnect(self.devID, self.protocol.value, self.baudrate)
-        self.log_last_operation("PassThruConnect")
+        self.log_last_operation("PassThruConnect", with_raise=True)
 
         configs = SCONFIG_LIST([
             (Ioctl_ID.DATA_RATE.value, 500000),
@@ -805,7 +814,6 @@ class J2534Connection(BaseConnection):
         return self.opened
 
     def rxthread_task(self) -> None:
-
         while not self.exit_requested:
             try:
                 result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 1)
@@ -815,20 +823,28 @@ class J2534Connection(BaseConnection):
                 self.logger.critical("Exiting J2534 rx thread")
                 self.exit_requested = True
 
-    def log_last_operation(self, exec_method: str) -> None:
+    def log_last_operation(self, exec_method: str, with_raise = False) -> None:
         res, pErrDescr = self.interface.PassThruGetLastError()
         if self.result != Error_ID.ERR_SUCCESS:
-            self.logger.error("J2534 %s: %s %s" % (exec_method, self.result, pErrDescr))
+            err = "J2534 %s: %s (%s)" % (exec_method, pErrDescr, self.result)
+            self.logger.error(err)
+            if with_raise:
+                raise RuntimeError(err)
+            return
 
         elif self.debug:
             self.logger.debug("J2534 %s: OK" % (exec_method))
 
     def close(self) -> None:
+        self.opened = False
         self.exit_requested = True
         self.rxthread.join()
+
         self.result = self.interface.PassThruDisconnect(self.channelID)
-        self.opened = False
-        self.log_last_operation("Connection closed")
+        self.log_last_operation('PassThruDisconnect')
+
+        self.interface.PassThruClose(self.devID)
+        self.log_last_operation('PassThruClose')
 
     def specific_send(self, payload: bytes, timeout: Optional[float] = None):
         if timeout is None:
