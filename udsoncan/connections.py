@@ -748,11 +748,12 @@ class J2534Connection(BaseConnection):
         try:
             # Open the interface (connect to the DLL)
             self.result, self.devID = self.interface.PassThruOpen()
-            self.log_last_operation("PassThruOpen", with_raise=True)
         except WindowsError as e:
             if e.errno in [0x16, 0xe06d7363]:
                 raise RuntimeError('Device alredy used')
-            raise e
+            raise RuntimeError('WindowsError ' + e.errno)
+
+        self.log_last_operation("PassThruOpen", with_raise=True)
 
         if debug:
             self.result = self.interface.PassThruIoctl(0,
