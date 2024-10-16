@@ -259,7 +259,7 @@ class J2534():
         pErrorDescription = (ctypes.c_char * 80)()
         result = dllPassThruGetLastError(pErrorDescription)
 
-        return Error_ID(hex(result)), str(pErrorDescription.value)
+        return Error_ID(hex(result)), pErrorDescription.value.decode()
 
     def PassThruIoctl(self, Handle, IoctlID, ioctlInput=None, ioctlOutput=None):
         if ioctlInput is None:
