@@ -750,8 +750,8 @@ class J2534Connection(BaseConnection):
             self.result, self.devID = self.interface.PassThruOpen()
         except WindowsError as e:
             if e.errno in [0x16, 0xe06d7363]:
-                raise RuntimeError('Device alredy used')
-            raise RuntimeError('WindowsError ' + e.errno)
+                raise RuntimeError('J2534 Device busy')
+            raise RuntimeError('WindowsError ' + hex(e.errno))
 
         self.log_last_operation("PassThruOpen", with_raise=True)
 
