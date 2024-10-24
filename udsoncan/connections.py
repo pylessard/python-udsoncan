@@ -728,15 +728,11 @@ class J2534Connection(BaseConnection):
     opened: bool
 
     def __init__(self, windll: str, rxid: int, txid: int, name: Optional[str] = None, debug: bool = False, *args, **kwargs):
-
         BaseConnection.__init__(self, name)
-
-        # Determine mode ID29 or ID11
-        txFlags = TxStatusFlag.ISO15765_CAN_ID_29.value if txid >> 11 else TxStatusFlag.ISO15765_CAN_ID_11.value
 
         # Set up a J2534 interface using the DLL provided
         try:
-            self.interface = J2534(windll=windll, rxid=rxid, txid=txid, txFlags=txFlags)
+            self.interface = J2534(windll=windll, rxid=rxid, txid=txid)
         except FileNotFoundError:
             raise RuntimeError('DLL not found')
 
