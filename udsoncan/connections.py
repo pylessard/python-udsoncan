@@ -83,7 +83,7 @@ class BaseConnection(ABC):
         """Waits for the reception of a frame of data from the underlying transport protocol
 
         :param timeout: The maximum amount of time to wait before giving up in seconds
-        :type timeout: int
+        :type timeout: float
         :param exception: Boolean value indicating if this function may return exceptions.
                 When ``True``, all exceptions may be raised, including ``TimeoutException``
                 When ``False``, all exceptions will be logged as ``DEBUG`` and ``None`` will be returned.
@@ -128,7 +128,7 @@ class BaseConnection(ABC):
         """The implementation of the ``wait_frame`` method. 
 
         :param timeout: The maximum amount of time to wait before giving up
-        :type timeout: int
+        :type timeout: float
 
         :returns: Received data
         :rtype: bytes or None
@@ -867,6 +867,14 @@ class J2534Connection(BaseConnection):
     def empty_rxqueue(self) -> None:
         while not self.rxqueue.empty():
             self.rxqueue.get()
+
+    def read_vbatt(self, digits=1) -> float:
+        vbatt = ctypes.POINTER(ctypes.c_int32)()
+
+        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.READ_VBATT, None, vbatt)
+        self.log_last_operation("PassThruIoctl READ_VBATT")
+
+        return round(ctypes.cast(vbatt, ctypes.c_void_p).value / 1000, digits)
 
 
 class FakeConnection(BaseConnection):
