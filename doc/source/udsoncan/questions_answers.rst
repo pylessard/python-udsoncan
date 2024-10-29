@@ -6,7 +6,7 @@ What version of the standard has been used?
 
 .. epigraph::
    
-   The code was originally written based on ISO-14229:2006. Some addition from the 2013 and 2020 version has been added, but not exhaustively.
+   The code was originally written based on ISO-14229:2006. Many additions from the 2013 and 2020 version have been added, but not exhaustively.
 
 
 How reliable is this code?
@@ -17,7 +17,7 @@ How reliable is this code?
    To the best of my knowledge, quite good. This project comes with a fair amount of unit tests, many based on examples proposed in the UDS standard document.
    Every service encoding/decoding is unit-tested.
 
-   The project is fully type-hinted and passes static type check using the `mypy` module
+   The project is fully type-hinted and passes static type check using the ``mypy`` module
 
    Only a few common services have been tested on a real ECU by the author, but many users are using the library successfully, including some major OEM.
 
@@ -80,6 +80,7 @@ How can I contribute?
 .. epigraph::
 
     Create a Github issue, fork the project, propose a pull request and I will review it; that's the best way.
+    Unit tests and static analysis are required to pass for a change to be accepted
 
 -----
 
@@ -98,3 +99,28 @@ My IsoTPSocketConnection raises an error after updating udsoncan
 
     # After 1.21
     IsoTPSocketConnection('vcan0', isotp.Address(isotp.AddressingMode.Normal_11bits, rxid=123, txid=456)) 
+
+-----
+
+Can this project be used on something else than a CAN bus?
+----------------------------------------------------------
+
+.. epigraph::
+
+   Absolutely, the library completely abstract the transport protocol as detailed in the :ref:`Connection<Connection>` page. 
+   The name UDSonCAN can be misleading in that regard. I chosed that name many years ago and I am stuck with it now.
+
+-----
+
+Where can I find more information about UDS?
+--------------------------------------------
+
+.. epigraph::
+
+   The best source of information is the standard itself `ISO-14229 <https://www.iso.org/standard/72439.html>`_ and 
+   `ISO-15765 <https://www.iso.org/standard/84211.html>`_ for the transport layer.
+
+   Other open source projects also provides a faire amount of information, see `py-uds knowledge base <https://uds.readthedocs.io/en/stable/pages/knowledge_base.html>`_
+
+   Finally, many commercial vendors such as Peak and Vector provide details about UDS in their documentation.
+
