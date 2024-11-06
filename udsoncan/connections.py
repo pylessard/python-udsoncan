@@ -874,7 +874,9 @@ class J2534Connection(BaseConnection):
         self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.READ_VBATT, None, vbatt)
         self.log_last_operation("PassThruIoctl READ_VBATT")
 
-        return round(ctypes.cast(vbatt, ctypes.c_void_p).value / 1000, digits)
+        value = ctypes.cast(vbatt, ctypes.c_void_p).value
+
+        return round(value / 1000, digits) if value else 0
 
 
 class FakeConnection(BaseConnection):
