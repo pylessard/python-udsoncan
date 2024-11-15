@@ -276,6 +276,7 @@ class J2534():
         msgMask.ProtocolID = protocol
         msgMask.TxFlags = self.txFlags
         msgMask.DataSize = 4
+        msgMask.RxStatus = msgMask.ExtraDataindex = 0xCCCC_CCCC
         for i in range(0, 4):
             msgMask.Data[i] = 0xFF
 
@@ -283,6 +284,7 @@ class J2534():
         msgPattern.ProtocolID = protocol
         msgPattern.TxFlags = self.txFlags
         msgPattern.DataSize = 4
+        msgPattern.RxStatus = msgPattern.ExtraDataindex = 0xCCCC_CCCC
         for i in range(0, len(self.rxid)):
             msgPattern.Data[i] = self.rxid[i]
 
@@ -290,6 +292,7 @@ class J2534():
         msgFlow.ProtocolID = protocol;
         msgFlow.TxFlags = self.txFlags
         msgFlow.DataSize = 4
+        msgFlow.RxStatus = msgFlow.ExtraDataindex = 0xCCCC_CCCC
         for i in range(0, len(self.txid)):
             msgFlow.Data[i] = self.txid[i]
 
