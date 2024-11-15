@@ -821,8 +821,8 @@ class J2534Connection(BaseConnection):
                 self.exit_requested = True
 
     def log_last_operation(self, exec_method: str, with_raise = False) -> None:
-        res, pErrDescr = self.interface.PassThruGetLastError()
         if self.result != Error_ID.ERR_SUCCESS:
+            res, pErrDescr = self.interface.PassThruGetLastError()
             err = "J2534 %s: %s (%s)" % (exec_method, pErrDescr, self.result)
             self.logger.error(err)
             if with_raise:
