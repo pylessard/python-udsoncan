@@ -6,16 +6,9 @@ import binascii
 import sys
 from abc import ABC, abstractmethod
 import time
-from typing import Union, Dict, TYPE_CHECKING
+from typing import Union, Dict
 import ctypes
 import selectors
-
-if sys.platform != 'win32':
-    raise ImportError('This module is only usable under Windows.')
-
-if TYPE_CHECKING and sys.platform != 'win32':
-    class WindowsError(OSError):
-        pass
 
 try:
     import can  # type:ignore
@@ -751,10 +744,10 @@ class J2534Connection(BaseConnection):
         try:
             # Open the interface (connect to the DLL)
             self.result, self.devID = self.interface.PassThruOpen()
-        except WindowsError as e:
+        except OSError as e:
             if e.errno in [0x16, 0xe06d7363]:
                 raise RuntimeError('J2534 Device busy')
-            raise RuntimeError('WindowsError ' + hex(e.errno))
+            raise RuntimeError('%s, %X' % (type(e).__name__, e.errno))
 
         self.log_last_operation("PassThruOpen", with_raise=True)
 
