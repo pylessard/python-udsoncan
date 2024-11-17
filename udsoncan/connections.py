@@ -6,9 +6,16 @@ import binascii
 import sys
 from abc import ABC, abstractmethod
 import time
-from typing import Union, Any, Dict
+from typing import Union, Dict, TYPE_CHECKING
 import ctypes
 import selectors
+
+if sys.platform != 'win32':
+    raise ImportError('This module is only usable under Windows.')
+
+if TYPE_CHECKING and sys.platform != 'win32':
+    class WindowsError(OSError):
+        pass
 
 try:
     import can  # type:ignore
