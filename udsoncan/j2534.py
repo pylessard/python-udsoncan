@@ -12,7 +12,7 @@ class PASSTHRU_MSG(Structure):
                 ("TxFlags", c_ulong),
                 ("Timestamp", c_ulong),
                 ("DataSize", c_ulong),
-                ("ExtraDataindex", c_ulong),
+                ("ExtraDataIndex", c_ulong),
                 ("Data", ctypes.c_ubyte * 4128)]
 
 
@@ -44,7 +44,7 @@ class J2534():
     dllPassThruStartMsgFilter = None
     dllPassThruIoctl = None
 
-    def __init__(self, windll, rxid, txid, txFlags=0):
+    def __init__(self, windll, rxid, txid):
         global dllPassThruOpen
         global dllPassThruClose
         global dllPassThruConnect
@@ -61,7 +61,9 @@ class J2534():
         self.hDLL = ctypes.cdll.LoadLibrary(windll)
         self.rxid = rxid.to_bytes(4, 'big')
         self.txid = txid.to_bytes(4, 'big')
-        self.txFlags = txFlags
+         # Determine mode ID29 or ID11
+        self.txConnectFlags = TxStatusFlag.ISO15765_CAN_ID_29.value if txid >> 11 else TxStatusFlag.ISO15765_CAN_ID_11.value
+        self.txFlags = self.txConnectFlags | TxStatusFlag.ISO15765_FRAME_PAD.value
 
         self.logger = logging.getLogger()
 
@@ -190,7 +192,7 @@ class J2534():
         if not pChannelID:
             pChannelID = c_ulong()
 
-        result = dllPassThruConnect(deviceID, protocol, self.txFlags, baudrate, byref(pChannelID))
+        result = dllPassThruConnect(deviceID, protocol, self.txConnectFlags, baudrate, byref(pChannelID))
         return Error_ID(hex(result)), pChannelID
 
     def PassThruClose(self, DeviceID):
@@ -259,18 +261,13 @@ class J2534():
         pErrorDescription = (ctypes.c_char * 80)()
         result = dllPassThruGetLastError(pErrorDescription)
 
-        return Error_ID(hex(result)), str(pErrorDescription.value)
+        return Error_ID(hex(result)), pErrorDescription.value.decode()
 
     def PassThruIoctl(self, Handle, IoctlID, ioctlInput=None, ioctlOutput=None):
-        if ioctlInput is None:
-            pInput = POINTER(c_ulong)()
-        else:
-            pInput = ioctlInput
+        pInput = None if ioctlInput is None else byref(ioctlInput)
+        pOutput = None if ioctlOutput is None else byref(ioctlOutput)
 
-        if ioctlOutput is None:
-            pOutput = POINTER(c_ulong)()
-
-        result = dllPassThruIoctl(Handle, c_ulong(IoctlID.value), byref(pInput), byref(pOutput))
+        result = dllPassThruIoctl(Handle, c_ulong(IoctlID.value), pInput, pOutput)
 
         return Error_ID(hex(result))
 
@@ -279,6 +276,7 @@ class J2534():
         msgMask.ProtocolID = protocol
         msgMask.TxFlags = self.txFlags
         msgMask.DataSize = 4
+        msgMask.RxStatus = msgMask.ExtraDataIndex = 0xCCCC_CCCC
         for i in range(0, 4):
             msgMask.Data[i] = 0xFF
 
@@ -286,6 +284,7 @@ class J2534():
         msgPattern.ProtocolID = protocol
         msgPattern.TxFlags = self.txFlags
         msgPattern.DataSize = 4
+        msgPattern.RxStatus = msgPattern.ExtraDataIndex = 0xCCCC_CCCC
         for i in range(0, len(self.rxid)):
             msgPattern.Data[i] = self.rxid[i]
 
@@ -293,6 +292,7 @@ class J2534():
         msgFlow.ProtocolID = protocol;
         msgFlow.TxFlags = self.txFlags
         msgFlow.DataSize = 4
+        msgFlow.RxStatus = msgFlow.ExtraDataIndex = 0xCCCC_CCCC
         for i in range(0, len(self.txid)):
             msgFlow.Data[i] = self.txid[i]
 
@@ -355,7 +355,8 @@ class Filter(Enum):
 
 
 class TxStatusFlag(Enum):
-    ISO15765_CAN_ID_29 = 0x00000140
+    ISO15765_CAN_ID_BOTH = 0x00000800
+    ISO15765_CAN_ID_29 = 0x00000100
     ISO15765_CAN_ID_11 = 0x00000040
     ISO15765_FRAME_PAD = 0x00000040
     WAIT_P3_MIN_ONLY = 0x00000200

@@ -6,7 +6,7 @@ import binascii
 import sys
 from abc import ABC, abstractmethod
 import time
-from typing import Union, Any, Dict
+from typing import Union, Dict
 import ctypes
 import selectors
 
@@ -83,7 +83,7 @@ class BaseConnection(ABC):
         """Waits for the reception of a frame of data from the underlying transport protocol
 
         :param timeout: The maximum amount of time to wait before giving up in seconds
-        :type timeout: int
+        :type timeout: float
         :param exception: Boolean value indicating if this function may return exceptions.
                 When ``True``, all exceptions may be raised, including ``TimeoutException``
                 When ``False``, all exceptions will be logged as ``DEBUG`` and ``None`` will be returned.
@@ -128,7 +128,7 @@ class BaseConnection(ABC):
         """The implementation of the ``wait_frame`` method. 
 
         :param timeout: The maximum amount of time to wait before giving up
-        :type timeout: int
+        :type timeout: float
 
         :returns: Received data
         :rtype: bytes or None
@@ -728,22 +728,28 @@ class J2534Connection(BaseConnection):
     opened: bool
 
     def __init__(self, windll: str, rxid: int, txid: int, name: Optional[str] = None, debug: bool = False, *args, **kwargs):
-
         BaseConnection.__init__(self, name)
 
-        # Determine mode ID29 or ID11
-        txFlags = TxStatusFlag.ISO15765_CAN_ID_29.value if txid >> 11 else TxStatusFlag.ISO15765_CAN_ID_11.value
-
         # Set up a J2534 interface using the DLL provided
-        self.interface = J2534(windll=windll, rxid=rxid, txid=txid, txFlags=txFlags)
+        try:
+            self.interface = J2534(windll=windll, rxid=rxid, txid=txid)
+        except FileNotFoundError:
+            raise RuntimeError('DLL not found')
 
         # Set the protocol to ISO15765, Baud rate to 500000
         self.protocol = Protocol_ID.ISO15765
         self.baudrate = 500000
         self.debug = debug
 
-        # Open the interface (connect to the DLL)
-        result, self.devID = self.interface.PassThruOpen()
+        try:
+            # Open the interface (connect to the DLL)
+            self.result, self.devID = self.interface.PassThruOpen()
+        except OSError as e:
+            if e.errno in [0x16, 0xe06d7363]:
+                raise RuntimeError('J2534 Device busy')
+            raise RuntimeError('%s, %X' % (type(e).__name__, e.errno))
+
+        self.log_last_operation("PassThruOpen", with_raise=True)
 
         if debug:
             self.result = self.interface.PassThruIoctl(0,
@@ -759,7 +765,7 @@ class J2534Connection(BaseConnection):
 
         # get the channel ID of the interface (used for subsequent communication)
         self.result, self.channelID = self.interface.PassThruConnect(self.devID, self.protocol.value, self.baudrate)
-        self.log_last_operation("PassThruConnect")
+        self.log_last_operation("PassThruConnect", with_raise=True)
 
         configs = SCONFIG_LIST([
             (Ioctl_ID.DATA_RATE.value, 500000),
@@ -805,7 +811,6 @@ class J2534Connection(BaseConnection):
         return self.opened
 
     def rxthread_task(self) -> None:
-
         while not self.exit_requested:
             try:
                 result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 1)
@@ -815,20 +820,28 @@ class J2534Connection(BaseConnection):
                 self.logger.critical("Exiting J2534 rx thread")
                 self.exit_requested = True
 
-    def log_last_operation(self, exec_method: str) -> None:
-        res, pErrDescr = self.interface.PassThruGetLastError()
+    def log_last_operation(self, exec_method: str, with_raise = False) -> None:
         if self.result != Error_ID.ERR_SUCCESS:
-            self.logger.error("J2534 %s: %s %s" % (exec_method, self.result, pErrDescr))
+            res, pErrDescr = self.interface.PassThruGetLastError()
+            err = "J2534 %s: %s (%s)" % (exec_method, pErrDescr, self.result)
+            self.logger.error(err)
+            if with_raise:
+                raise RuntimeError(err)
+            return
 
         elif self.debug:
             self.logger.debug("J2534 %s: OK" % (exec_method))
 
     def close(self) -> None:
+        self.opened = False
         self.exit_requested = True
         self.rxthread.join()
+
         self.result = self.interface.PassThruDisconnect(self.channelID)
-        self.opened = False
-        self.log_last_operation("Connection closed")
+        self.log_last_operation('PassThruDisconnect')
+
+        self.interface.PassThruClose(self.devID)
+        self.log_last_operation('PassThruClose')
 
     def specific_send(self, payload: bytes, timeout: Optional[float] = None):
         if timeout is None:
@@ -854,6 +867,16 @@ class J2534Connection(BaseConnection):
     def empty_rxqueue(self) -> None:
         while not self.rxqueue.empty():
             self.rxqueue.get()
+
+    def read_vbatt(self, digits=1) -> float:
+        vbatt = ctypes.POINTER(ctypes.c_int32)()
+
+        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.READ_VBATT, None, vbatt)
+        self.log_last_operation("PassThruIoctl READ_VBATT")
+
+        value = ctypes.cast(vbatt, ctypes.c_void_p).value
+
+        return round(value / 1000, digits) if value else 0
 
 
 class FakeConnection(BaseConnection):
