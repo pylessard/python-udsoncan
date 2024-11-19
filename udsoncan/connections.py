@@ -813,6 +813,7 @@ class J2534Connection(BaseConnection):
     def rxthread_task(self) -> None:
         while not self.exit_requested:
             try:
+                time.sleep(0.02) # FIXME avoid ERR_CONCURRENT_API_CALL
                 result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 1)
                 if data is not None:
                     self.rxqueue.put(data)
