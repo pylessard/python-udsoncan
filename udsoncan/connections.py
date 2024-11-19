@@ -846,7 +846,8 @@ class J2534Connection(BaseConnection):
     def specific_send(self, payload: bytes, timeout: Optional[float] = None):
         if timeout is None:
             timeout = 0
-        result = self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value, Timeout=int(timeout * 1000))
+        self.result = self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value, Timeout=int(timeout * 1000))
+        self.log_last_operation('PassThruWriteMsgs', with_raise=True)
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         if not self.opened:
