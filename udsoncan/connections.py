@@ -795,6 +795,7 @@ class J2534Connection(BaseConnection):
 
     def open(self) -> "J2534Connection":
         self.exit_requested = False
+        self.sem = threading.Semaphore()
         self.rxthread = threading.Thread(target=self.rxthread_task, daemon=True)
         self.rxthread.start()
         self.opened = True
@@ -812,6 +813,7 @@ class J2534Connection(BaseConnection):
 
     def rxthread_task(self) -> None:
         while not self.exit_requested:
+            self.sem.acquire()
             try:
                 result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 1)
                 if data is not None:
@@ -819,6 +821,8 @@ class J2534Connection(BaseConnection):
             except Exception:
                 self.logger.critical("Exiting J2534 rx thread")
                 self.exit_requested = True
+            self.sem.release()
+            time.sleep(0.001)
 
     def log_last_operation(self, exec_method: str, with_raise = False) -> None:
         if self.result != Error_ID.ERR_SUCCESS:
@@ -844,9 +848,13 @@ class J2534Connection(BaseConnection):
         self.log_last_operation('PassThruClose')
 
     def specific_send(self, payload: bytes, timeout: Optional[float] = None):
-        if timeout is None:
-            timeout = 0
-        result = self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value, Timeout=int(timeout * 1000))
+        timeout = 0 if timeout is None else timeout
+
+        # Fix for avoid ERR_CONCURRENT_API_CALL. Stop reading
+        self.sem.acquire()
+        self.result = self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value, Timeout=int(timeout * 1000))
+        self.log_last_operation('PassThruWriteMsgs', with_raise=True)
+        self.sem.release()
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         if not self.opened:

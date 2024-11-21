@@ -185,7 +185,7 @@ class J2534():
         if not pDeviceID:
             pDeviceID = ctypes.c_ulong()
 
-        result = dllPassThruOpen(ctypes.POINTER(ctypes.c_int)(), byref(pDeviceID))
+        result = dllPassThruOpen(bytes('J2534-2:', 'ascii'), byref(pDeviceID))
         return Error_ID(hex(result)), pDeviceID
 
     def PassThruConnect(self, deviceID, protocol, baudrate, pChannelID=None):
