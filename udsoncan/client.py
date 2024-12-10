@@ -110,6 +110,7 @@ class Client:
         self.suppress_positive_response = Client.SuppressPositiveResponse()
         self.payload_override = Client.PayloadOverrider()
         self.last_response = None
+        self.response_pending_times = 0
 
         self.session_timing = cast(SessionTiming, dict(p2_server_max=None, p2_star_server_max=None))    # python 3.7 cast
 
@@ -2247,6 +2248,7 @@ class Client:
 
                 if response.code == Response.Code.RequestCorrectlyReceived_ResponsePending:
                     done_receiving = False
+                    self.response_pending_times += 1
                     if not using_p2_star:
                         # Received a 0x78 NRC: timeout is now set to P2*
                         p2_star = self.config['p2_star_timeout'] if self.session_timing['p2_star_server_max'] is None else self.session_timing['p2_star_server_max']
@@ -2263,7 +2265,7 @@ class Client:
 
         response.original_request = request
 
-        if spr_used:
+        if spr_used and self.response_pending_times == 0:
             return None
 
         return response

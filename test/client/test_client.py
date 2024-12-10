@@ -293,3 +293,78 @@ class TestClient(ClientServerTest):
         with self.udsclient.suppress_positive_response(wait_nrc=True):
             resp = self.udsclient.tester_present()
             self.assertIsNotNone(resp)
+
+    def test_pending_positive_response(self):
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x78")
+        self.conn.fromuserqueue.put(b"\x7E\x00")
+
+    def _test_pending_positive_response(self):
+        req = Request(service=services.TesterPresent, subfunction=0)
+        resp = self.udsclient.send_request(req)
+        self.assertEqual(resp.original_payload, b'\x7E\x00')
+        self.assertEqual(self.udsclient.response_pending_times, 1)
+
+    def test_pending_negative_response(self):
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x78")
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x22")
+
+    def _test_pending_negative_response(self):
+        req = Request(service=services.TesterPresent, subfunction=0)
+        with self.assertRaises(NegativeResponseException):
+            self.udsclient.send_request(req)
+        self.assertEqual(self.udsclient.response_pending_times, 1)
+
+    def test_suppress_positive_response_pending_case1(self):
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x78")
+        self.conn.fromuserqueue.put(b"\x7E\x00")
+
+    def _test_suppress_positive_response_pending_case1(self):
+        # Case 3 - Negative and wait
+        req = Request(service=services.TesterPresent, subfunction=0)
+        with self.udsclient.suppress_positive_response(wait_nrc=True):
+            resp = self.udsclient.send_request(req)
+            self.assertEqual(resp.original_payload, b'\x7E\x00')
+            self.assertEqual(self.udsclient.response_pending_times, 1)
+
+    def test_suppress_positive_response_response_pending_case2(self):
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x78")
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x31")
+
+    def _test_suppress_positive_response_response_pending_case2(self):
+        req = Request(service=services.TesterPresent, subfunction=0)
+        with self.assertRaises(NegativeResponseException):
+            with self.udsclient.suppress_positive_response(wait_nrc=True):
+                self.udsclient.send_request(req)
+            self.assertEqual(self.udsclient.response_pending_times, 1)
+
+    def test_suppress_positive_response_response_pending_case3(self):
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x78")
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x78")
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x78")
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x31")
+
+    def _test_suppress_positive_response_response_pending_case3(self):
+        # Case 3 - Negative and wait
+        req = Request(service=services.TesterPresent, subfunction=0)
+        with self.assertRaises(NegativeResponseException) as exc:
+            with self.udsclient.suppress_positive_response(wait_nrc=True):
+                self.udsclient.send_request(req)
+            self.assertEqual(self.udsclient.response_pending_times, 3)
+
+    def test_suppress_positive_response_response_pending_negative_case1(self):
+        self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x78")
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x78")
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x31")
+
+    def _test_suppress_positive_response_response_pending_negative_case1(self):
+        req = Request(service=services.TesterPresent, subfunction=0)
+        with self.assertRaises(NegativeResponseException):
+            with self.udsclient.suppress_positive_response(wait_nrc=True):
+                self.udsclient.send_request(req)
+            self.assertEqual(self.udsclient.response_pending_times, 2)
