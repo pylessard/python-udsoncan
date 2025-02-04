@@ -20,5 +20,6 @@ default_client_config: ClientConfig = cast(ClientConfig, {
     'p2_star_timeout': 5,
     'standard_version': latest_standard,  # 2006, 2013, 2020
     'use_server_timing': True,
-    'extended_data_size': None
+    'extended_data_size': None,
+    'nrc78_callback':None
 })
