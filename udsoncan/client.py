@@ -1835,7 +1835,7 @@ class Client:
                                 dtc_obj.id, extended_data.record_number, extended_data_record_number))
 
         if Dtc.Format.get_name(response.service_data.dtc_format) is None:
-            self.logger.warning('Unknown DTC Format Identifier %s. Value should be between 0 and 3' %
+            self.logger.warning('Unknown DTC Format Identifier %s. Value should be between 0 and 4' %
                                 ('0x%02x' % response.service_data.dtc_format if response.service_data.dtc_format is not None else '<None>')
                                 )
 
