@@ -52,7 +52,7 @@ Response
 Response Codes
 ##############
 
-.. autoclass:: udsoncan::Response.Code
+.. autoclass:: udsoncan.ResponseCode.ResponseCode
     :members: 
     :undoc-members:
     :member-order: bysource

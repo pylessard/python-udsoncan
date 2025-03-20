@@ -293,3 +293,22 @@ class TestClient(ClientServerTest):
         with self.udsclient.suppress_positive_response(wait_nrc=True):
             resp = self.udsclient.tester_present()
             self.assertIsNotNone(resp)
+
+    def test_nrc78_callback(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.conn.fromuserqueue.put(b"\x7F\x3E\x78")
+        self.conn.fromuserqueue.put(b"\x7E\x00")
+
+    def _test_nrc78_callback(self):
+        class Container:
+            def __init__(self):
+                self.called = False
+        container = Container()
+        def callback():
+            container.called = True
+        self.udsclient.config['nrc78_callback'] = callback
+        req = Request(service=services.TesterPresent, subfunction=0)
+        response = self.udsclient.send_request(req)
+        self.assertTrue(response.positive)
+        self.assertTrue(container.called)
+

@@ -10,6 +10,7 @@ else:
     from typing import TypedDict
 
 SecurityAlgoType = Callable[[int, bytes, Any], bytes]
+Nrc78CallbackType = Callable[[], None]
 
 
 CodecDefinition = Union[str, DidCodec, Type[DidCodec]]
@@ -45,3 +46,4 @@ class ClientConfig(TypedDict, total=False):
     use_server_timing: bool
     logger_name: str
     extended_data_size: Optional[Union[int, Dict[int, int]]]
+    nrc78_callback:Optional[Nrc78CallbackType]

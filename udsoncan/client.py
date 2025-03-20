@@ -2246,6 +2246,9 @@ class Client:
                         response.code_name, response.code))
 
                 if response.code == Response.Code.RequestCorrectlyReceived_ResponsePending:
+                    if self.config['nrc78_callback'] is not None:
+                        self.config['nrc78_callback']()
+                    
                     done_receiving = False
                     if not using_p2_star:
                         # Received a 0x78 NRC: timeout is now set to P2*

@@ -248,6 +248,17 @@ See :ref:`an example <example_security_algo>`
 
    Default value is True
 
+
+.. _config_nrc78_callback:
+
+.. attribute:: nrc78_callback
+   :annotation: (callable)
+
+   A callback to be called each time a server returns a negative response with code NRC 0x78 (:attr:`RequestCorrectlyReceived_ResponsePending<udsoncan.ResponseCode.ResponseCode.RequestCorrectlyReceived_ResponsePending>`).
+   When the response is received, the client will call the callback, then go back into a wait state for the next response.
+   
+   Can be useful to send a :ref:`TesterPresent<TesterPresent>` request/response before blocking again. 
+
 -------------
 
 Suppress positive response
