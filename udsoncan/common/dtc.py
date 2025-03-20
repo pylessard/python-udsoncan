@@ -18,10 +18,12 @@ class Dtc:
         """
         Provide a list of DTC formats and their indices. These values are used by the :ref:`The ReadDTCInformation<ReadDtcInformation>` when requesting a number of DTCs.		
         """
-        ISO15031_6 = 0
+        ISO15031_6 = 0                  # 2006
+        SAE_J2012_DA_DTCFormat_00 = 0   # 2013 / 2020
         ISO14229_1 = 1
         SAE_J1939_73 = 2
         ISO11992_4 = 3
+        SAE_J2012_DA_DTCFormat_04 = 4
 
         @classmethod
         def get_name(cls, given_id: Optional[int]) -> Optional[str]:
