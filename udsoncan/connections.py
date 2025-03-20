@@ -747,7 +747,10 @@ class J2534Connection(BaseConnection):
         except OSError as e:
             if e.errno in [0x16, 0xe06d7363]:
                 raise RuntimeError('J2534 Device busy')
-            raise RuntimeError('%s, %X' % (type(e).__name__, e.errno))
+            exception_str = type(e).__name__
+            if e.errno is not None:
+                exception_str += ', %s' % e.errno
+            raise RuntimeError(exception_str)
 
         self.log_last_operation("PassThruOpen", with_raise=True)
 
