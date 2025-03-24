@@ -2582,6 +2582,103 @@ class TestReportDTCWithPermanentStatus(ClientServerTest,GenericTestNoParamReques
         GenericTestNoParamRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x15, client_function = 'get_dtc_with_permanent_status')
 
 
+class TestreportDTCWWHOBDDTCByMaskRecord(ClientServerTest):   # Subfn = 0x16
+    sb = struct.pack('B', 0x42)
+    badsb = struct.pack('B', 0x42+1)
+    functional_group_id = 0x1
+    status_mask = 0x2
+    severity_mask = 0x20
+    dtc_class = 0x4
+    expected_request_bytes = b'\x19' + sb + bytes([functional_group_id, status_mask, severity_mask | dtc_class])
+
+    def assert_no_data_response(self, response):
+        self.assertEqual(len(response.service_data.dtcs), 0)
+        self.assertEqual(response.service_data.dtc_count, 0)
+
+    def test_no_data(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, self.expected_request_bytes)
+        self.conn.fromuserqueue.put(b'\x59'  + self.sb + bytes([0x1, 0x2, 0x3, 0x4]))
+
+    def _test_no_data(self):
+        response = self.udsclient.get_wwh_obd_dtc_by_status_mask(self.functional_group_id, self.status_mask, self.severity_mask, self.dtc_class)
+        self.assert_no_data_response(response)
+
+    def test_functional_group_verification(self):
+        pass
+
+    def _test_functional_group_verification(self):
+        with self.assertRaises(ValueError):
+            response = self.udsclient.get_wwh_obd_dtc_by_status_mask(None, self.status_mask, self.severity_mask, self.dtc_class)
+
+        with self.assertRaises(ValueError):
+            response = self.udsclient.get_wwh_obd_dtc_by_status_mask(0xff, self.status_mask, self.severity_mask, self.dtc_class)
+
+    def assert_no_data_response_with_severity_class(self, response):
+        self.assertEqual(len(response.service_data.dtcs), 0)
+        self.assertEqual(response.service_data.dtc_count, 0)
+
+    def test_no_data_with_severity_class(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, self.expected_request_bytes)
+        self.conn.fromuserqueue.put(b'\x59'  + self.sb + bytes([0x1, 0x2, 0x3, 0x4]))
+
+    def _test_no_data_with_severity_class(self):
+        severity_class = Dtc.Severity()
+        severity_class.set_byte(self.severity_mask)
+        response = self.udsclient.get_wwh_obd_dtc_by_status_mask(self.functional_group_id, self.status_mask, severity_class, self.dtc_class)
+        self.assert_no_data_response(response)
+
+    def assert_single_data_response(self, response):
+        self.assertEqual(len(response.service_data.dtcs), 1)
+        self.assertEqual(response.service_data.dtc_count, 1)
+
+        dtc = response.service_data.dtcs[0]
+
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
+        self.assertEqual(dtc.severity.get_byte_as_int(), 32)
+
+        self.assertEqual(len(dtc.extended_data), 0)
+
+    def test_single_data(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, self.expected_request_bytes)
+        self.conn.fromuserqueue.put(b'\x59'  + self.sb + bytes([0x1, 0x2, 0x3, 0x4, 0x33, 0x12, 0x34, 0x56, 0x20]))
+
+    def _test_single_data(self):
+        response = self.udsclient.get_wwh_obd_dtc_by_status_mask(self.functional_group_id, self.status_mask, self.severity_mask, self.dtc_class)
+        self.assert_single_data_response(response)
+
+    def assert_multiple_data_response(self, response):
+        self.assertEqual(len(response.service_data.dtcs), 2)
+        self.assertEqual(response.service_data.dtc_count, 2)
+
+        dtc = response.service_data.dtcs[0]
+
+        self.assertEqual(dtc.id, 0x123456)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
+        self.assertEqual(dtc.severity.get_byte_as_int(), 32)
+        self.assertEqual(len(dtc.extended_data), 0)
+
+        dtc = response.service_data.dtcs[1]
+
+        self.assertEqual(dtc.id, 0x123457)
+        self.assertEqual(dtc.status.get_byte_as_int(), 0x20)
+        self.assertEqual(dtc.severity.get_byte_as_int(), 32)
+        self.assertEqual(len(dtc.extended_data), 0)
+
+
+    def test_multiple_data(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, self.expected_request_bytes)
+        self.conn.fromuserqueue.put(b'\x59'  + self.sb + bytes([0x1, 0x2, 0x3, 0x4])
+                                + bytes([0x33, 0x12, 0x34, 0x56, 0x20])
+                                + bytes([0x33, 0x12, 0x34, 0x57, 0x20]))
+
+    def _test_multiple_data(self):
+        response = self.udsclient.get_wwh_obd_dtc_by_status_mask(self.functional_group_id, self.status_mask, self.severity_mask, self.dtc_class)
+        self.assert_multiple_data_response(response)
 
 
 class TestreportDTCExtDataRecordByRecordNumber(ClientServerTest):   # Subfn = 0x16

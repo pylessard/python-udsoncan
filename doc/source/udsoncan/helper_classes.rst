@@ -107,6 +107,19 @@ DTC.Format
 
 -----
 
+.. _DTC_FunctionalGroupIdentifiers:
+
+DTC.FunctionalGroupIdentifiers
+------------------------------
+
+.. autoclass:: udsoncan::Dtc.FunctionalGroupIdentifiers
+   :members:
+   :undoc-members:
+   :member-order: bysource
+   :exclude-members:  get_name
+
+-----
+
 .. _IOValues:
 
 IOValues

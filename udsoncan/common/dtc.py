@@ -37,6 +37,14 @@ class Dtc:
 
             return None
 
+    class FunctionalGroupIdentifiers:
+        """
+        Provides a list of FunctionalGroupIdentifiers (Table D.15) which are used by the :ref:`ReadDTCInformation<ReadDtcInformation>` when requesting a number of DTCs.
+        """
+        EMISSIONS_SYSTEM_GROUP = 0x33
+        SAFETY_SYSTEM_GROUP = 0xD0
+        VOBD_SYSTEM = 0xFE
+
     # DTC Status byte
     # This byte is an 8-bit flag indicating how much we are sure that a DTC is active.
     class Status:
