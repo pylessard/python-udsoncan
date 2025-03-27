@@ -1361,6 +1361,38 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 
+    def get_wwh_obd_dtc_by_status_mask(self, functional_group_id: int, status_mask: int, severity_mask: Union[int,Dtc.Severity], dtc_class: int) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
+        """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportWWHOBDDTCByMaskRecord``
+
+        Reads all the WWH OBD Diagnostic Trouble Codes that have a functional_group, class, status and a severity matching the given masks. 
+        The server will check all of its DTCs and if ( (Dtc.status & status_mask) != 0 && (Dtc.severity & severity) !=0), then the DTCs match the filter and are sent back to the client.
+        Note: severity_mask and dtc_class are combined into a single byte to populate DTCSeverityMask- see Table D.11.
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+
+        :param functional_group_id: Functional Group ID to search for (FGID) (0x00 to 0xFF) :ref:`Dtc.FunctionalGroupIdentifiers<DTC_FunctionalGroupIdentifiers>` 
+        :type functional_group_id: int
+
+        :param status_mask: The status mask against which the DTCs are tested. 
+        :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
+
+        :param severity_mask: The severity mask against which the DTCs are tested. (Optionas 0x20, 0x40, or 0x80)
+        :type severity_mask: int or :ref:`Dtc.Severity<DTC_Severity>`
+
+        :param dtc_class: The GTR DTC class mask against which the DTCs are tested. (Options 0x01, 0x02, 0x04, 0x08)
+        :type dtc_class: int
+
+        :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
+        dtc_severity_mask = dtc_class & 0x1f
+        if isinstance(severity_mask, Dtc.Severity):
+            dtc_severity_mask |= (severity_mask.get_byte_as_int() & 0xe0)
+        else:
+            dtc_severity_mask |= (severity_mask & 0xe0)
+        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord, status_mask=status_mask, severity_mask=dtc_severity_mask, functional_group_id=functional_group_id)
+
     def get_number_of_dtc_by_status_mask(self, status_mask: int) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfDTCByStatusMask``
@@ -1733,8 +1765,8 @@ class Client:
                              snapshot_record_number: Optional[int] = None,
                              extended_data_record_number: Optional[int] = None,
                              extended_data_size: Optional[int] = None,
-                             memory_selection: Optional[int] = None
-                             ):
+                             memory_selection: Optional[int] = None,
+                             functional_group_id: Optional[int] = None):
         if dtc is not None and isinstance(dtc, Dtc):
             dtc = dtc.id
 
@@ -1745,7 +1777,8 @@ class Client:
                                                            snapshot_record_number=snapshot_record_number,
                                                            extended_data_record_number=extended_data_record_number,
                                                            memory_selection=memory_selection,
-                                                           standard_version=self.config['standard_version'])
+                                                           standard_version=self.config['standard_version'],
+                                                           functional_group_id=functional_group_id)
 
         self.logger.info('%s - Sending request with subfunction "%s" (0x%02X).' % (self.service_log_prefix(services.ReadDTCInformation),
                          services.ReadDTCInformation.Subfunction.get_name(subfunction), subfunction))

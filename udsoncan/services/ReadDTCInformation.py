@@ -106,10 +106,10 @@ class ReadDTCInformation(BaseService):
         reportUserDefMemoryDTCByStatusMask = 0x17
         reportUserDefMemoryDTCSnapshotRecordByDTCNumber = 0x18
         reportUserDefMemoryDTCExtDataRecordByDTCNumber = 0x19
+        reportWWHOBDDTCByMaskRecord = 0x42
 
         # todo
         reportSupportedDTCExtDataRecord = 0x1A
-        reportWWHOBDDTCByMaskRecord = 0x42
         reportWWHOBDDTCWithPermanentStatus = 0x55
         reportDTCInformationByDTCReadinessGroupIdentifier = 0x56
 
@@ -162,6 +162,12 @@ class ReadDTCInformation(BaseService):
                 tools.validate_int(extended_data_size[dtcid], min=0, max=0xFFF, name='Extended data size for DTC=0x%06x' % dtcid)
 
     @classmethod
+    def assert_functional_group_id(cls, functional_group_id: Optional[int], subfunction, maxval: int = 0xFF) -> None:
+        if functional_group_id is None:
+            raise ValueError('functional_group_id must be provided for subfunction 0x%02x' % subfunction)
+        tools.validate_int(functional_group_id, min=0, max=maxval, name='Functional Group ID')
+
+    @classmethod
     def pack_dtc(cls, dtcid: int) -> bytes:
         return struct.pack('BBB', (dtcid >> 16) & 0xFF, (dtcid >> 8) & 0xFF, (dtcid >> 0) & 0xFF)
 
@@ -202,7 +208,9 @@ class ReadDTCInformation(BaseService):
                      snapshot_record_number: Optional[int] = None,
                      extended_data_record_number: Optional[int] = None,
                      memory_selection: Optional[int] = None,
-                     standard_version: int = latest_standard) -> Request:
+                     standard_version: int = latest_standard,
+                     functional_group_id:Optional[int] = None,
+                     ) -> Request:
         """
         Generates a request for ReadDTCInformation. 
         Each subfunction uses a subset of parameters. 
@@ -360,6 +368,12 @@ class ReadDTCInformation(BaseService):
         elif subfunction == ReadDTCInformation.Subfunction.reportDTCExtDataRecordByRecordNumber:
             cls.assert_extended_data_record_number(extended_data_record_number, subfunction, maxval=0xEF)  # Maximum specified by ISO-14229:2020
             req.data = struct.pack('B', extended_data_record_number)
+
+        elif subfunction == ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord:
+            cls.assert_status_mask(status_mask, subfunction)
+            cls.assert_severity_mask(severity_mask, subfunction)
+            cls.assert_functional_group_id(functional_group_id, subfunction, maxval=0xFE)  # Maximum specified by ISO-14229:2020 
+            req.data = struct.pack('BBB', functional_group_id, status_mask, severity_mask)
 
         return req
 
@@ -869,6 +883,31 @@ class ReadDTCInformation(BaseService):
                 response.service_data.dtcs.append(dtc)
 
                 actual_byte += size
+
+            response.service_data.dtc_count = len(response.service_data.dtcs)
+
+        elif subfunction == ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord:
+            if len(response.data) < 4:
+                raise InvalidResponseException(response, 'Incomplete response from server.')
+
+            _functional_group_id = response.data[1]
+            _dtc_status_availability_mask = response.data[2]
+            _dtc_severity_availability_mask = response.data[3]
+            _dtc_format_identifier = response.data[4]
+
+            remaining_bytes = response.data[5:]
+
+            if len(remaining_bytes) % 5 != 0:
+                raise InvalidResponseException(response, 'Incomplete response from server. Remaining bytes must be a multiple of 5')
+
+            while remaining_bytes:
+                severity = remaining_bytes[0]
+                dtc = Dtc(struct.unpack('>L', b'\x00' + remaining_bytes[1:4])[0])
+                status_of_dtc = Dtc.Status.from_byte(remaining_bytes[4])
+                dtc.severity.set_byte(severity)
+                dtc.status = status_of_dtc
+                remaining_bytes = remaining_bytes[5:]
+                response.service_data.dtcs.append(dtc)
 
             response.service_data.dtc_count = len(response.service_data.dtcs)
 
