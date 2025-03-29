@@ -14,6 +14,16 @@ pipeline {
             stages {
                 stage ('Create venvs') {
                     parallel{
+                        stage ('Python 3.13') {
+                            steps {
+                                sh 'python3.13 -m venv venv-3.13 && VENV_DIR=venv3.13 scripts/activate-venv.sh'
+                            }
+                        }
+                        stage ('Python 3.12') {
+                            steps {
+                                sh 'python3.12 -m venv venv-3.12 && VENV_DIR=venv3.12 scripts/activate-venv.sh'
+                            }
+                        }
                         stage ('Python 3.11') {
                             steps {
                                 sh 'python3.11 -m venv venv-3.11 && VENV_DIR=venv3.11 scripts/activate-venv.sh'
@@ -43,7 +53,22 @@ pipeline {
                 }
                 stage('Testing'){
                     parallel{
-                        
+                        stage ('Python 3.13') {
+                            steps {
+                                sh '''
+                                VENV_DIR=venv-3.13 scripts/with-venv.sh scripts/check-python-version.sh 3.13
+                                VENV_DIR=venv-3.13 COVERAGE_SUFFIX=3.13 scripts/with-venv.sh scripts/runtests.sh
+                                '''
+                            }
+                        }
+                        stage ('Python 3.12') {
+                            steps {
+                                sh '''
+                                VENV_DIR=venv-3.12 scripts/with-venv.sh scripts/check-python-version.sh 3.12
+                                VENV_DIR=venv-3.12 COVERAGE_SUFFIX=3.12 scripts/with-venv.sh scripts/runtests.sh
+                                '''
+                            }
+                        }
                         stage ('Python 3.11') {
                             steps {
                                 sh '''
@@ -89,8 +114,8 @@ pipeline {
                 stage("Doc"){
                     steps {
                         sh '''
-                        VENV_DIR=venv-3.11 scripts/with-venv.sh pip3 install -r doc/requirements.txt
-                        VENV_DIR=venv-3.11 scripts/with-venv.sh make -C doc html
+                        VENV_DIR=venv-3.13 scripts/with-venv.sh pip3 install -r doc/requirements.txt
+                        VENV_DIR=venv-3.13 scripts/with-venv.sh make -C doc html
                         '''
                     }
                 }
