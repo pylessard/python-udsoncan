@@ -916,10 +916,8 @@ class ReadDTCInformation(BaseService):
                     raise InvalidResponseException(response, 'Incomplete response from server.')
                 
                 response.service_data.functional_group_id = response.data[1]
-                response.service_data.status_availability = Dtc.Status()
-                response.service_data.status_availability.set_byte(response.data[2])
-                response.service_data.severity_availability = Dtc.Severity()
-                response.service_data.severity_availability.set_byte(response.data[3])
+                response.service_data.status_availability = Dtc.Status.from_byte(response.data[2])
+                response.service_data.severity_availability = Dtc.Severity.from_byte(response.data[3])
                 response.service_data.dtc_format = response.data[4]
                 remaining_bytes = response.data[5:]
             elif subfunction == ReadDTCInformation.Subfunction.reportWWHOBDDTCWithPermanentStatus:
@@ -927,19 +925,17 @@ class ReadDTCInformation(BaseService):
                     raise InvalidResponseException(response, 'Incomplete response from server.')
                 
                 response.service_data.functional_group_id = response.data[1]
-                response.service_data.status_availability = Dtc.Status()
-                response.service_data.status_availability.set_byte(response.data[2])
+                response.service_data.status_availability = Dtc.Status.from_byte(response.data[2])
                 response.service_data.dtc_format = response.data[3]
                 remaining_bytes = response.data[4:]
             else:
                 raise NotImplementedError("Unreachable code")
 
             if response.service_data.functional_group_id > 0xFE:
-                raise InvalidResponseException(response, "FunctionalGroupIdentifier returned by the server is not smaller than 0xFE")
+                raise InvalidResponseException(response, "FunctionalGroupIdentifier returned by the server is not smaller or equal than 0xFE")
             
             if response.service_data.dtc_format not in [Dtc.Format.SAE_J2012_DA_DTCFormat_04, Dtc.Format.SAE_J1939_73]:
                 raise InvalidResponseException(response, "DTCFormatIdentifier returned by the server is not one of the following: SAE_J2012-DA_DTCFormat_04 (4), SAE_J1939-73_DTCFormat(2). Got 0x%02x" % response.service_data.dtc_format)
-
 
             if len(remaining_bytes) % 5 != 0:
                 raise InvalidResponseException(response, 'Incomplete response from server. Remaining bytes must be a multiple of 5')
