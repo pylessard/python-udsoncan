@@ -34,8 +34,8 @@ class TestDiagnosticSessionControl(ClientServerTest):
         self.assertEqual(response.service_data.session_param_records, b"\x99\x88\x12\x34")
         self.assertEqual(response.service_data.p2_server_max, (0x9988) / 1000)
         self.assertEqual(response.service_data.p2_star_server_max, 0x1234 * 10 / 1000)
-        self.assertEqual(self.udsclient.session_timing['p2_server_max'], response.service_data.p2_server_max)
-        self.assertEqual(self.udsclient.session_timing['p2_star_server_max'], response.service_data.p2_star_server_max)
+        self.assertEqual(self.udsclient.get_session_timing().p2_server_max, response.service_data.p2_server_max)
+        self.assertEqual(self.udsclient.get_session_timing().p2_star_server_max, response.service_data.p2_star_server_max)
 
     def test_dsc_success_2013_plus_ignore_server_timing(self):
         request = self.conn.touserqueue.get(timeout=0.2)
@@ -50,8 +50,8 @@ class TestDiagnosticSessionControl(ClientServerTest):
         self.assertEqual(response.service_data.session_param_records, b"\x99\x88\x12\x34")
         self.assertEqual(response.service_data.p2_server_max, 0x9988 / 1000)
         self.assertEqual(response.service_data.p2_star_server_max, 0x1234 * 10 / 1000)
-        self.assertIsNone(self.udsclient.session_timing['p2_server_max'])
-        self.assertIsNone(self.udsclient.session_timing['p2_star_server_max'])
+        self.assertIsNone(self.udsclient.get_session_timing().p2_server_max)
+        self.assertIsNone(self.udsclient.get_session_timing().p2_star_server_max)
 
     def test_dsc_success_spr(self):
         request = self.conn.touserqueue.get(timeout=0.2)

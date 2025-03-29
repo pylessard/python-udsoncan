@@ -242,11 +242,17 @@ See :ref:`an example <example_security_algo>`
 .. attribute:: use_server_timing
    :annotation: (bool)
 
-   When using 2013 standard or above, the server is required to provide its P2 and P2* timing values with a DiagnosticSessionControl request. By setting this parameter to ``True``, the value received from the server will be used. When ``False``, these timing values will be ignored and local configuration timing will be used.  Note that no timeout value can exceed the ``config['request_timeout']`` as it is meant to avoid the client from hanging for too long.
+   When using 2013 standard or above, the server is required to provide its P2 and P2* timing values with a DiagnosticSessionControl request. 
+   By setting this parameter to ``True``, the value received from the server will be used. When ``False``, these timing values will be ignored and local configuration timing will be used.  
+   Note that no timeout value can exceed the ``config['request_timeout']`` as it is meant to avoid the client from hanging for too long.
 
    This parameter has no effect when ``config['standard_version']`` is set to ``2006``.
 
    Default value is True
+
+.. note::
+
+   The timeouts provided by the server can be obtained via :meth:`get_session_timing<Client.get_session_timing>`
 
 
 .. _config_nrc78_callback:
@@ -319,6 +325,24 @@ When using that feature, the client will process the response from the server ju
 .. note:: It is possible to change the behaviour of the client on failing requests. See the client parameters :ref:`exception_on_invalid_response<config_exception_on_invalid_response>`, :ref:`exception_on_unexpected_response<config_exception_on_unexpected_response>` and :ref:`exception_on_negative_response<config_exception_on_negative_response>`
 
 -----
+
+Session timings
+---------------
+
+When a request is performed, the client uses the P2 & P2* timeouts value provided by the server in a response to :meth:`change_session<udsoncan.client.Client.change_session>`.
+If :meth:`change_session<udsoncan.client.Client.change_session>` is not called yet (or if the standard used is 2006), the values from the configuration will be used : :ref:`p2_timeout<config_p2_timeout>` & :ref:`p2_star_timeout<config_p2_star_timeout>`
+
+The client can provide the received P2 & P2* timeouts value via :meth:`get_session_timing<udsoncan.client.Client.get_session_timing>`
+
+.. automethod:: udsoncan.client.Client.get_session_timing
+
+.. autoclass:: udsoncan.client.SessionTiming
+   :exclude-members: __init__, __new__
+   :members:
+   
+
+-----
+
 
 Methods by services
 -------------------
