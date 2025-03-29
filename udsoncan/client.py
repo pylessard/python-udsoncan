@@ -23,9 +23,17 @@ import time
 from typing import Callable, Optional, Union, Dict, List, Any, cast, Type
 
 
-class SessionTiming(TypedDict):
+class SessionTiming:
+    """Container for server provided P2 & P2* timeouts."""
+
     p2_server_max: Optional[float]
+    """P2 server max provided by the server. ``None`` if not provided yet """
     p2_star_server_max: Optional[float]
+    """P2* server max provided by the server. ``None`` if not provided yet """
+
+    def __init__(self, p2_server_max:Optional[float]=None, p2_star_server_max:Optional[float]=None) -> None:
+        self.p2_server_max = p2_server_max
+        self.p2_star_server_max = p2_star_server_max
 
 
 class Client:
@@ -111,7 +119,7 @@ class Client:
         self.payload_override = Client.PayloadOverrider()
         self.last_response = None
 
-        self.session_timing = cast(SessionTiming, dict(p2_server_max=None, p2_star_server_max=None))    # python 3.7 cast
+        self.session_timing = SessionTiming(p2_server_max=None, p2_star_server_max=None)
 
         self.refresh_config()
 
@@ -204,6 +212,15 @@ class Client:
     def service_log_prefix(self, service: Type[BaseService]):
         return "%s<0x%02x>" % (service.get_name(), service.request_id())
 
+    def get_session_timing(self) -> SessionTiming:
+        """Return the session timing provided by the server, including P2 & P2* timeouts.
+        If the timeout values are ``None``, it means that no timing has been given by the server yet and the timings form the client configuration 
+        (:ref:`p2_timeout<config_p2_timeout>`, :ref:`p2_star_timeout<config_p2_star_timeout>`)
+
+        :return: The session timings
+        """
+        return self.session_timing
+
     @standard_error_management
     def change_session(self, newsession: int) -> Optional[services.DiagnosticSessionControl.InterpretedResponse]:
         """ 
@@ -238,8 +255,8 @@ class Client:
             if self.config['use_server_timing']:
                 self.logger.info('%s - Received new timing parameters. P2=%.3fs and P2*=%.3fs.  Using these value from now on.' %
                                  (self.service_log_prefix(services.DiagnosticSessionControl), response.service_data.p2_server_max, response.service_data.p2_star_server_max))
-                self.session_timing['p2_server_max'] = response.service_data.p2_server_max
-                self.session_timing['p2_star_server_max'] = response.service_data.p2_star_server_max
+                self.session_timing.p2_server_max = response.service_data.p2_server_max
+                self.session_timing.p2_star_server_max = response.service_data.p2_star_server_max
 
         return response
 
@@ -2174,7 +2191,7 @@ class Client:
         if timeout < 0:
             # Timeout not provided by user: defaults to Client request_timeout value
             overall_timeout = self.config['request_timeout']
-            p2 = self.config['p2_timeout'] if self.session_timing['p2_server_max'] is None else self.session_timing['p2_server_max']
+            p2 = self.config['p2_timeout'] if self.session_timing.p2_server_max is None else self.session_timing.p2_server_max
             if overall_timeout is not None:
                 single_request_timeout = min(overall_timeout, p2)
             else:
@@ -2285,7 +2302,7 @@ class Client:
                     done_receiving = False
                     if not using_p2_star:
                         # Received a 0x78 NRC: timeout is now set to P2*
-                        p2_star = self.config['p2_star_timeout'] if self.session_timing['p2_star_server_max'] is None else self.session_timing['p2_star_server_max']
+                        p2_star = self.config['p2_star_timeout'] if self.session_timing.p2_star_server_max is None else self.session_timing.p2_star_server_max
                         single_request_timeout = p2_star
                         using_p2_star = True
                         self.logger.debug("Server requested to wait with response code %s (0x%02x), single request timeout is now set to P2* (%.3f seconds)" %
