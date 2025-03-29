@@ -57,6 +57,8 @@ class ReadDTCInformation(BaseService):
         status_availability: Optional[Dtc.Status]
         extended_data: Optional[List[bytes]]
         memory_selection_echo: Optional[int]
+        functional_group_id:Optional[int]
+        severity_availability: Optional[Dtc.Severity]
 
         def __init__(self, subfunction_echo: int,
                      dtcs: Optional[List[Dtc]] = None,
@@ -64,7 +66,9 @@ class ReadDTCInformation(BaseService):
                      dtc_format: Optional[int] = None,
                      status_availability: Optional[Dtc.Status] = None,
                      extended_data: Optional[List[bytes]] = [],
-                     memory_selection_echo: Optional[int] = None
+                     memory_selection_echo: Optional[int] = None,
+                     functional_group_id:Optional[int] = None,
+                     severity_availability: Optional[Dtc.Severity] = None
                      ):
             super().__init__(ReadDTCInformation)
             self.subfunction_echo = subfunction_echo
@@ -74,6 +78,8 @@ class ReadDTCInformation(BaseService):
             self.status_availability = status_availability
             self.extended_data = extended_data if extended_data is not None else []
             self.memory_selection_echo = memory_selection_echo
+            self.functional_group_id = functional_group_id
+            self.severity_availability=severity_availability
 
     class InterpretedResponse(Response):
         service_data: "ReadDTCInformation.ResponseData"
@@ -107,10 +113,10 @@ class ReadDTCInformation(BaseService):
         reportUserDefMemoryDTCSnapshotRecordByDTCNumber = 0x18
         reportUserDefMemoryDTCExtDataRecordByDTCNumber = 0x19
         reportWWHOBDDTCByMaskRecord = 0x42
+        reportWWHOBDDTCWithPermanentStatus = 0x55
 
         # todo
         reportSupportedDTCExtDataRecord = 0x1A
-        reportWWHOBDDTCWithPermanentStatus = 0x55
         reportDTCInformationByDTCReadinessGroupIdentifier = 0x56
 
     @classmethod
@@ -162,10 +168,10 @@ class ReadDTCInformation(BaseService):
                 tools.validate_int(extended_data_size[dtcid], min=0, max=0xFFF, name='Extended data size for DTC=0x%06x' % dtcid)
 
     @classmethod
-    def assert_functional_group_id(cls, functional_group_id: Optional[int], subfunction, maxval: int = 0xFF) -> None:
+    def assert_functional_group_id(cls, functional_group_id: Optional[int], subfunction) -> None:
         if functional_group_id is None:
             raise ValueError('functional_group_id must be provided for subfunction 0x%02x' % subfunction)
-        tools.validate_int(functional_group_id, min=0, max=maxval, name='Functional Group ID')
+        tools.validate_int(functional_group_id, min=0, max=0xFE, name='Functional Group ID')
 
     @classmethod
     def pack_dtc(cls, dtcid: int) -> bytes:
@@ -204,6 +210,7 @@ class ReadDTCInformation(BaseService):
                      subfunction: int,
                      status_mask: Optional[Union[int, Dtc.Status]] = None,
                      severity_mask: Optional[Union[int, Dtc.Severity]] = None,
+                     dtc_class: Optional[Union[int, Dtc.DtcClass]] = None,
                      dtc: Optional[Union[int, Dtc]] = None,
                      snapshot_record_number: Optional[int] = None,
                      extended_data_record_number: Optional[int] = None,
@@ -223,6 +230,9 @@ class ReadDTCInformation(BaseService):
 
         :param severity_mask: A severity mask used to filter DTC 
         :type severity_mask: int or :ref:`Dtc.Severity <DTC_Severity>`
+
+        :param dtc_class: A DTC class to be packed in the same byte as the severity mask
+        :type dtc_class: int or :ref:`Dtc.DtcClass <DTC_DtcClass>`
 
         :param dtc: A DTC mask used to filter DTC
         :type dtc: int or :ref:`Dtc <DTC>`
@@ -307,6 +317,15 @@ class ReadDTCInformation(BaseService):
 
         if severity_mask is not None and isinstance(severity_mask, Dtc.Severity):
             severity_mask = severity_mask.get_byte_as_int()
+            severity_mask = severity_mask & 0xE0
+
+        if dtc_class is not None :
+            if severity_mask is None:
+                raise ValueError("A severity mask must be specified in order to specify a dataclass")
+            
+            if isinstance(dtc_class, Dtc.DtcClass):
+                dtc_class = dtc_class.get_byte_as_int()
+            severity_mask |= (dtc_class & 0x1F)
 
         if dtc is not None and isinstance(dtc, Dtc):
             dtc = dtc.id
@@ -372,8 +391,12 @@ class ReadDTCInformation(BaseService):
         elif subfunction == ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord:
             cls.assert_status_mask(status_mask, subfunction)
             cls.assert_severity_mask(severity_mask, subfunction)
-            cls.assert_functional_group_id(functional_group_id, subfunction, maxval=0xFE)  # Maximum specified by ISO-14229:2020 
+            cls.assert_functional_group_id(functional_group_id, subfunction)  # Maximum specified by ISO-14229:2020 
             req.data = struct.pack('BBB', functional_group_id, status_mask, severity_mask)
+       
+        elif subfunction == ReadDTCInformation.Subfunction.reportWWHOBDDTCWithPermanentStatus:
+            cls.assert_functional_group_id(functional_group_id, subfunction)  # Maximum specified by ISO-14229:2020 
+            req.data = struct.pack('B', functional_group_id)
 
         return req
 
@@ -886,16 +909,37 @@ class ReadDTCInformation(BaseService):
 
             response.service_data.dtc_count = len(response.service_data.dtcs)
 
-        elif subfunction == ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord:
-            if len(response.data) < 4:
-                raise InvalidResponseException(response, 'Incomplete response from server.')
+        elif subfunction in [ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord, ReadDTCInformation.Subfunction.reportWWHOBDDTCWithPermanentStatus]:
 
-            _functional_group_id = response.data[1]
-            _dtc_status_availability_mask = response.data[2]
-            _dtc_severity_availability_mask = response.data[3]
-            _dtc_format_identifier = response.data[4]
+            if subfunction == ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord:
+                if len(response.data) < 5:
+                    raise InvalidResponseException(response, 'Incomplete response from server.')
+                
+                response.service_data.functional_group_id = response.data[1]
+                response.service_data.status_availability = Dtc.Status()
+                response.service_data.status_availability.set_byte(response.data[2])
+                response.service_data.severity_availability = Dtc.Severity()
+                response.service_data.severity_availability.set_byte(response.data[3])
+                response.service_data.dtc_format = response.data[4]
+                remaining_bytes = response.data[5:]
+            elif subfunction == ReadDTCInformation.Subfunction.reportWWHOBDDTCWithPermanentStatus:
+                if len(response.data) < 4:
+                    raise InvalidResponseException(response, 'Incomplete response from server.')
+                
+                response.service_data.functional_group_id = response.data[1]
+                response.service_data.status_availability = Dtc.Status()
+                response.service_data.status_availability.set_byte(response.data[2])
+                response.service_data.dtc_format = response.data[3]
+                remaining_bytes = response.data[4:]
+            else:
+                raise NotImplementedError("Unreachable code")
 
-            remaining_bytes = response.data[5:]
+            if response.service_data.functional_group_id > 0xFE:
+                raise InvalidResponseException(response, "FunctionalGroupIdentifier returned by the server is not smaller than 0xFE")
+            
+            if response.service_data.dtc_format not in [Dtc.Format.SAE_J2012_DA_DTCFormat_04, Dtc.Format.SAE_J1939_73]:
+                raise InvalidResponseException(response, "DTCFormatIdentifier returned by the server is not one of the following: SAE_J2012-DA_DTCFormat_04 (4), SAE_J1939-73_DTCFormat(2). Got 0x%02x" % response.service_data.dtc_format)
+
 
             if len(remaining_bytes) % 5 != 0:
                 raise InvalidResponseException(response, 'Incomplete response from server. Remaining bytes must be a multiple of 5')
