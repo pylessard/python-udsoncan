@@ -438,6 +438,7 @@ Methods by services
 .. automethod:: udsoncan.client.Client.get_mirrormemory_dtc_by_status_mask
 .. automethod:: udsoncan.client.Client.get_dtc_by_status_severity_mask
 .. automethod:: udsoncan.client.Client.get_wwh_obd_dtc_by_status_mask
+.. automethod:: udsoncan.client.Client.get_wwh_obd_dtc_with_permanent_status
 .. automethod:: udsoncan.client.Client.get_number_of_dtc_by_status_mask
 .. automethod:: udsoncan.client.Client.get_mirrormemory_number_of_dtc_by_status_mask
 .. automethod:: udsoncan.client.Client.get_number_of_emission_dtc_by_status_mask

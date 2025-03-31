@@ -190,6 +190,12 @@ class Dtc:
             self.maintenance_only = True if byte & 0x20 > 0 else False
             self.check_at_next_exit = True if byte & 0x40 > 0 else False
             self.check_immediately = True if byte & 0x80 > 0 else False
+        
+        @classmethod
+        def from_byte(cls, byte: Union[bytes, int]) -> "Dtc.Severity":
+            severity = cls()
+            severity.set_byte(byte)
+            return severity
 
         @property
         def available(self):
@@ -209,11 +215,89 @@ class Dtc:
         record_number: Optional[int] = None
         raw_data: Optional[bytes] = b''
 
+    class DtcClass:
+        """
+        Represents a DTC class information which consists of 5 boolean flags. All flags can be set after instantiation without problems. 
+
+        :param class0: Bit0 : Unclassified
+        :type class0: bool
+
+        :param class1: Bit1 : GTR module B Class A definition.
+        :type class1: bool
+
+        :param class2: Bit2: GTR module B Class B1 definition
+        :type class2: bool
+
+        :param class3: Bit3: GTR module B Class B2 definition.
+        :type class3: bool
+
+        :param class4: Bit4: GTR module B Class C definition.
+        :type class4: bool
+        """
+
+        class0: bool
+        class1: bool
+        class2: bool
+        class3: bool
+        class4: bool
+
+        def __init__(self, 
+                     class0: bool = False, 
+                     class1: bool = False, 
+                     class2: bool = False,
+                     class3: bool = False,
+                     class4: bool = False
+                     ):
+            self.class0 = class0
+            self.class1 = class1
+            self.class2 = class2
+            self.class3 = class3
+            self.class4 = class4
+
+        def get_byte_as_int(self) -> int:
+            byte = 0
+            byte |= 0x01 if self.class0 else 0
+            byte |= 0x02 if self.class1 else 0
+            byte |= 0x04 if self.class2 else 0
+            byte |= 0x08 if self.class3 else 0
+            byte |= 0x10 if self.class4 else 0
+
+            return byte
+
+        def get_byte(self) -> bytes:
+            return struct.pack('B', self.get_byte_as_int())
+
+        def set_byte(self, byte: Union[bytes, int]) -> None:
+            if not isinstance(byte, int) and not isinstance(byte, bytes):
+                raise ValueError('Given byte must be an integer or bytes object.')
+
+            if isinstance(byte, bytes):
+                if len(byte) != 1:
+                    raise ValueError("Expected 1 byte to set the DTC Status")
+                byte = int(byte[0])
+
+            self.class0 = True if byte & 0x01 > 0 else False
+            self.class1 = True if byte & 0x02 > 0 else False
+            self.class2 = True if byte & 0x04 > 0 else False
+            self.class3 = True if byte & 0x08 > 0 else False
+            self.class4 = True if byte & 0x10 > 0 else False
+
+        @property
+        def available(self):
+            return True if self.get_byte_as_int() > 0 else False
+
+        @classmethod
+        def from_byte(cls, byte: Union[bytes, int]) -> "Dtc.DtcClass":
+            dtc_class = cls()
+            dtc_class.set_byte(byte)
+            return dtc_class
+
     id: int
     status: "Dtc.Status"
     snapshots: List[Union["Dtc.Snapshot", int]]
     extended_data: List["Dtc.ExtendedData"]
     severity: "Dtc.Severity"
+    dtc_class:"Dtc.DtcClass"
     functional_unit: Any
     fault_counter: Optional[int]
 
@@ -223,12 +307,19 @@ class Dtc:
         self.snapshots = []  		# . DID codec must be configured
         self.extended_data = []
         self.severity = Dtc.Severity()
+        self.dtc_class = Dtc.DtcClass()
         self.functional_unit = None 	# Implementation specific (ISO 14229 D.4)
         # Common practice is to detect a specific failure many times before setting the DTC active. This counter should tell the actual count.
         self.fault_counter = None
 
     def __repr__(self) -> str:
-        return '<DTC ID=0x%06x, Status=0x%02x, Severity=0x%02x at 0x%08x>' % (self.id, self.status.get_byte_as_int(), self.severity.get_byte_as_int(), id(self))
+        return '<DTC ID=0x%06x, Status=0x%02x, Severity=0x%02x, class=%02x at 0x%08x>' % (
+            self.id, 
+            self.status.get_byte_as_int(), 
+            self.severity.get_byte_as_int(), 
+            self.dtc_class.get_byte_as_int(),  
+            id(self)
+            )
 
     def id_iso(self) -> str:
         return '%c%i%03X-%02X' % (

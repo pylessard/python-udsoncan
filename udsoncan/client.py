@@ -1378,7 +1378,12 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 
-    def get_wwh_obd_dtc_by_status_mask(self, functional_group_id: int, status_mask: int, severity_mask: Union[int,Dtc.Severity], dtc_class: int) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
+    def get_wwh_obd_dtc_by_status_mask(self, 
+                                       functional_group_id: int, 
+                                       status_mask: int, 
+                                       severity_mask: Union[int,Dtc.Severity], 
+                                       dtc_class: Union[int, Dtc.DtcClass]
+                                       ) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportWWHOBDDTCByMaskRecord``
 
@@ -1388,29 +1393,43 @@ class Client:
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
-        :param functional_group_id: Functional Group ID to search for (FGID) (0x00 to 0xFF) :ref:`Dtc.FunctionalGroupIdentifiers<DTC_FunctionalGroupIdentifiers>` 
+        :param functional_group_id: Functional Group ID to search for (FGID) (0x00 to 0xFE) :ref:`Dtc.FunctionalGroupIdentifiers<DTC_FunctionalGroupIdentifiers>` 
         :type functional_group_id: int
 
         :param status_mask: The status mask against which the DTCs are tested. 
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
 
-        :param severity_mask: The severity mask against which the DTCs are tested. (Optionas 0x20, 0x40, or 0x80)
+        :param severity_mask: The severity mask against which the DTCs are tested. (Bit mask of: 0x20, 0x40, or 0x80)
         :type severity_mask: int or :ref:`Dtc.Severity<DTC_Severity>`
 
-        :param dtc_class: The GTR DTC class mask against which the DTCs are tested. (Options 0x01, 0x02, 0x04, 0x08)
-        :type dtc_class: int
+        :param dtc_class: The GTR DTC class mask against which the DTCs are tested. (Bit mask of: 0x01, 0x02, 0x04, 0x08, 0x10)
+        :type dtc_class: int or :ref:`Dtc.DtcClass<DTC_DtcClass>`
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
         """
-        dtc_severity_mask = dtc_class & 0x1f
-        if isinstance(severity_mask, Dtc.Severity):
-            dtc_severity_mask |= (severity_mask.get_byte_as_int() & 0xe0)
-        else:
-            dtc_severity_mask |= (severity_mask & 0xe0)
-        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord, status_mask=status_mask, severity_mask=dtc_severity_mask, functional_group_id=functional_group_id)
 
-    def get_number_of_dtc_by_status_mask(self, status_mask: int) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
+        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord, status_mask=status_mask, severity_mask=severity_mask, dtc_class=dtc_class, functional_group_id=functional_group_id)
+    
+    def get_wwh_obd_dtc_with_permanent_status(self, functional_group_id: int) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
+        """
+        Performs a ``ReadDTCInformation`` service request with subfunction ``reportWWHOBDDTCWithPermanentStatus,``
+
+        Reads all the WWH OBD Diagnostic Trouble Codes that have the specified functional_group and a permanent status. 
+
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
+
+        :param functional_group_id: Functional Group ID to search for (FGID) (0x00 to 0xFE) :ref:`Dtc.FunctionalGroupIdentifiers<DTC_FunctionalGroupIdentifiers>` 
+        :type functional_group_id: int
+
+
+        :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
+        :rtype: :ref:`Response<Response>`
+        """
+
+        return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportWWHOBDDTCWithPermanentStatus, functional_group_id=functional_group_id)
+
+    def get_number_of_dtc_by_status_mask(self, status_mask: Union[int, Dtc.Status]) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfDTCByStatusMask``
 
@@ -1426,7 +1445,7 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfDTCByStatusMask, status_mask=status_mask)
 
-    def get_mirrormemory_number_of_dtc_by_status_mask(self, status_mask: int) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
+    def get_mirrormemory_number_of_dtc_by_status_mask(self, status_mask: Union[int, Dtc.Status]) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfMirrorMemoryDTCByStatusMask``
 
@@ -1442,7 +1461,7 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfMirrorMemoryDTCByStatusMask, status_mask=status_mask)
 
-    def get_number_of_emission_dtc_by_status_mask(self, status_mask: int) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
+    def get_number_of_emission_dtc_by_status_mask(self, status_mask: Union[int, Dtc.Status]) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfEmissionsRelatedOBDDTCByStatusMask``
 
@@ -1458,7 +1477,7 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportNumberOfEmissionsRelatedOBDDTCByStatusMask, status_mask=status_mask)
 
-    def get_number_of_dtc_by_status_severity_mask(self, status_mask: int, severity_mask: int) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
+    def get_number_of_dtc_by_status_severity_mask(self, status_mask: Union[int, Dtc.Status], severity_mask: Union[int, Dtc.Severity]) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportNumberOfDTCBySeverityMaskRecord``
 
@@ -1776,14 +1795,16 @@ class Client:
     @standard_error_management
     def read_dtc_information(self,
                              subfunction: int,
-                             status_mask: Optional[int] = None,
-                             severity_mask: Optional[int] = None,
+                             status_mask: Optional[Union[Dtc.Status, int]] = None,
+                             severity_mask: Optional[Union[Dtc.Severity, int]] = None,
                              dtc: Optional[Union[int, Dtc]] = None,
                              snapshot_record_number: Optional[int] = None,
                              extended_data_record_number: Optional[int] = None,
                              extended_data_size: Optional[int] = None,
                              memory_selection: Optional[int] = None,
-                             functional_group_id: Optional[int] = None):
+                             functional_group_id: Optional[int] = None,
+                             dtc_class: Optional[Union[int, Dtc.DtcClass]] = None
+                             ):
         if dtc is not None and isinstance(dtc, Dtc):
             dtc = dtc.id
 
@@ -1795,7 +1816,8 @@ class Client:
                                                            extended_data_record_number=extended_data_record_number,
                                                            memory_selection=memory_selection,
                                                            standard_version=self.config['standard_version'],
-                                                           functional_group_id=functional_group_id)
+                                                           functional_group_id=functional_group_id,
+                                                           dtc_class=dtc_class)
 
         self.logger.info('%s - Sending request with subfunction "%s" (0x%02X).' % (self.service_log_prefix(services.ReadDTCInformation),
                          services.ReadDTCInformation.Subfunction.get_name(subfunction), subfunction))
@@ -1825,7 +1847,7 @@ class Client:
         except Exception as e:
             error = e
 
-        # If nothing can be checked, raise the rror right away
+        # If nothing can be checked, raise the error right away
         if isinstance(error, InvalidResponseException):
             if response.service_data is None:
                 raise error
@@ -1883,6 +1905,12 @@ class Client:
                         if extended_data.record_number != extended_data_record_number:
                             raise UnexpectedResponseException(response, 'Extended data record number given by the server for DTC 0x%06X has a value of %d but requested record number was %d', (
                                 dtc_obj.id, extended_data.record_number, extended_data_record_number))
+
+        if subfunction in [services.ReadDTCInformation.Subfunction.reportWWHOBDDTCWithPermanentStatus, services.ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord]:
+            assert response.service_data.functional_group_id is not None
+            assert functional_group_id is not None
+            if functional_group_id != response.service_data.functional_group_id:
+                raise UnexpectedResponseException(response, "FunctionalGroupIdentifier in the server response does not match the value in the request. Requested 0x%02x, got 0x%02x" % (functional_group_id, response.service_data.functional_group_id))
 
         if Dtc.Format.get_name(response.service_data.dtc_format) is None:
             self.logger.warning('Unknown DTC Format Identifier %s. Value should be between 0 and 4' %

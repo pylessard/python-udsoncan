@@ -85,6 +85,15 @@ DTC.Status
 
 -----
 
+.. _DTC_DtcClass:
+
+DTC.DtcClass
+------------
+
+.. autoclass:: udsoncan::Dtc.DtcClass
+
+-----
+
 .. _DTC_Severity:
 
 DTC.Severity
