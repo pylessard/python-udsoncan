@@ -29,7 +29,6 @@ class DataIdentifier:
     ActiveDiagnosticSession = 0xF186
     VehicleManufacturerSparePartNumber = 0xF187
     VehicleManufacturerECUSoftwareNumber = 0xF188
-    VehicleManufacturerECUSoftwareNumber = 0xF188
     VehicleManufacturerECUSoftwareVersionNumber = 0xF189
     SystemSupplierIdentifier = 0xF18A
     ECUManufacturingDate = 0xF18B
@@ -87,8 +86,6 @@ class DataIdentifier:
             return 'ActiveDiagnosticSessionDataIdentifier'
         if did == 0xF187:
             return 'VehicleManufacturerSparePartNumberDataIdentifier'
-        if did == 0xF188:
-            return 'VehicleManufacturerECUSoftwareNumberDataIdentifier'
         if did == 0xF188:
             return 'VehicleManufacturerECUSoftwareNumberDataIdentifier'
         if did == 0xF189:
