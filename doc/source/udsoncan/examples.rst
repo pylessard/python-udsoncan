@@ -19,7 +19,7 @@ We will start by crafting a binary payload manually, then we will add a layer of
    if payload == b'\x71\x01\x12\x34':
       print('Success!')
    else:
-      print('Start Routine 0x1234 failed')
+      print('Start of routine 0x1234 failed')
 
 2. Request and Responses
 ########################
@@ -33,7 +33,7 @@ We will start by crafting a binary payload manually, then we will add a layer of
    if response.service == service.RoutineControl and response.code == Response.Code.PositiveResponse and response.data == b'\x01\x12\x34':
       print('Success!')
    else:
-      print('Start Routine 0x1234 failed')
+      print('Start of routine 0x1234 failed')
 
 3. Services
 ###########
@@ -50,7 +50,7 @@ We will start by crafting a binary payload manually, then we will add a layer of
       and response.service_data.routine_id_echo == 0x1234):
       print('Success!')
    else:
-      print('Reset failed')
+      print('Start of routine 0x1234 failed')
 
 4. Client
 #########
@@ -61,7 +61,7 @@ We will start by crafting a binary payload manually, then we will add a layer of
       response = client.start_routine(routine_id=0x1234) # control_type_echo and routine_id_echo are validated by the client.
       print('Success!')
    except Exception:
-      print('Reset failed')
+      print('Start of routine 0x1234 failed')
 
 -----
 
