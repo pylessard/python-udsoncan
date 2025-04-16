@@ -6,45 +6,48 @@ Examples
 Different layers of intelligence (1 to 4)
 -----------------------------------------
 
-In the following examples, we will request an ECU reset in 4 different ways. We will start by crafting a binary payload manually, then we will add a layer of interpretation making the code more comprehensive each time. 
+In the following examples, we will request aa Routine Start with the RoutineControl service in 4 different ways. 
+We will start by crafting a binary payload manually, then we will add a layer of interpretation making the code more comprehensive each time. 
 
 1. Raw Connection
 #################
 
 .. code-block:: python
 
-   my_connection.send(b'\x11\x01\x77\x88\x99') # Sends ECU Reset, with subfunction = 1
+   my_connection.send(b'\x31\x01\x12\x34') # Sends RoutineControl, with ControlType=1, Routine ID=0x1234
    payload = my_connection.wait_frame(timeout=1)
-   if payload == b'\x51\x01':
+   if payload == b'\x71\x01\x12\x34':
       print('Success!')
    else:
-      print('Reset failed')
+      print('Start Routine 0x1234 failed')
 
 2. Request and Responses
 ########################
 
 .. code-block:: python
 
-   req = Request(services.ECUReset, subfunction=1, data=b'\x77\x88\x99')
+   req = Request(services.RoutineControl, control_type=1, routine_id=0x1234)  # control_type=1 --> StartRoutine
    my_connection.send(req.get_payload()) 
    payload = my_connection.wait_frame(timeout=1)
    response = Response.from_payload(payload)
-   if response.service == service.ECUReset and response.code == Response.Code.PositiveResponse and response.data == b'\x01':
+   if response.service == service.RoutineControl and response.code == Response.Code.PositiveResponse and response.data == b'\x01\x12\x34':
       print('Success!')
    else:
-      print('Reset failed')
+      print('Start Routine 0x1234 failed')
 
 3. Services
 ###########
 
 .. code-block:: python
 
-   req = services.ECUReset.make_request(reset_type=1, data=b'\x77\x88\x99')
+   req = services.RoutineControl.make_request(control_type=services.RoutineControl.ControlType.startRoutine, routine_id=0x1234)
    my_connection.send(req.get_payload()) 
    payload = my_connection.wait_frame(timeout=1)
    response = Response.from_payload(payload)
    services.ECUReset.interpret_response(response)
-   if response.service == service.ECUReset and response.code == Response.Code.PositiveResponse and response.service_data.reset_type_echo == 1:
+   if ( response.service == service.RoutineControl and response.code == Response.Code.PositiveResponse 
+      and response.service_data.control_type_echo == 1
+      and response.service_data.routine_id_echo == 0x1234):
       print('Success!')
    else:
       print('Reset failed')
@@ -55,9 +58,9 @@ In the following examples, we will request an ECU reset in 4 different ways. We 
 .. code-block:: python
 
    try:
-      client.ecu_reset(reset_type=1, data=b'\x77\x88\x99')
+      response = client.start_routine(routine_id=0x1234) # control_type_echo and routine_id_echo are validated by the client.
       print('Success!')
-   except:
+   except Exception:
       print('Reset failed')
 
 -----
@@ -73,7 +76,7 @@ Note that, in order to run this code, both ``python-can`` and ``can-isotp`` must
 .. code-block:: python
    
    import can
-   import can.interfaces.vector import VectorBus
+   from can.interfaces.vector import VectorBus
    from udsoncan.connections import PythonIsoTpConnection
    from udsoncan.client import Client
    import udsoncan.configs
@@ -219,7 +222,7 @@ This example shows how to configure the client with a DID configuration and requ
       'default' : '>H',                      # Default codec is a struct.pack/unpack string. 16bits little endian
       0x1234 : MyCustomCodecThatShiftBy4,    # Uses own custom defined codec. Giving the class is ok
       0x1235 : MyCustomCodecThatShiftBy4(),  # Same as 0x1234, giving an instance is good also
-      0xF190 : udsoncan.AsciiCodec(15)       # Codec that read ASCII string. We must tell the length of the string
+      0xF190 : udsoncan.AsciiCodec(17)       # Codec that read ASCII string. We must tell the length of the string
       }
 
    # IsoTPSocketconnection only works with SocketCAN under Linux. Use another connection if needed.
@@ -230,7 +233,7 @@ This example shows how to configure the client with a DID configuration and requ
       
       # Or, if a single DID is expected, a shortcut to read the value of the first DID
       vin = client.read_data_by_identifier_first(0xF190)     
-      print(vin)  # 'ABCDE0123456789' (15 chars)
+      print(vin)  # 'ABCDEFG0123456789' (17 chars)
 
 -----
 
