@@ -733,12 +733,12 @@ class J2534Connection(BaseConnection):
                  txid: int,
                  name: Optional[str] = None,
                  debug: bool = False,
-                 protocol = Protocol_ID.ISO15765,
+                 protocol = None,
                  baudrate = 500000,
                  ):
         BaseConnection.__init__(self, name)
 
-        self.protocol = protocol
+        self.protocol = protocol if protocol else Protocol_ID.ISO15765
         self.baudrate = baudrate
         self.debug = debug
 
