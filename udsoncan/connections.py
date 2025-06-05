@@ -709,10 +709,10 @@ class J2534Connection(BaseConnection):
     :type name: string
     :param debug: This will enable windows debugging mode in the dll (see tactrix doc for additional information)
     :type debug: boolean
-    :param args: Optional parameters list (Unused right now).
-    :type args: list
-    :param kwargs: Optional parameters dictionary Unused right now).
-    :type kwargs: dict
+    :param protocol: CAN protocol
+    :type protocol: Protocol_ID
+    :param baudrate: Operation bauderate
+    :type baudrate: int
 
     """
 
@@ -727,23 +727,29 @@ class J2534Connection(BaseConnection):
     exit_requested: bool
     opened: bool
 
-    def __init__(self, windll: str, rxid: int, txid: int, name: Optional[str] = None, debug: bool = False, *args, **kwargs):
+    def __init__(self,
+                 windll: str,
+                 rxid: int,
+                 txid: int,
+                 name: Optional[str] = None,
+                 debug: bool = False,
+                 protocol = None,
+                 baudrate = 500000,
+                 ):
         BaseConnection.__init__(self, name)
 
-        # Set up a J2534 interface using the DLL provided
-        try:
-            self.interface = J2534(windll=windll, rxid=rxid, txid=txid)
-        except FileNotFoundError:
-            raise RuntimeError('DLL not found')
-
-        # Set the protocol to ISO15765, Baud rate to 500000
-        self.protocol = Protocol_ID.ISO15765
-        self.baudrate = 500000
+        self.protocol = protocol if protocol else Protocol_ID.ISO15765
+        self.baudrate = baudrate
         self.debug = debug
 
         try:
+            # Set up a J2534 interface using the DLL provided
+            self.interface = J2534(windll=windll, rxid=rxid, txid=txid)
+
             # Open the interface (connect to the DLL)
             self.result, self.devID = self.interface.PassThruOpen()
+        except FileNotFoundError:
+            raise RuntimeError('DLL not found')
         except OSError as e:
             if e.errno in [0x16, 0xe06d7363]:
                 raise RuntimeError('J2534 Device busy')
@@ -771,7 +777,7 @@ class J2534Connection(BaseConnection):
         self.log_last_operation("PassThruConnect", with_raise=True)
 
         configs = SCONFIG_LIST([
-            (Ioctl_ID.DATA_RATE.value, 500000),
+            (Ioctl_ID.DATA_RATE.value, self.baudrate),
             (Ioctl_ID.LOOPBACK.value, 0),
             (Ioctl_ID.ISO15765_BS.value, 0x20),
             (Ioctl_ID.ISO15765_STMIN.value, 0),
