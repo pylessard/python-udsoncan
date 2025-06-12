@@ -214,7 +214,7 @@ class J2534():
             result = dllPassThruReadMsgs(ChannelID, byref(pMsg), byref(pNumMsgs), c_ulong(Timeout))
             if Error_ID(hex(result)) == Error_ID.ERR_BUFFER_EMPTY or pNumMsgs == 0:
                 return None, None, 0
-            elif pMsg.RxStatus == 0 or pMsg.RxStatus == 0x100:
+            elif pMsg.RxStatus in [0, 0x100, 0x110]:
                 return Error_ID(hex(result)), bytes(pMsg.Data[4:pMsg.DataSize]), pNumMsgs
 
     def PassThruWriteMsgs(self, ChannelID, Data, protocol, pNumMsgs=1, Timeout=1000):
