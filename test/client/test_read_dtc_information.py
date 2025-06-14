@@ -2347,26 +2347,31 @@ class TestReportMostRecentConfirmedDTC(ClientServerTest, GenericTestNoParamReque
 class TestReportMirrorMemoryDTCByStatusMask(ClientServerTest, GenericTestStatusMaskRequest_DtcAndStatusMaskResponse):	# Subfn = 0xF
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
+        self.set_standard(2013) # Removed starting form 2020
         GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0xf, client_function = 'get_mirrormemory_dtc_by_status_mask')
 
 class TestReportMirrorMemoryDTCExtendedDataRecordByDTCNumber(ClientServerTest, GenericReportExtendedDataByRecordNumber):	# Subfn = 0x10
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
+        self.set_standard(2013) # Removed starting form 2020
         GenericReportExtendedDataByRecordNumber.__init__(self, subfunction=0x10, client_function = 'get_mirrormemory_dtc_extended_data_by_dtc_number')
 
 class TestReportNumberOfMirrorMemoryDTCByStatusMask(ClientServerTest, GenericTest_RequestStatusMask_ResponseNumberOfDTC):	# Subfn = 0x11
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
+        self.set_standard(2013) # Removed starting form 2020
         GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x11, client_function = 'get_mirrormemory_number_of_dtc_by_status_mask')
 
 class TestReportNumberOfEmissionsRelatedOBDDTCByStatusMask(ClientServerTest, GenericTest_RequestStatusMask_ResponseNumberOfDTC):	# Subfn = 0x12
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
+        self.set_standard(2013) # Removed starting form 2020
         GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x12, client_function = 'get_number_of_emission_dtc_by_status_mask')
 
 class TestReportEmissionsRelatedOBDDTCByStatusMask(ClientServerTest, GenericTestStatusMaskRequest_DtcAndStatusMaskResponse):	# Subfn = 0x13
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
+        self.set_standard(2013) # Removed starting form 2020
         GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x13, client_function = 'get_emission_dtc_by_status_mask')
 
 class TestReportDTCFaultDetectionCounter(ClientServerTest):	# Subfn = 0x14
@@ -3417,7 +3422,7 @@ class TestReportUserDefMemoryDTCByStatusMask(ClientServerTest): # Subfn = 0x17
             self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x12, 'aaa')
 
         with self.assertRaises(NotImplementedError):
-            self.udsclient.set_config('standard_version', 2013)
+            self.udsclient.set_config('standard_version', 2006)
             self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x10, 0x20)
         self.udsclient.set_config('standard_version', latest_standard)
 
