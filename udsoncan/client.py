@@ -14,7 +14,8 @@ from udsoncan.BaseService import BaseService
 
 from udsoncan.exceptions import *
 from udsoncan.configs import default_client_config
-from udsoncan.typing import ClientConfig, TypedDict
+from udsoncan.typing import ClientConfig
+from udsoncan import valid_standards
 import logging
 import binascii
 import functools
@@ -160,7 +161,7 @@ class Client:
         self.validate_config()
 
     def validate_config(self) -> None:
-        if self.config['standard_version'] not in [2006, 2013, 2020]:
+        if self.config['standard_version'] not in valid_standards:
             raise ConfigError('Valid standard versions are 2006, 2013, 2020. %s is not supported' % self.config['standard_version'])
 
     # Decorator to apply on functions that the user will call.

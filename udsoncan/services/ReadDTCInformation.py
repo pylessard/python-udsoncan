@@ -1,5 +1,5 @@
 import struct
-from udsoncan import Dtc, check_did_config, make_did_codec_from_definition, fetch_codec_definition_from_config, latest_standard, DIDConfig
+from udsoncan import Dtc, check_did_config, make_did_codec_from_definition, fetch_codec_definition_from_config, latest_standard, valid_standards, DIDConfig
 from udsoncan.Request import Request
 from udsoncan.Response import Response
 from udsoncan.exceptions import *
@@ -168,10 +168,12 @@ class ReadDTCInformation(BaseService):
                 tools.validate_int(extended_data_size[dtcid], min=0, max=0xFFF, name='Extended data size for DTC=0x%06x' % dtcid)
 
     @classmethod
-    def assert_functional_group_id(cls, functional_group_id: Optional[int], subfunction) -> None:
+    def assert_functional_group_id(cls, functional_group_id: Optional[int], subfunction:int) -> None:
         if functional_group_id is None:
             raise ValueError('functional_group_id must be provided for subfunction 0x%02x' % subfunction)
-        tools.validate_int(functional_group_id, min=0, max=0xFE, name='Functional Group ID')
+        # ISO-14229:2020 Disallow a value of 0xFF. But ISO-27145-3 Defines it as "All functional system groups".
+        # Allowing 0xFF because of the ambiguity
+        tools.validate_int(functional_group_id, min=0, max=0xFF, name='Functional Group ID')    
 
     @classmethod
     def pack_dtc(cls, dtcid: int) -> bytes:
@@ -180,6 +182,9 @@ class ReadDTCInformation(BaseService):
     @classmethod
     def check_subfunction_valid(cls, subfunction: int, standard_version: int = latest_standard) -> None:
         tools.validate_int(subfunction, min=1, max=0xFF, name='Subfunction')
+        if standard_version not in valid_standards:
+            raise ValueError(f"Standard version {standard_version} is not valid")
+
         vlist = vars(cls)
         ok = True
         for v in vlist:
@@ -190,20 +195,33 @@ class ReadDTCInformation(BaseService):
             raise ValueError('Unknown subfunction : 0x%02x', subfunction)
 
         # These subfunction have been added in the 2020 version of the standard
-        subfunction2020 = [
-            cls.Subfunction.reportUserDefMemoryDTCByStatusMask,
-            cls.Subfunction.reportDTCExtDataRecordByRecordNumber,
-            cls.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber,
-            cls.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber,
-            cls.Subfunction.reportSupportedDTCExtDataRecord,
-            cls.Subfunction.reportWWHOBDDTCByMaskRecord,
-            cls.Subfunction.reportWWHOBDDTCWithPermanentStatus,
-            cls.Subfunction.reportDTCInformationByDTCReadinessGroupIdentifier,
-        ]
+        subfunction_disallow_map:Dict[int, List[int]] = {
+            2006: [
+                cls.Subfunction.reportDTCExtDataRecordByRecordNumber,
+                cls.Subfunction.reportUserDefMemoryDTCByStatusMask,
+                cls.Subfunction.reportUserDefMemoryDTCSnapshotRecordByDTCNumber,
+                cls.Subfunction.reportUserDefMemoryDTCExtDataRecordByDTCNumber,
+                #cls.Subfunction.reportDTCExtendedDataRecordIdentification, # Not implemented
+                cls.Subfunction.reportWWHOBDDTCByMaskRecord,
+                cls.Subfunction.reportWWHOBDDTCWithPermanentStatus,
+                cls.Subfunction.reportDTCInformationByDTCReadinessGroupIdentifier,
+            ],
+            2013: [
+                #cls.Subfunction.reportDTCExtendedDataRecordIdentification, # Not implemented
+                cls.Subfunction.reportDTCInformationByDTCReadinessGroupIdentifier,
+            ],
+            2020: [
+                cls.Subfunction.reportMirrorMemoryDTCByStatusMask,
+                #cls.Subfunction.reportMirrorMemoryDTCExtDataRecordByDTCNumber, # Not implemented
+                cls.Subfunction.reportNumberOfMirrorMemoryDTCByStatusMask,
+                #cls.Subfunction.reportNumberOfEmissionsOBDDTCByStatusMask, # Not implemented
+                #cls.Subfunction.reportEmissionsOBDDTCByStatusMask, # Not implemented
+            ]
+        }
 
-        if subfunction in subfunction2020 and standard_version < 2020:
-            raise NotImplementedError('The subfunction 0x%02x has been introduced in standard version 2020 but decoding is requested to be done as per %d version' % (
-                subfunction, standard_version))
+        if standard_version in subfunction_disallow_map:
+            if subfunction in subfunction_disallow_map[standard_version]:
+                raise NotImplementedError(f"Subfunction 0x{subfunction:02x} is not allowed by ISO-14229:{standard_version}. Check for a different version of the standard")
 
     @classmethod
     def make_request(cls,
@@ -248,6 +266,8 @@ class ReadDTCInformation(BaseService):
 
 
         :raises ValueError: If parameters are out of range, missing or wrong type
+        :raises NotImplementedError: If the requested subfunction is not supported by the active ISO-14229 standard version
+
         """
 
         # Request grouping for subfunctions that have the same request format
@@ -391,11 +411,11 @@ class ReadDTCInformation(BaseService):
         elif subfunction == ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord:
             cls.assert_status_mask(status_mask, subfunction)
             cls.assert_severity_mask(severity_mask, subfunction)
-            cls.assert_functional_group_id(functional_group_id, subfunction)  # Maximum specified by ISO-14229:2020 
+            cls.assert_functional_group_id(functional_group_id, subfunction)
             req.data = struct.pack('BBB', functional_group_id, status_mask, severity_mask)
        
         elif subfunction == ReadDTCInformation.Subfunction.reportWWHOBDDTCWithPermanentStatus:
-            cls.assert_functional_group_id(functional_group_id, subfunction)  # Maximum specified by ISO-14229:2020 
+            cls.assert_functional_group_id(functional_group_id, subfunction)
             req.data = struct.pack('B', functional_group_id)
 
         return req
@@ -852,9 +872,6 @@ class ReadDTCInformation(BaseService):
                 raise InvalidResponseException(response, 'Incomplete response from server. Missing DTCExtDataRecordNumber')
 
             record_number = int(response.data[1])
-            if record_number > 0xEF:
-                raise InvalidResponseException(
-                    response, 'Server returned a RecordNumber of %d which is out of range (00-EF) according to ISO-14229:2020', record_number)
 
             actual_byte = 2
             received_dtcs = set()
