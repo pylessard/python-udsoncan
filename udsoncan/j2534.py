@@ -62,7 +62,8 @@ class J2534():
         self.rxid = rxid.to_bytes(4, 'big')
         self.txid = txid.to_bytes(4, 'big')
          # Determine mode ID29 or ID11
-        self.txConnectFlags = TxStatusFlag.ISO15765_CAN_ID_29.value if txid >> 11 else TxStatusFlag.ISO15765_CAN_ID_11.value
+         # If CAN identifier length is 29 bit set the proper flag
+        self.txConnectFlags = TxStatusFlag.ISO15765_CAN_ID_29.value if txid >> 11 else 0
         self.txFlags = self.txConnectFlags | TxStatusFlag.ISO15765_FRAME_PAD.value
 
         self.logger = logging.getLogger()
@@ -357,7 +358,6 @@ class Filter(Enum):
 class TxStatusFlag(Enum):
     ISO15765_CAN_ID_BOTH = 0x00000800
     ISO15765_CAN_ID_29 = 0x00000100
-    ISO15765_CAN_ID_11 = 0x00000040
     ISO15765_FRAME_PAD = 0x00000040
     WAIT_P3_MIN_ONLY = 0x00000200
     SW_CAN_HV_TX = 0x00000400  # OP2.0: Not supported
