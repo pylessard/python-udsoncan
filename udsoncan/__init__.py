@@ -26,10 +26,12 @@ __license__ = 'MIT'
 __author__ = 'Pier-Yves Lessard'
 
 latest_standard = 2020
+valid_standards = [2006,2013,2020]
+
 __default_log_config_file = path.join(path.dirname(path.abspath(__file__)), 'logging.conf')
 
 
-def setup_logging(config_file=__default_log_config_file):
+def setup_logging(config_file:str=__default_log_config_file):
     """
     This function setup the logger accordingly to the module provided cfg file
     """

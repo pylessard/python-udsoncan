@@ -2347,26 +2347,31 @@ class TestReportMostRecentConfirmedDTC(ClientServerTest, GenericTestNoParamReque
 class TestReportMirrorMemoryDTCByStatusMask(ClientServerTest, GenericTestStatusMaskRequest_DtcAndStatusMaskResponse):	# Subfn = 0xF
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
+        self.set_standard(2013) # Removed starting form 2020
         GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0xf, client_function = 'get_mirrormemory_dtc_by_status_mask')
 
 class TestReportMirrorMemoryDTCExtendedDataRecordByDTCNumber(ClientServerTest, GenericReportExtendedDataByRecordNumber):	# Subfn = 0x10
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
+        self.set_standard(2013) # Removed starting form 2020
         GenericReportExtendedDataByRecordNumber.__init__(self, subfunction=0x10, client_function = 'get_mirrormemory_dtc_extended_data_by_dtc_number')
 
 class TestReportNumberOfMirrorMemoryDTCByStatusMask(ClientServerTest, GenericTest_RequestStatusMask_ResponseNumberOfDTC):	# Subfn = 0x11
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
+        self.set_standard(2013) # Removed starting form 2020
         GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x11, client_function = 'get_mirrormemory_number_of_dtc_by_status_mask')
 
 class TestReportNumberOfEmissionsRelatedOBDDTCByStatusMask(ClientServerTest, GenericTest_RequestStatusMask_ResponseNumberOfDTC):	# Subfn = 0x12
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
+        self.set_standard(2013) # Removed starting form 2020
         GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x12, client_function = 'get_number_of_emission_dtc_by_status_mask')
 
 class TestReportEmissionsRelatedOBDDTCByStatusMask(ClientServerTest, GenericTestStatusMaskRequest_DtcAndStatusMaskResponse):	# Subfn = 0x13
     def __init__(self, *args, **kwargs):
         ClientServerTest.__init__(self, *args, **kwargs)
+        self.set_standard(2013) # Removed starting form 2020
         GenericTestStatusMaskRequest_DtcAndStatusMaskResponse.__init__(self, subfunction=0x13, client_function = 'get_emission_dtc_by_status_mask')
 
 class TestReportDTCFaultDetectionCounter(ClientServerTest):	# Subfn = 0x14
@@ -2605,9 +2610,6 @@ class TestreportDTCWWHOBDDTCByMaskRecord(ClientServerTest):   # Subfn = 0x16
         with self.assertRaises(ValueError):
             self.udsclient.get_wwh_obd_dtc_by_status_mask(None, status_mask=2, severity_mask=0xA0, dtc_class=4)
 
-        with self.assertRaises(ValueError):
-            self.udsclient.get_wwh_obd_dtc_by_status_mask(0xff, status_mask=2, severity_mask=0xA0, dtc_class=4)
-
     def assert_no_data_response_with_severity_class(self, response):
         self.assertEqual(len(response.service_data.dtcs), 0)
         self.assertEqual(response.service_data.dtc_count, 0)
@@ -2732,8 +2734,6 @@ class TestreportWWHOBDDTCWithPermanentStatus(ClientServerTest):   # Subfn = 0x16
         with self.assertRaises(ValueError):
             self.udsclient.get_wwh_obd_dtc_with_permanent_status(None)
 
-        with self.assertRaises(ValueError):
-            self.udsclient.get_wwh_obd_dtc_with_permanent_status(0xff)
 
     def assert_no_data_response_with_severity_class(self, response):
         self.assertEqual(len(response.service_data.dtcs), 0)
@@ -3092,10 +3092,10 @@ class TestreportDTCExtDataRecordByRecordNumber(ClientServerTest):   # Subfn = 0x
         pass
 
     def _test_record_number_out_of_range_response_exception(self):
-        response = Response(service = ReadDTCInformation, code = Response.Code.PositiveResponse, data = self.sb + b'\xF0\x12\x34\x56\x20\x01\x02\x03\x04\x05')
+        response = Response(service = ReadDTCInformation, code = Response.Code.PositiveResponse, data = self.sb + b'\xF0\x12\x34\x56\x20\x01\x02\x03\x04')
         
         with self.assertRaises(InvalidResponseException):  
-            # Do not go thourgh the client because out of range would raised at request time.
+            # Do not go through the client because out of range would raised at request time.
             ReadDTCInformation.interpret_response(response, ReadDTCInformation.Subfunction.reportDTCExtDataRecordByRecordNumber, extended_data_size={0x123456 : 5})
 
     def test_duplicate_dtc(self):
@@ -3126,7 +3126,7 @@ class TestreportDTCExtDataRecordByRecordNumber(ClientServerTest):   # Subfn = 0x
             self.udsclient.get_dtc_extended_data_by_record_number(record_number = 'asd', data_size=5)
 
         with self.assertRaises(NotImplementedError):
-            self.udsclient.set_config('standard_version', 2013)
+            self.udsclient.set_config('standard_version', 2006)
             self.udsclient.get_dtc_extended_data_by_record_number(record_number = 0x33, data_size=5)
         self.udsclient.set_config('standard_version', latest_standard)    
 
@@ -3417,7 +3417,7 @@ class TestReportUserDefMemoryDTCByStatusMask(ClientServerTest): # Subfn = 0x17
             self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x12, 'aaa')
 
         with self.assertRaises(NotImplementedError):
-            self.udsclient.set_config('standard_version', 2013)
+            self.udsclient.set_config('standard_version', 2006)
             self.udsclient.get_user_defined_memory_dtc_by_status_mask(0x10, 0x20)
         self.udsclient.set_config('standard_version', latest_standard)
 
@@ -3857,7 +3857,7 @@ class TestReportUserDefMemoryDTCSnapshotRecordByDTCNumber(ClientServerTest): # S
             self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x100)
 
         with self.assertRaises(NotImplementedError):
-            self.udsclient.set_config('standard_version', 2013)
+            self.udsclient.set_config('standard_version', 2006)
             self.udsclient.get_user_defined_dtc_snapshot_by_dtc_number(dtc=0x123456, record_number=0x02, memory_selection = 0x99)
         self.udsclient.set_config('standard_version', latest_standard)
 
@@ -4182,7 +4182,7 @@ class TestTeportUserDefMemoryDTCExtDataRecordByDTCNumber(ClientServerTest): # Su
 
 
         with self.assertRaises(NotImplementedError):
-            self.udsclient.set_config('standard_version', 2013)
+            self.udsclient.set_config('standard_version', 2006)
             self.udsclient.get_user_defined_dtc_extended_data_by_dtc_number(dtc=0x123456, data_size=3, record_number=0x99, memory_selection=0x88)  
         self.udsclient.set_config('standard_version', latest_standard)          
 
