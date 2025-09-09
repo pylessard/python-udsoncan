@@ -948,9 +948,8 @@ class ReadDTCInformation(BaseService):
             else:
                 raise NotImplementedError("Unreachable code")
 
-            if response.service_data.functional_group_id > 0xFE:
-                raise InvalidResponseException(response, "FunctionalGroupIdentifier returned by the server is not smaller or equal than 0xFE")
-            
+            # Don't check functional_group_id on purpose. range 0 to FF is accepted
+
             if response.service_data.dtc_format not in [Dtc.Format.SAE_J2012_DA_DTCFormat_04, Dtc.Format.SAE_J1939_73]:
                 raise InvalidResponseException(response, "DTCFormatIdentifier returned by the server is not one of the following: SAE_J2012-DA_DTCFormat_04 (4), SAE_J1939-73_DTCFormat(2). Got 0x%02x" % response.service_data.dtc_format)
 
