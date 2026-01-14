@@ -206,7 +206,7 @@ class J2534():
         result = dllPassThruDisconnect(ChannelID)
         return Error_ID(hex(result))
 
-    def PassThruReadMsgs(self, ChannelID, protocol, pNumMsgs=1, Timeout=100):
+    def PassThruReadMsgs(self, ChannelID, protocol, pNumMsgs=1, Timeout=20):
         pMsg = PASSTHRU_MSG()
         pMsg.ProtocolID = protocol
 
@@ -218,7 +218,7 @@ class J2534():
             if hex(result) == Error_ID.ERR_BUFFER_EMPTY.value or pNumMsgs == 0:
                 return None, None, 0
 
-            if pMsg.RxStatus & (RxStatus.TX_INDICATION.value | RxStatus.TX_MSG_TYPE.value):
+            if pMsg.RxStatus & (RxStatus.TX_INDICATION.value | RxStatus.TX_MSG_TYPE.value | RxStatus.START_OF_MESSAGE.value):
                 continue
 
             return Error_ID(hex(result)), bytes(pMsg.Data[4:pMsg.DataSize]), pNumMsgs
