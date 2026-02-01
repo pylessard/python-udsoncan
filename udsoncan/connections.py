@@ -969,10 +969,13 @@ class SyncAioIsotpConnection(BaseConnection):
 
     def specific_send(self, payload: bytes, timeout: Optional[float] = None) -> None:
         self.check_connection_opened()
+        assert self.conn is not None
+
         self.conn.send(payload)
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         self.check_connection_opened()
+        assert self.conn is not None
 
         frame = cast(Optional[bytes], self.conn.recv(timeout))
 
