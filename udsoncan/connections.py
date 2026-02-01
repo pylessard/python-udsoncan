@@ -78,7 +78,7 @@ class BaseConnection(ABC):
         else:
             self.specific_send(payload)
 
-    def check_connection_opened(self):
+    def check_connection_opened(self) -> None:
         if not self.is_open():
             raise RuntimeError(self.__class__.__name__ + ' is not opened')
 
@@ -998,7 +998,7 @@ class SyncAioIsotpConnection(BaseConnection):
             self.conn.empty()
 
     def is_open(self) -> bool:
-        return self.conn and self.opened
+        return self.conn is not None and self.opened
 
     def __enter__(self) -> "SyncAioIsotpConnection":
         return self
