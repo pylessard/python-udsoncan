@@ -23,7 +23,7 @@ except Exception as e:
     _import_isotp_err = e
 
 try:
-    from udsoncan.j2534 import J2534, TxStatusFlag, Protocol_ID, Error_ID, Ioctl_Flags, Ioctl_ID, SCONFIG_LIST
+    from udsoncan.j2534 import J2534, Protocol_ID, Error_ID, Ioctl_Flags, Ioctl_ID, SCONFIG_LIST
     _import_j2534_err = None
 except Exception as e:
     _import_j2534_err = e
@@ -63,8 +63,7 @@ class BaseConnection(ABC):
 
         :returns: None
         """
-        if not self.is_open():
-            raise RuntimeError("Connection is not opened")
+        self.check_connection_opened()
 
         if isinstance(data, Request) or isinstance(data, Response):
             payload = data.get_payload()
@@ -79,6 +78,10 @@ class BaseConnection(ABC):
         else:
             self.specific_send(payload)
 
+    def check_connection_opened(self) -> None:
+        if not self.is_open():
+            raise RuntimeError(self.__class__.__name__ + ' is not opened')
+
     def wait_frame(self, timeout: Optional[float] = None, exception: bool = False) -> Optional[bytes]:
         """Waits for the reception of a frame of data from the underlying transport protocol
 
@@ -92,8 +95,7 @@ class BaseConnection(ABC):
         :returns: Received data
         :rtype: bytes or None
         """
-        if not self.is_open():
-            raise RuntimeError("Connection is not opened")
+        self.check_connection_opened()
 
         try:
             frame = self.specific_wait_frame(timeout=timeout)
@@ -243,20 +245,12 @@ class SocketConnection(BaseConnection):
         self.sock.send(payload)
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
-        if not self.opened:
-            raise RuntimeError("Connection is not open")
+        self.check_connection_opened()
 
-        timedout = False
-        frame = None
         try:
-            frame = self.rxqueue.get(block=True, timeout=timeout)
+            return self.rxqueue.get(block=True, timeout=timeout)
         except queue.Empty:
-            timedout = True
-
-        if timedout:
             raise TimeoutException("Did not received frame in time (timeout=%s sec)" % timeout)
-
-        return frame
 
     def empty_rxqueue(self) -> None:
         while not self.rxqueue.empty():
@@ -359,21 +353,12 @@ class IsoTPSocketConnection(BaseConnection):
         self.tpsock.send(payload)
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
-        if not self.opened:
-            raise RuntimeError("Connection is not open")
+        self.check_connection_opened()
 
-        timedout = False
-        frame = None
         try:
-            frame = self.rxqueue.get(block=True, timeout=timeout)
-
+            return self.rxqueue.get(block=True, timeout=timeout)
         except queue.Empty:
-            timedout = True
-
-        if timedout:
             raise TimeoutException("Did not received ISOTP frame in time (timeout=%s sec)" % timeout)
-
-        return frame
 
     def empty_rxqueue(self) -> None:
         while not self.rxqueue.empty():
@@ -442,17 +427,12 @@ class QueueConnection(BaseConnection):
         self.touserqueue.put(payload, block=True, timeout=timeout)
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
-        if not self.opened:
-            raise RuntimeError("Connection is not open")
+        self.check_connection_opened()
 
-        timedout = False
         frame = None
         try:
             frame = self.fromuserqueue.get(block=True, timeout=timeout)
         except queue.Empty:
-            timedout = True
-
-        if timedout:
             raise TimeoutException("Did not receive frame from user queue in time (timeout=%s sec)" % timeout)
 
         if self.mtu is not None:
@@ -577,8 +557,7 @@ class PythonIsoTpV2Connection(BaseConnection):
         self.isotp_layer.send(payload, send_timeout=timeout)
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
-        if not self.opened:
-            raise RuntimeError("Connection is not opened")
+        self.check_connection_opened()
 
         frame = self.isotp_layer.recv(block=True, timeout=timeout)
         if frame is None:
@@ -649,24 +628,14 @@ class PythonIsoTpV1Connection(BaseConnection):
         self.toIsoTPQueue.put(bytearray(payload))  # isotp.protocol.TransportLayer uses byte array. udsoncan is strict on bytes format
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
-        if not self.opened:
-            raise RuntimeError("Connection is not open")
+        self.check_connection_opened()
 
-        timedout = False
-        frame = None
         try:
             frame = self.fromIsoTPQueue.get(block=True, timeout=timeout)
+            # isotp.protocol.TransportLayer uses bytearray. udsoncan is strict on bytes format
+            return bytes(frame)
         except queue.Empty:
-            timedout = True
-
-        if timedout:
             raise TimeoutException("Did not receive IsoTP frame from the Transport layer in time (timeout=%s sec)" % timeout)
-
-        if frame is None:
-            return None
-
-        # isotp.protocol.TransportLayer uses bytearray. udsoncan is strict on bytes format
-        return bytes(frame)
 
     def empty_rxqueue(self) -> None:
         while not self.fromIsoTPQueue.empty():
@@ -776,13 +745,26 @@ class J2534Connection(BaseConnection):
         self.result, self.channelID = self.interface.PassThruConnect(self.devID, self.protocol.value, self.baudrate)
         self.log_last_operation("PassThruConnect", with_raise=True)
 
-        configs = SCONFIG_LIST([
+        configs = [
             (Ioctl_ID.DATA_RATE.value, self.baudrate),
             (Ioctl_ID.LOOPBACK.value, 0),
-            (Ioctl_ID.ISO15765_BS.value, 0x20),
-            (Ioctl_ID.ISO15765_STMIN.value, 0),
-        ])
-        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.SET_CONFIG, configs)
+        ]
+        if self.protocol in [Protocol_ID.ISO9141, Protocol_ID.ISO14230]:
+            configs += [
+                (Ioctl_ID.P1_MAX.value, 40),
+                (Ioctl_ID.P3_MIN.value, 110),
+                (Ioctl_ID.P4_MIN.value, 10),
+                (Ioctl_ID.TIDLE.value,  300),
+                (Ioctl_ID.TWUP.value,   50),
+                (Ioctl_ID.TINL.value,   25),
+            ]
+        elif self.protocol in [Protocol_ID.ISO15765]:
+            configs += [
+                (Ioctl_ID.ISO15765_BS.value, 0x20),
+                (Ioctl_ID.ISO15765_STMIN.value, 0),
+            ]
+
+        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.SET_CONFIG, SCONFIG_LIST(configs))
         self.log_last_operation("PassThruIoctl SET_CONFIG")
 
         self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_MSG_FILTERS)
@@ -804,7 +786,7 @@ class J2534Connection(BaseConnection):
 
     def open(self) -> "J2534Connection":
         self.exit_requested = False
-        self.sem = threading.Semaphore()
+        self.interfaceSemaphore = threading.Semaphore()
         self.rxthread = threading.Thread(target=self.rxthread_task, daemon=True)
         self.rxthread.start()
         self.opened = True
@@ -822,15 +804,15 @@ class J2534Connection(BaseConnection):
 
     def rxthread_task(self) -> None:
         while not self.exit_requested:
-            self.sem.acquire()
+            self.interfaceSemaphore.acquire()
             try:
-                result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 1)
+                result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, pNumMsgs=1)
                 if data is not None:
                     self.rxqueue.put(data)
             except Exception:
                 self.logger.critical("Exiting J2534 rx thread")
                 self.exit_requested = True
-            self.sem.release()
+            self.interfaceSemaphore.release()
             time.sleep(0.001)
 
     def log_last_operation(self, exec_method: str, with_raise = False) -> None:
@@ -860,26 +842,18 @@ class J2534Connection(BaseConnection):
         timeout = 0 if timeout is None else timeout
 
         # Fix for avoid ERR_CONCURRENT_API_CALL. Stop reading
-        self.sem.acquire()
+        self.interfaceSemaphore.acquire()
         self.result = self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value, Timeout=int(timeout * 1000))
         self.log_last_operation('PassThruWriteMsgs', with_raise=True)
-        self.sem.release()
+        self.interfaceSemaphore.release()
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
-        if not self.opened:
-            raise RuntimeError("J2534 Connection is not open")
+        self.check_connection_opened()
 
-        timedout = False
-        frame = None
         try:
-            frame = self.rxqueue.get(block=True, timeout=timeout)
+            return self.rxqueue.get(block=True, timeout=timeout)
         except queue.Empty:
-            timedout = True
-
-        if timedout:
             raise TimeoutException("Did not received response from J2534 RxQueue (timeout=%s sec)" % timeout)
-
-        return frame
 
     def empty_rxqueue(self) -> None:
         while not self.rxqueue.empty():
@@ -942,20 +916,12 @@ class FakeConnection(BaseConnection):
         self.rxqueue.put(self.ResponseData[payload])
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
-        if not self.opened:
-            raise RuntimeError("Fake Connection is not open")
+        self.check_connection_opened()
 
-        timedout = False
-        frame = None
         try:
-            frame = self.rxqueue.get(block=True, timeout=timeout)
+            return self.rxqueue.get(block=True, timeout=timeout)
         except queue.Empty:
-            timedout = True
-
-        if timedout:
             raise TimeoutException("Did not received response from J2534 RxQueue (timeout=%s sec)" % timeout)
-
-        return frame
 
     def empty_rxqueue(self) -> None:
         while not self.rxqueue.empty():
@@ -1002,13 +968,14 @@ class SyncAioIsotpConnection(BaseConnection):
         self.opened = False
 
     def specific_send(self, payload: bytes, timeout: Optional[float] = None) -> None:
-        if self.conn is None or not self.opened:
-            raise RuntimeError("Connection is not opened")
+        self.check_connection_opened()
+        assert self.conn is not None
+
         self.conn.send(payload)
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
-        if not self.opened or self.conn is None:
-            raise RuntimeError("Connection is not open")
+        self.check_connection_opened()
+        assert self.conn is not None
 
         frame = cast(Optional[bytes], self.conn.recv(timeout))
 
@@ -1034,7 +1001,7 @@ class SyncAioIsotpConnection(BaseConnection):
             self.conn.empty()
 
     def is_open(self) -> bool:
-        return self.opened
+        return self.conn is not None and self.opened
 
     def __enter__(self) -> "SyncAioIsotpConnection":
         return self

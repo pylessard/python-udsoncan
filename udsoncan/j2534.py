@@ -61,9 +61,12 @@ class J2534():
         self.hDLL = ctypes.cdll.LoadLibrary(windll)
         self.rxid = rxid.to_bytes(4, 'big')
         self.txid = txid.to_bytes(4, 'big')
-         # Determine mode ID29 or ID11
-        self.txConnectFlags = TxStatusFlag.ISO15765_CAN_ID_29.value if txid >> 11 else TxStatusFlag.ISO15765_CAN_ID_11.value
-        self.txFlags = self.txConnectFlags | TxStatusFlag.ISO15765_FRAME_PAD.value
+        self.txFlags = TxFlags.ISO15765_FRAME_PAD.value
+        self.connectFlags = ConnectFlags.NONE.value
+        # Determine mode ID29 or ID11
+        if txid >> 11:
+            self.txFlags |= TxFlags.CAN_29_BIT_ID.value
+            self.connectFlags |= ConnectFlags.CAN_29_BIT_ID.value
 
         self.logger = logging.getLogger()
 
@@ -192,7 +195,7 @@ class J2534():
         if not pChannelID:
             pChannelID = c_ulong()
 
-        result = dllPassThruConnect(deviceID, protocol, self.txConnectFlags, baudrate, byref(pChannelID))
+        result = dllPassThruConnect(deviceID, protocol, self.connectFlags, baudrate, byref(pChannelID))
         return Error_ID(hex(result)), pChannelID
 
     def PassThruClose(self, DeviceID):
@@ -203,7 +206,7 @@ class J2534():
         result = dllPassThruDisconnect(ChannelID)
         return Error_ID(hex(result))
 
-    def PassThruReadMsgs(self, ChannelID, protocol, pNumMsgs=1, Timeout=100):
+    def PassThruReadMsgs(self, ChannelID, protocol, pNumMsgs=1, Timeout=20):
         pMsg = PASSTHRU_MSG()
         pMsg.ProtocolID = protocol
 
@@ -212,15 +215,18 @@ class J2534():
         while 1:
             # breakpoint()
             result = dllPassThruReadMsgs(ChannelID, byref(pMsg), byref(pNumMsgs), c_ulong(Timeout))
-            if Error_ID(hex(result)) == Error_ID.ERR_BUFFER_EMPTY or pNumMsgs == 0:
+            if hex(result) == Error_ID.ERR_BUFFER_EMPTY.value or pNumMsgs == 0:
                 return None, None, 0
-            elif pMsg.RxStatus in [0, 0x100, 0x110]:
-                return Error_ID(hex(result)), bytes(pMsg.Data[4:pMsg.DataSize]), pNumMsgs
+
+            if pMsg.RxStatus & (RxStatus.TX_INDICATION.value | RxStatus.TX_MSG_TYPE.value | RxStatus.START_OF_MESSAGE.value):
+                continue
+
+            return Error_ID(hex(result)), bytes(pMsg.Data[4:pMsg.DataSize]), pNumMsgs
 
     def PassThruWriteMsgs(self, ChannelID, Data, protocol, pNumMsgs=1, Timeout=1000):
         txmsg = PASSTHRU_MSG()
         txmsg.TxFlags = self.txFlags
-        txmsg.ProtocolID = protocol;
+        txmsg.ProtocolID = protocol
 
         Data = self.txid + Data
         self.logger.info("Sending data: " + str(Data.hex()))
@@ -288,18 +294,23 @@ class J2534():
         for i in range(0, len(self.rxid)):
             msgPattern.Data[i] = self.rxid[i]
 
-        msgFlow = PASSTHRU_MSG()
-        msgFlow.ProtocolID = protocol;
-        msgFlow.TxFlags = self.txFlags
-        msgFlow.DataSize = 4
-        msgFlow.RxStatus = msgFlow.ExtraDataIndex = 0xCCCC_CCCC
-        for i in range(0, len(self.txid)):
-            msgFlow.Data[i] = self.txid[i]
+        if protocol in [Protocol_ID.ISO9141.value, Protocol_ID.ISO14230.value]:
+            filterType = c_ulong(Filter.PASS_FILTER.value)
+            msgFlow = None
+        else:
+            filterType = c_ulong(Filter.FLOW_CONTROL_FILTER.value)
+            msgFlow = PASSTHRU_MSG()
+            msgFlow.ProtocolID = protocol
+            msgFlow.TxFlags = self.txFlags
+            msgFlow.DataSize = 4
+            msgFlow.RxStatus = msgFlow.ExtraDataIndex = 0xCCCC_CCCC
+            for i in range(0, len(self.txid)):
+                msgFlow.Data[i] = self.txid[i]
+            msgFlow = byref(msgFlow)
 
-        filterType = c_ulong(Filter.FLOW_CONTROL_FILTER.value)
         msgID = c_ulong(0)
 
-        result = dllPassThruStartMsgFilter(ChannelID, filterType, byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
+        result = dllPassThruStartMsgFilter(ChannelID, filterType, byref(msgMask), byref(msgPattern), msgFlow, byref(msgID))
 
         return Error_ID(hex(result))
 
@@ -354,15 +365,76 @@ class Filter(Enum):
     FLOW_CONTROL_FILTER = 0x00000003
 
 
-class TxStatusFlag(Enum):
-    ISO15765_CAN_ID_BOTH = 0x00000800
-    ISO15765_CAN_ID_29 = 0x00000100
-    ISO15765_CAN_ID_11 = 0x00000040
+class ConnectFlags(Enum):
+    NONE = 0
+    CAN_29_BIT_ID = 0x100
+    ISO9141_NO_CHECKSUM = 0x200
+    CAN_ID_BOTH = 0x800
+    ISO9141_K_LINE_ONLY = 0x1000
+
+
+class TxFlags(Enum):
+    NONE = 0
+    # 0 = no padding
+    # 1 = pad all flow controlled messages to a full CAN frame using zeroes
     ISO15765_FRAME_PAD = 0x00000040
+
+    ISO15765_ADDR_TYPE = 0x00000080
+    CAN_29_BIT_ID = 0x00000100
+
+    # 0 = Interface message timing as specified in ISO 14230
+    # 1 = After a response is received for a physical request, the wait time shall be reduced to P3_MIN
+    # Does not affect timing on responses to functional requests
     WAIT_P3_MIN_ONLY = 0x00000200
-    SW_CAN_HV_TX = 0x00000400  # OP2.0: Not supported
-    SCI_MODE = 0x00400000  # OP2.0: Not supported
-    SCI_TX_VOLTAGE = 0x00800000  # OP2.0: Not supported
+
+    SW_CAN_HV_TX = 0x00000400
+
+    # 0 = Transmit using SCI Full duplex mode
+    # 1 = Transmit using SCI Half duplex mode
+    SCI_MODE = 0x00400000
+
+    # 0 = no voltage after message transmit
+    # 1 = apply 20V after message transmit
+    SCI_TX_VOLTAGE = 0x00800000
+
+    DT_PERIODIC_UPDATE = 0x10000000
+
+
+class RxStatus(Enum):
+    NONE = 0
+    # 0 = received
+    # 1 = transmitted
+    TX_MSG_TYPE  = 0x00000001
+
+    # 0 = Not a start of message indication
+    # 1 = First byte or frame received
+    START_OF_MESSAGE = 0x00000002
+    ISO15765_FIRST_FRAME = 0x00000002  
+
+    ISO15765_EXT_ADDR = 0x00000080
+
+    # 0 = No break received
+    # 1 = Break received
+    RX_BREAK = 0x00000004
+
+    # 0 = No TxDone
+    # 1 = TxDone
+    TX_INDICATION = 0x00000008
+    TX_DONE = 0x00000008
+
+    # 0 = No Error
+    # 1 = Padding Error
+    ISO15765_PADDING_ERROR = 0x00000010
+
+    # 0 = no extended address,
+    # 1 = extended address is first byte after the CAN ID
+    ISO15765_ADDR_TYPE = 0x00000080
+
+    CAN_29_BIT_ID = 0x00000100
+
+    SW_CAN_NS_RX = 0x00040000
+    SW_CAN_HS_RX = 0x00020000
+    SW_CAN_HV_RX = 0x00010000
 
 
 class Ioctl_ID(Enum):
