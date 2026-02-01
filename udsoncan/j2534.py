@@ -294,18 +294,23 @@ class J2534():
         for i in range(0, len(self.rxid)):
             msgPattern.Data[i] = self.rxid[i]
 
-        msgFlow = PASSTHRU_MSG()
-        msgFlow.ProtocolID = protocol
-        msgFlow.TxFlags = self.txFlags
-        msgFlow.DataSize = 4
-        msgFlow.RxStatus = msgFlow.ExtraDataIndex = 0xCCCC_CCCC
-        for i in range(0, len(self.txid)):
-            msgFlow.Data[i] = self.txid[i]
+        if protocol in [Protocol_ID.ISO9141.value, Protocol_ID.ISO14230.value]:
+            filterType = c_ulong(Filter.PASS_FILTER.value)
+            msgFlow = None
+        else:
+            filterType = c_ulong(Filter.FLOW_CONTROL_FILTER.value)
+            msgFlow = PASSTHRU_MSG()
+            msgFlow.ProtocolID = protocol
+            msgFlow.TxFlags = self.txFlags
+            msgFlow.DataSize = 4
+            msgFlow.RxStatus = msgFlow.ExtraDataIndex = 0xCCCC_CCCC
+            for i in range(0, len(self.txid)):
+                msgFlow.Data[i] = self.txid[i]
+            msgFlow = byref(msgFlow)
 
-        filterType = c_ulong(Filter.FLOW_CONTROL_FILTER.value)
         msgID = c_ulong(0)
 
-        result = dllPassThruStartMsgFilter(ChannelID, filterType, byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
+        result = dllPassThruStartMsgFilter(ChannelID, filterType, byref(msgMask), byref(msgPattern), msgFlow, byref(msgID))
 
         return Error_ID(hex(result))
 
