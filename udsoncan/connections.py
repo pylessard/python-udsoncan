@@ -745,13 +745,26 @@ class J2534Connection(BaseConnection):
         self.result, self.channelID = self.interface.PassThruConnect(self.devID, self.protocol.value, self.baudrate)
         self.log_last_operation("PassThruConnect", with_raise=True)
 
-        configs = SCONFIG_LIST([
+        configs = [
             (Ioctl_ID.DATA_RATE.value, self.baudrate),
             (Ioctl_ID.LOOPBACK.value, 0),
-            (Ioctl_ID.ISO15765_BS.value, 0x20),
-            (Ioctl_ID.ISO15765_STMIN.value, 0),
-        ])
-        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.SET_CONFIG, configs)
+        ]
+        if self.protocol in [Protocol_ID.ISO9141, Protocol_ID.ISO14230]:
+            configs += [
+                (Ioctl_ID.P1_MAX.value, 40),
+                (Ioctl_ID.P3_MIN.value, 110),
+                (Ioctl_ID.P4_MIN.value, 10),
+                (Ioctl_ID.TIDLE.value,  300),
+                (Ioctl_ID.TWUP.value,   50),
+                (Ioctl_ID.TINL.value,   25),
+            ]
+        elif self.protocol in [Protocol_ID.ISO15765]:
+            configs += [
+                (Ioctl_ID.ISO15765_BS.value, 0x20),
+                (Ioctl_ID.ISO15765_STMIN.value, 0),
+            ]
+
+        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.SET_CONFIG, SCONFIG_LIST(configs))
         self.log_last_operation("PassThruIoctl SET_CONFIG")
 
         self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_MSG_FILTERS)
