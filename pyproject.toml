@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = [ "version" ]
+name = "udsoncan"
+description = "Implementation of the Unified Diagnostic Service (UDS) protocol (ISO-14229) used in the automotive industry."
+readme = "README.rst"
+authors = [
+  { name = "Pier-Yves Lessard", email = "py.lessard@gmail.com" }
+]
+license = "MIT"
+keywords = [
+  "uds",
+  "14229",
+  "iso-14229",
+  "diagnostic",
+  "automotive",
+]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Development Status :: 4 - Beta",
+  "Operating System :: POSIX :: Linux",
+  "Intended Audience :: Developers",
+  "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator"
+]
+requires-python = ">= 3.7"
+
+[project.optional-dependencies]
+test = [
+  "mypy",
+  "coverage",
+  "aioisotp",
+]
+dev = [
+  "mypy",
+  "ipdb",
+  "autopep8",
+  "coverage",
+]
+
+[project.urls]
+Homepage = "https://github.com/pylessard/python-udsoncan"
