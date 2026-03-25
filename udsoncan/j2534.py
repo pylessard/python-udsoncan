@@ -347,16 +347,60 @@ class Error_ID(Enum):
 
 
 class Protocol_ID(Enum):
-    J1850VPW = 1
-    J1850PWM = 2
-    ISO9141 = 3
-    ISO14230 = 4
-    CAN = 5
-    ISO15765 = 6
-    SCI_A_ENGINE = 7  # OP2.0: Not supported
-    SCI_A_TRANS = 8  # OP2.0: Not supported
-    SCI_B_ENGINE = 9  # OP2.0: Not supported
-    SCI_B_TRANS = 10  # OP2.0: Not supported
+    J1850VPW         = 1
+    J1850PWM         = 2
+    ISO9141          = 3
+    ISO14230         = 4
+    CAN              = 5
+    ISO15765         = 6
+    SCI_A_ENGINE     = 7  # OP2.0: Not supported
+    SCI_A_TRANS      = 8  # OP2.0: Not supported
+    SCI_B_ENGINE     = 9  # OP2.0: Not supported
+    SCI_B_TRANS      = 10 # OP2.0: Not supported
+
+    J1850VPW_PS      = 0x8000
+    J1850PWM_PS      = 0x8001
+    ISO9141_PS       = 0x8002
+    ISO14230_PS      = 0x8003
+    CAN_PS           = 0x8004
+    ISO15765_PS      = 0x8005
+    J2610_PS         = 0x8006
+    SW_ISO15765_PS   = 0x8007
+    SW_CAN_PS        = 0x8008
+    GM_UART_PS       = 0x8009
+    CAN_XON_XOFF_PS  = 0x800A
+    ANALOG_IN_1      = 0x800B
+    ANALOG_IN_2      = 0x800C
+    ANALOG_IN_3      = 0x800D
+    ANALOG_IN_4      = 0x800E
+    ANALOG_IN_5      = 0x800F
+    ANALOG_IN_6      = 0x8010
+    ANALOG_IN_7      = 0x8011
+    ANALOG_IN_8      = 0x8012
+    ANALOG_IN_9      = 0x8013
+    ANALOG_IN_10     = 0x8014
+    ANALOG_IN_11     = 0x8015
+    ANALOG_IN_12     = 0x8016
+    ANALOG_IN_13     = 0x8017
+    ANALOG_IN_14     = 0x8018
+    ANALOG_IN_15     = 0x8019
+    ANALOG_IN_16     = 0x801A
+    ANALOG_IN_17     = 0x801B
+    ANALOG_IN_18     = 0x801C
+    ANALOG_IN_19     = 0x801D
+    ANALOG_IN_20     = 0x801E
+    ANALOG_IN_21     = 0x801F
+    ANALOG_IN_22     = 0x8020
+    ANALOG_IN_23     = 0x8021
+    ANALOG_IN_24     = 0x8022
+    ANALOG_IN_25     = 0x8023
+    ANALOG_IN_26     = 0x8024
+    ANALOG_IN_27     = 0x8025
+    ANALOG_IN_28     = 0x8026
+    ANALOG_IN_29     = 0x8027
+    ANALOG_IN_30     = 0x8028
+    ANALOG_IN_31     = 0x8029
+    ANALOG_IN_32     = 0x802A
 
 
 class Filter(Enum):
@@ -488,6 +532,21 @@ class Ioctl_ID(Enum):
     STMIN_TX = 0x23
     T3_MAX = 0x24
     ISO15765_WFT_MAX = 0x25
+
+    # J2534-2
+    CAN_MIXED_FORMAT          = 0x8000
+    J1962_PINS                = 0x8001
+    SW_CAN_HS_DATA_RATE       = 0x8010
+    SW_CAN_SPEEDCHANGE_ENABLE = 0x8011
+    SW_CAN_RES_SWITCH         = 0x8012
+    ACTIVE_CHANNELS           = 0x8020 # Bitmask of channels being sampled
+    SAMPLE_RATE               = 0x8021 # Samples/second or Seconds/sample
+    SAMPLES_PER_READING       = 0x8022 # Samples to average into a single reading
+    READINGS_PER_MSG          = 0x8023 # Number of readings for each active channel per PASSTHRU_MSG structure
+    AVERAGING_METHOD          = 0x8024 # The way in which the samples will be averaged.
+    SAMPLE_RESOLUTION         = 0x8025 # The number of bits of resolution for each channel in the subsystem. Read Only.
+    INPUT_RANGE_LOW           = 0x8026 # Lower limit in millivolts of A/D input. Read Only.
+    INPUT_RANGE_HIGH          = 0x8027 # Upper limit in millivolts of A/D input. Read Only.
 
 
 class Ioctl_Flags(Enum):
