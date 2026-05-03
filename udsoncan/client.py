@@ -21,7 +21,7 @@ import binascii
 import functools
 import time
 
-from typing import Callable, Optional, Union, Dict, List, Any, cast, Type
+from typing import Callable, Optional, Union, Dict, List, Any, cast, Type, Set
 
 
 class SessionTiming:
@@ -108,6 +108,7 @@ class Client:
     last_response: Optional[Response]
     session_timing: SessionTiming
     logger: logging.Logger
+    _unlocked_security_levels: Set[int]
 
     def __init__(self, conn: BaseConnection, config: ClientConfig = default_client_config, request_timeout: Optional[float] = None):
         self.conn = conn
@@ -121,6 +122,7 @@ class Client:
         self.last_response = None
 
         self.session_timing = SessionTiming(p2_server_max=None, p2_star_server_max=None)
+        self._unlocked_security_levels = set()
 
         self.refresh_config()
 
@@ -134,9 +136,27 @@ class Client:
     def open(self) -> None:
         if not self.conn.is_open():
             self.conn.open()
+            self._reset_security_access_state()
 
     def close(self) -> None:
         self.conn.close()
+        self._reset_security_access_state()
+
+    def _reset_security_access_state(self, level: Optional[int] = None) -> None:
+        if level is None:
+            if len(self._unlocked_security_levels) > 0:
+                self.logger.info('Resetting all security access levels')
+                self._unlocked_security_levels.clear()
+        else:
+            normalized_level = services.SecurityAccess.normalize_level(
+                mode=services.SecurityAccess.Mode.RequestSeed, level=level
+            )
+            if normalized_level in self._unlocked_security_levels:
+                self.logger.info('Resetting security access level 0x%02x' % normalized_level)
+                self._unlocked_security_levels.remove(normalized_level)
+
+    def get_unlocked_security_levels(self) -> Set[int]:
+        return set(self._unlocked_security_levels)
 
     def configure_logger(self) -> None:
         logger_name = 'UdsClient'
@@ -259,6 +279,7 @@ class Client:
                 self.session_timing.p2_server_max = response.service_data.p2_server_max
                 self.session_timing.p2_star_server_max = response.service_data.p2_star_server_max
 
+        self._reset_security_access_state()
         return response
 
     @standard_error_management
@@ -323,19 +344,30 @@ class Client:
                          (self.service_log_prefix(services.SecurityAccess), req.subfunction))
         self.logger.debug('\tKey to send [%s]' % (binascii.hexlify(key).decode('ascii')))
 
-        response = self.send_request(req)
-        if response is None:
-            return None
+        normalized_level = services.SecurityAccess.normalize_level(
+            mode=services.SecurityAccess.Mode.RequestSeed, level=level
+        )
 
-        response = services.SecurityAccess.interpret_response(response, mode=services.SecurityAccess.Mode.SendKey)
+        try:
+            response = self.send_request(req)
+            if response is None:
+                return None
 
-        expected_level = services.SecurityAccess.normalize_level(mode=services.SecurityAccess.Mode.SendKey, level=level)
-        received_level = response.service_data.security_level_echo
-        if expected_level != received_level:
-            raise UnexpectedResponseException(
-                response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (received_level, expected_level))
+            response = services.SecurityAccess.interpret_response(response, mode=services.SecurityAccess.Mode.SendKey)
 
-        return response
+            expected_level = services.SecurityAccess.normalize_level(mode=services.SecurityAccess.Mode.SendKey, level=level)
+            received_level = response.service_data.security_level_echo
+            if expected_level != received_level:
+                raise UnexpectedResponseException(
+                    response, "Response subfunction received from server (0x%02x) does not match the requested subfunction (0x%02x)" % (received_level, expected_level))
+
+            if response.positive:
+                self._unlocked_security_levels.add(normalized_level)
+
+            return response
+        except NegativeResponseException:
+            self._reset_security_access_state(level)
+            raise
 
     @standard_error_management
     def unlock_security_access(self, level, seed_params=bytes()) -> Optional[services.SecurityAccess.InterpretedResponse]:
@@ -360,9 +392,14 @@ class Client:
 
         response = self.request_seed._func_no_error_management(self, level, data=seed_params)
         seed = response.service_data.seed
+        normalized_level = services.SecurityAccess.normalize_level(
+            mode=services.SecurityAccess.Mode.RequestSeed, level=level
+        )
+
         if len(seed) > 0 and seed == b'\x00' * len(seed):
             self.logger.info('%s - Security access level 0x%02x is already unlocked, no key will be sent.' %
                              (self.service_log_prefix(services.SecurityAccess), level))
+            self._unlocked_security_levels.add(normalized_level)
             return response
 
         params = self.config['security_algo_params'] if 'security_algo_params' in self.config else None
@@ -383,7 +420,14 @@ class Client:
             algo_params = {'seed': seed, 'params': params, 'level': level}
 
         key = self.config['security_algo'].__call__(**algo_params)  # type: ignore
-        return self.send_key._func_no_error_management(self, level, key)
+        try:
+            result = self.send_key._func_no_error_management(self, level, key)
+            if result is not None and result.positive:
+                self._unlocked_security_levels.add(normalized_level)
+            return result
+        except NegativeResponseException:
+            self._reset_security_access_state(level)
+            raise
 
     @standard_error_management
     def tester_present(self) -> Optional[services.TesterPresent.InterpretedResponse]:
@@ -578,6 +622,7 @@ class Client:
             assert response.service_data.powerdown_time is not None
             self.logger.info('Server will shutdown in %d seconds.' % (response.service_data.powerdown_time))
 
+        self._reset_security_access_state()
         return response
 
     @standard_error_management

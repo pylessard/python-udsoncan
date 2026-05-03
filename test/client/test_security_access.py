@@ -322,3 +322,125 @@ class TestUnlockSecurityService(ClientServerTest):
     def _test_no_algo_set(self):
         with self.assertRaises(NotImplementedError):
             self.udsclient.unlock_security_access(0x07)
+
+
+class TestSecurityAccessStateLifecycle(ClientServerTest):
+    def __init__(self, *args, **kwargs):
+        ClientServerTest.__init__(self, *args, **kwargs)
+
+    def dummy_algo(self, level, seed, params=None):
+        key = bytearray(seed)
+        for i in range(len(key)):
+            key[i] = (params + level + i + key[i])
+        return bytes(key)
+
+    def test_security_level_tracked_after_unlock(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x27\x07")
+        self.conn.fromuserqueue.put(b"\x67\x07\x11\x22\x33\x44")
+        request = self.conn.touserqueue.get(timeout=0.2)
+        key = bytearray([(0x10 + 0x07 + 0 + 0x11), (0x10 + 0x07 + 1 + 0x22), (0x10 + 0x07 + 2 + 0x33), (0x10 + 0x07 + 3 + 0x44)])
+        self.assertEqual(request, b"\x27\x08" + bytes(key))
+        self.conn.fromuserqueue.put(b"\x67\x08")
+
+    def _test_security_level_tracked_after_unlock(self):
+        self.udsclient.config['security_algo'] = self.dummy_algo
+        self.udsclient.config['security_algo_params'] = 0x10
+        
+        self.assertEqual(self.udsclient.get_unlocked_security_levels(), set())
+        
+        response = self.udsclient.unlock_security_access(0x07)
+        self.assertTrue(response.positive)
+        self.assertIn(0x07, self.udsclient.get_unlocked_security_levels())
+
+    def test_security_level_tracked_after_send_key(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x27\x06\x11\x22\x33\x44")
+        self.conn.fromuserqueue.put(b"\x67\x06")
+
+    def _test_security_level_tracked_after_send_key(self):
+        self.assertEqual(self.udsclient.get_unlocked_security_levels(), set())
+        
+        response = self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
+        self.assertTrue(response.positive)
+        self.assertIn(0x05, self.udsclient.get_unlocked_security_levels())
+
+    def test_security_level_tracked_after_zero_seed(self):
+        request = self.conn.touserqueue.get(timeout=0.2)
+        self.assertEqual(request, b"\x27\x05")
+        self.conn.fromuserqueue.put(b"\x67\x05\x00\x00\x00\x00")
+
+    def _test_security_level_tracked_after_zero_seed(self):
+        self.udsclient.config['security_algo'] = self.dummy_algo
+        self.udsclient.config['security_algo_params'] = 0x10
+        
+        self.assertEqual(self.udsclient.get_unlocked_security_levels(), set())
+        
+        response = self.udsclient.unlock_security_access(0x05)
+        self.assertTrue(response.positive)
+        self.assertIn(0x05, self.udsclient.get_unlocked_security_levels())
+
+    def test_reset_after_session_change(self):
+        self.conn.fromuserqueue.put(b"\x50\x03\x00\x0A\x00\x14")
+        self.conn.fromuserqueue.put(b"\x27\x05")
+        self.conn.fromuserqueue.put(b"\x67\x05\x00\x00\x00\x00")
+
+    def _test_reset_after_session_change(self):
+        self.udsclient.config['security_algo'] = self.dummy_algo
+        self.udsclient.config['security_algo_params'] = 0x10
+        self.udsclient.config['standard_version'] = 2013
+        
+        self.udsclient._unlocked_security_levels.add(0x05)
+        self.udsclient._unlocked_security_levels.add(0x01)
+        self.assertEqual(len(self.udsclient.get_unlocked_security_levels()), 2)
+        
+        self.udsclient.change_session(0x03)
+        self.assertEqual(self.udsclient.get_unlocked_security_levels(), set())
+
+    def test_reset_after_ecu_reset(self):
+        self.conn.fromuserqueue.put(b"\x51\x55")
+
+    def _test_reset_after_ecu_reset(self):
+        self.udsclient._unlocked_security_levels.add(0x05)
+        self.udsclient._unlocked_security_levels.add(0x01)
+        self.assertEqual(len(self.udsclient.get_unlocked_security_levels()), 2)
+        
+        self.udsclient.ecu_reset(0x55)
+        self.assertEqual(self.udsclient.get_unlocked_security_levels(), set())
+
+    def test_reset_after_invalid_key(self):
+        self.wait_request_and_respond(b"\x7F\x27\x35")
+
+    def _test_reset_after_invalid_key(self):
+        self.udsclient._unlocked_security_levels.add(0x05)
+        self.assertIn(0x05, self.udsclient.get_unlocked_security_levels())
+        
+        with self.assertRaises(NegativeResponseException):
+            self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
+        
+        self.assertNotIn(0x05, self.udsclient.get_unlocked_security_levels())
+
+    def test_reset_after_invalid_key_no_exception(self):
+        self.wait_request_and_respond(b"\x7F\x27\x35")
+
+    def _test_reset_after_invalid_key_no_exception(self):
+        self.udsclient._unlocked_security_levels.add(0x05)
+        self.assertIn(0x05, self.udsclient.get_unlocked_security_levels())
+        
+        self.udsclient.config['exception_on_negative_response'] = False
+        response = self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
+        
+        self.assertFalse(response.positive)
+        self.assertEqual(response.code, 0x35)
+
+    def test_reset_after_required_time_delay(self):
+        self.wait_request_and_respond(b"\x7F\x27\x37")
+
+    def _test_reset_after_required_time_delay(self):
+        self.udsclient._unlocked_security_levels.add(0x05)
+        self.assertIn(0x05, self.udsclient.get_unlocked_security_levels())
+        
+        with self.assertRaises(NegativeResponseException):
+            self.udsclient.send_key(0x06, b"\x11\x22\x33\x44")
+        
+        self.assertNotIn(0x05, self.udsclient.get_unlocked_security_levels())
