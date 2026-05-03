@@ -26,6 +26,11 @@ class IOConfigEntry(TypedDict, total=False):
 IOConfig = Dict[Union[int, str], Union[IOConfigEntry, CodecDefinition]]
 
 
+ProtectedServicesConfig = Dict[int, int]
+ProtectedDidsConfig = Dict[int, int]
+ProtectedRoutinesConfig = Dict[int, int]
+
+
 class ClientConfig(TypedDict, total=False):
     exception_on_negative_response: bool
     exception_on_invalid_response: bool
@@ -47,3 +52,6 @@ class ClientConfig(TypedDict, total=False):
     logger_name: str
     extended_data_size: Optional[Union[int, Dict[int, int]]]
     nrc78_callback:Optional[Nrc78CallbackType]
+    protected_services: Optional[ProtectedServicesConfig]
+    protected_dids: Optional[ProtectedDidsConfig]
+    protected_routines: Optional[ProtectedRoutinesConfig]

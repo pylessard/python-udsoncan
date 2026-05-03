@@ -21,5 +21,8 @@ default_client_config: ClientConfig = cast(ClientConfig, {
     'standard_version': latest_standard,  # 2006, 2013, 2020
     'use_server_timing': True,
     'extended_data_size': None,
-    'nrc78_callback':None
+    'nrc78_callback': None,
+    'protected_services': None,
+    'protected_dids': None,
+    'protected_routines': None
 })

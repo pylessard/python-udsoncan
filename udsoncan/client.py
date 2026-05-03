@@ -158,6 +158,54 @@ class Client:
     def get_unlocked_security_levels(self) -> Set[int]:
         return set(self._unlocked_security_levels)
 
+    def _check_security_access_for_service(self, service_id: int) -> None:
+        protected_services = self.config.get('protected_services')
+        if protected_services is None:
+            return
+        if service_id in protected_services:
+            required_level = protected_services[service_id]
+            normalized_level = services.SecurityAccess.normalize_level(
+                mode=services.SecurityAccess.Mode.RequestSeed, level=required_level
+            )
+            if normalized_level not in self._unlocked_security_levels:
+                raise SecurityAccessDeniedException(
+                    required_level=normalized_level,
+                    resource_type='service',
+                    resource_id=service_id
+                )
+
+    def _check_security_access_for_did(self, did: int) -> None:
+        protected_dids = self.config.get('protected_dids')
+        if protected_dids is None:
+            return
+        if did in protected_dids:
+            required_level = protected_dids[did]
+            normalized_level = services.SecurityAccess.normalize_level(
+                mode=services.SecurityAccess.Mode.RequestSeed, level=required_level
+            )
+            if normalized_level not in self._unlocked_security_levels:
+                raise SecurityAccessDeniedException(
+                    required_level=normalized_level,
+                    resource_type='DID',
+                    resource_id=did
+                )
+
+    def _check_security_access_for_routine(self, routine_id: int) -> None:
+        protected_routines = self.config.get('protected_routines')
+        if protected_routines is None:
+            return
+        if routine_id in protected_routines:
+            required_level = protected_routines[routine_id]
+            normalized_level = services.SecurityAccess.normalize_level(
+                mode=services.SecurityAccess.Mode.RequestSeed, level=required_level
+            )
+            if normalized_level not in self._unlocked_security_levels:
+                raise SecurityAccessDeniedException(
+                    required_level=normalized_level,
+                    resource_type='routine',
+                    resource_id=routine_id
+                )
+
     def configure_logger(self) -> None:
         logger_name = 'UdsClient'
         if 'logger_name' in self.config:
@@ -564,7 +612,7 @@ class Client:
         """
         Requests to write a value associated with a data identifier (DID) through the :ref:`WriteDataByIdentifier<WriteDataByIdentifier>` service.
 
-        :Effective configuration:  ``exception_on_<type>_response`` ``data_identifiers``
+        :Effective configuration:  ``exception_on_<type>_response`` ``data_identifiers`` ``protected_services`` ``protected_dids``
 
         :param did: The DID to write its value
         :type did: int
@@ -575,7 +623,10 @@ class Client:
         :return: The server response parsed by :meth:`WriteDataByIdentifier.interpret_response<udsoncan.services.WriteDataByIdentifier.interpret_response>`
         :rtype: :ref:`Response<Response>`
 
+        :raises SecurityAccessDeniedException: If the service or DID is protected and the required security level is not unlocked
         """
+        self._check_security_access_for_service(services.WriteDataByIdentifier._sid)
+        self._check_security_access_for_did(did)
         req = services.WriteDataByIdentifier.make_request(did, value, didconfig=self.config['data_identifiers'])
         self.logger.info("%s - Writing data identifier 0x%04x (%s)" %
                          (self.service_log_prefix(services.WriteDataByIdentifier), did, DataIdentifier.name_from_id(did)))
@@ -729,7 +780,7 @@ class Client:
         """
         Sends a generic request for the :ref:`RoutineControl<RoutineControl>` service with custom subfunction (control_type).
 
-        :Effective configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response`` ``protected_services`` ``protected_routines``
 
         :param control_type: The service subfunction. See :class:`RoutineControl.ControlType<udsoncan.services.RoutineControl.ControlType>`
         :type group: int
@@ -742,7 +793,11 @@ class Client:
 
         :return: The server response parsed by :meth:`RoutineControl.interpret_response<udsoncan.services.RoutineControl.interpret_response>`
         :rtype: :ref:`Response<Response>`
+
+        :raises SecurityAccessDeniedException: If the service or routine is protected and the required security level is not unlocked
         """
+        self._check_security_access_for_service(services.RoutineControl._sid)
+        self._check_security_access_for_routine(routine_id)
         request = services.RoutineControl.make_request(routine_id, control_type, data=data)
         payload_length = 0 if data is None else len(data)
         action = "ISOSAEReserved action for routine ID"
@@ -973,6 +1028,14 @@ class Client:
     # Common code for both RequestDownload and RequestUpload services
     @standard_error_management
     def request_upload_download(self, service_cls, memory_location, dfi=None):
+        """
+        Common code for both RequestDownload and RequestUpload services.
+
+        :Effective configuration: ``exception_on_<type>_response`` ``server_address_format`` ``server_memorysize_format`` ``protected_services``
+
+        :raises SecurityAccessDeniedException: If the service is protected and the required security level is not unlocked
+        """
+        self._check_security_access_for_service(service_cls._sid)
         dfi = service_cls.normalize_data_format_identifier(dfi)
 
         if service_cls not in [services.RequestDownload, services.RequestUpload]:
@@ -1016,7 +1079,7 @@ class Client:
         """
         Transfer a block of data to/from the client to/from the server by sending a :ref:`TransferData<TransferData>` service request and returning the server response.
 
-        :Effective configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response`` ``protected_services``
 
         :param sequence_number: Corresponds to an 8bit counter that should increment for each new block transferred.
                 Allowed values are from 0 to 0xFF
@@ -1027,7 +1090,10 @@ class Client:
 
         :return: The server response parsed by :meth:`TransferData.interpret_response<udsoncan.services.TransferData.interpret_response>`
         :rtype: :ref:`Response<Response>`
+
+        :raises SecurityAccessDeniedException: If the service is protected and the required security level is not unlocked
         """
+        self._check_security_access_for_service(services.TransferData._sid)
         request = services.TransferData.make_request(sequence_number, data)
 
         data_len = 0 if data is None else len(data)
@@ -1052,14 +1118,17 @@ class Client:
         """
         Informs the server that the client wants to stop the data transfer by sending a :ref:`RequestTransferExit<RequestTransferExit>` service request.
 
-        :Effective configuration: ``exception_on_<type>_response``
+        :Effective configuration: ``exception_on_<type>_response`` ``protected_services``
 
         :param data: Optional additional data to send to the server
         :type data: bytes
 
         :return: The server response parsed by :meth:`RequestTransferExit.interpret_response<udsoncan.services.RequestTransferExit.interpret_response>`
         :rtype: :ref:`Response<Response>`
+
+        :raises SecurityAccessDeniedException: If the service is protected and the required security level is not unlocked
         """
+        self._check_security_access_for_service(services.RequestTransferExit._sid)
         request = services.RequestTransferExit.make_request(data)
         self.logger.info('%s - Sending exit request' % (self.service_log_prefix(services.RequestTransferExit)))
 

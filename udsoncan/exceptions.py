@@ -3,7 +3,8 @@ __all__ = [
     'NegativeResponseException',
     'InvalidResponseException',
     'UnexpectedResponseException',
-    'ConfigError'
+    'ConfigError',
+    'SecurityAccessDeniedException'
 ]
 from udsoncan.Response import Response
 from typing import Any
@@ -106,4 +107,36 @@ class ConfigError(Exception):
 
     def __init__(self, key: Any, msg="<No details given>", *args, **kwargs):
         self.key = key
+        super().__init__(msg, *args, **kwargs)
+
+
+class SecurityAccessDeniedException(Exception):
+    """
+    Raised when the client attempts to access a protected service, DID, or routine
+    without having unlocked the required security level.
+
+    :param required_level: The security level that is required but not unlocked
+    :type required_level: int
+
+    :param resource_type: The type of resource being accessed (service, did, routine)
+    :type resource_type: str
+
+    :param resource_id: The identifier of the resource being accessed
+    :type resource_id: int
+
+    """
+    required_level: int
+    resource_type: str
+    resource_id: int
+
+    def __init__(self, required_level: int, resource_type: str, resource_id: int, *args, **kwargs):
+        self.required_level = required_level
+        self.resource_type = resource_type
+        self.resource_id = resource_id
+        msg = "Security access denied: Required level 0x%02x not unlocked for %s 0x%04x" % (
+            required_level, resource_type, resource_id
+        )
+        if len(args) > 0:
+            msg += " " + str(args[0])
+            args = tuple(list(args)[1:])
         super().__init__(msg, *args, **kwargs)
