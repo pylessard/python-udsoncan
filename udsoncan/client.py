@@ -2331,6 +2331,8 @@ class Client:
         if request.service is None:
             raise ValueError("Request has no service")
 
+        self._check_security_access_for_service(request.service.request_id())
+
         if timeout < 0:
             # Timeout not provided by user: defaults to Client request_timeout value
             overall_timeout = self.config['request_timeout']
@@ -2406,6 +2408,7 @@ class Client:
                     timeout_name_to_report = 'Timeout'
                     timeout_value_to_report = timeout_value
 
+                self._reset_security_access_state()
                 raise TimeoutException('Did not receive response in time. %s time has expired (timeout=%.3f sec)' %
                                        (timeout_name_to_report, float(timeout_value_to_report)))
 

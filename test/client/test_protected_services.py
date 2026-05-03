@@ -1,4 +1,4 @@
-from udsoncan import services
+from udsoncan import services, CommunicationType
 from udsoncan.exceptions import *
 from udsoncan import DidCodec
 import struct
@@ -272,3 +272,185 @@ class TestCombinedProtection(TestProtectedServicesBase):
 
         response = self.udsclient.write_data_by_identifier(did=0x1234, value=0x1234)
         self.assertTrue(response.positive)
+
+
+class TestTimeoutSecurityReset(TestProtectedServicesBase):
+
+    def test_timeout_resets_security_access(self):
+        pass
+
+    def _test_timeout_resets_security_access(self):
+        self.udsclient.config['protected_services'] = {
+            services.WriteDataByIdentifier._sid: 0x05
+        }
+
+        self.udsclient._unlocked_security_levels.add(0x05)
+        self.assertIn(0x05, self.udsclient.get_unlocked_security_levels())
+
+        with self.assertRaises(TimeoutException):
+            self.udsclient.write_data_by_identifier(did=0x1234, value=0x1234)
+
+        self.assertEqual(self.udsclient.get_unlocked_security_levels(), set())
+
+        with self.assertRaises(SecurityAccessDeniedException):
+            self.udsclient.write_data_by_identifier(did=0x1234, value=0x1234)
+
+    def test_timeout_requires_re_unlock(self):
+        pass
+
+    def _test_timeout_requires_re_unlock(self):
+        self.udsclient.config['security_algo'] = self.dummy_algo
+        self.udsclient.config['security_algo_params'] = 0x10
+        self.udsclient.config['protected_services'] = {
+            services.WriteDataByIdentifier._sid: 0x05
+        }
+
+        self.udsclient._unlocked_security_levels.add(0x05)
+        self.assertIn(0x05, self.udsclient.get_unlocked_security_levels())
+
+        with self.assertRaises(TimeoutException):
+            self.udsclient.write_data_by_identifier(did=0x1234, value=0x1234)
+
+        self.assertEqual(self.udsclient.get_unlocked_security_levels(), set())
+
+
+class TestGenericServiceProtection(TestProtectedServicesBase):
+
+    def test_clear_dtc_protected_without_unlock(self):
+        pass
+
+    def _test_clear_dtc_protected_without_unlock(self):
+        self.udsclient.config['protected_services'] = {
+            services.ClearDiagnosticInformation._sid: 0x05
+        }
+
+        with self.assertRaises(SecurityAccessDeniedException) as context:
+            self.udsclient.clear_dtc()
+
+        self.assertEqual(context.exception.required_level, 0x05)
+        self.assertEqual(context.exception.resource_type, 'service')
+        self.assertEqual(context.exception.resource_id, services.ClearDiagnosticInformation._sid)
+
+    def test_clear_dtc_access_granted_after_unlock(self):
+        self.conn.fromuserqueue.put(b"\x54\xFF\xFF\xFF")
+
+    def _test_clear_dtc_access_granted_after_unlock(self):
+        self.udsclient.config['protected_services'] = {
+            services.ClearDiagnosticInformation._sid: 0x05
+        }
+
+        self.udsclient._unlocked_security_levels.add(0x05)
+        self.assertIn(0x05, self.udsclient.get_unlocked_security_levels())
+
+        response = self.udsclient.clear_dtc()
+        self.assertTrue(response.positive)
+
+    def test_io_control_protected_without_unlock(self):
+        pass
+
+    def _test_io_control_protected_without_unlock(self):
+        self.udsclient.config['protected_services'] = {
+            services.InputOutputControlByIdentifier._sid: 0x05
+        }
+        self.udsclient.config['input_output'] = {
+            0x1234: {
+                'codec': '>H',
+                'mask': {
+                    'test1': 0x01,
+                    'test2': 0x02,
+                }
+            }
+        }
+
+        with self.assertRaises(SecurityAccessDeniedException) as context:
+            self.udsclient.io_control(did=0x1234)
+
+        self.assertEqual(context.exception.required_level, 0x05)
+        self.assertEqual(context.exception.resource_type, 'service')
+        self.assertEqual(context.exception.resource_id, services.InputOutputControlByIdentifier._sid)
+
+    def test_write_memory_by_address_protected_without_unlock(self):
+        pass
+
+    def _test_write_memory_by_address_protected_without_unlock(self):
+        from udsoncan.common.MemoryLocation import MemoryLocation
+
+        self.udsclient.config['protected_services'] = {
+            services.WriteMemoryByAddress._sid: 0x05
+        }
+
+        with self.assertRaises(SecurityAccessDeniedException) as context:
+            memloc = MemoryLocation(address=0x12345678, memorysize=4)
+            self.udsclient.write_memory_by_address(memloc, b'\x11\x22\x33\x44')
+
+        self.assertEqual(context.exception.required_level, 0x05)
+        self.assertEqual(context.exception.resource_type, 'service')
+        self.assertEqual(context.exception.resource_id, services.WriteMemoryByAddress._sid)
+
+    def test_read_memory_by_address_protected_without_unlock(self):
+        pass
+
+    def _test_read_memory_by_address_protected_without_unlock(self):
+        from udsoncan.common.MemoryLocation import MemoryLocation
+
+        self.udsclient.config['protected_services'] = {
+            services.ReadMemoryByAddress._sid: 0x05
+        }
+
+        with self.assertRaises(SecurityAccessDeniedException) as context:
+            memloc = MemoryLocation(address=0x12345678, memorysize=4)
+            self.udsclient.read_memory_by_address(memloc)
+
+        self.assertEqual(context.exception.required_level, 0x05)
+        self.assertEqual(context.exception.resource_type, 'service')
+        self.assertEqual(context.exception.resource_id, services.ReadMemoryByAddress._sid)
+
+    def test_communication_control_protected_without_unlock(self):
+        pass
+
+    def _test_communication_control_protected_without_unlock(self):
+        self.udsclient.config['protected_services'] = {
+            services.CommunicationControl._sid: 0x05
+        }
+
+        with self.assertRaises(SecurityAccessDeniedException) as context:
+            self.udsclient.communication_control(
+                control_type=services.CommunicationControl.ControlType.enableRxAndDisableTx,
+                communication_type=CommunicationType(subnet=CommunicationType.Subnet.node, normal_msg=True)
+            )
+
+        self.assertEqual(context.exception.required_level, 0x05)
+        self.assertEqual(context.exception.resource_type, 'service')
+        self.assertEqual(context.exception.resource_id, services.CommunicationControl._sid)
+
+    def test_control_dtc_setting_protected_without_unlock(self):
+        pass
+
+    def _test_control_dtc_setting_protected_without_unlock(self):
+        self.udsclient.config['protected_services'] = {
+            services.ControlDTCSetting._sid: 0x05
+        }
+
+        with self.assertRaises(SecurityAccessDeniedException) as context:
+            self.udsclient.control_dtc_setting(
+                setting_type=services.ControlDTCSetting.SettingType.off
+            )
+
+        self.assertEqual(context.exception.required_level, 0x05)
+        self.assertEqual(context.exception.resource_type, 'service')
+        self.assertEqual(context.exception.resource_id, services.ControlDTCSetting._sid)
+
+    def test_authentication_protected_without_unlock(self):
+        pass
+
+    def _test_authentication_protected_without_unlock(self):
+        self.udsclient.config['protected_services'] = {
+            services.Authentication._sid: 0x05
+        }
+
+        with self.assertRaises(SecurityAccessDeniedException) as context:
+            self.udsclient.deauthenticate()
+
+        self.assertEqual(context.exception.required_level, 0x05)
+        self.assertEqual(context.exception.resource_type, 'service')
+        self.assertEqual(context.exception.resource_id, services.Authentication._sid)
