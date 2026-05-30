@@ -15,6 +15,15 @@ class PASSTHRU_MSG(Structure):
                 ("ExtraDataIndex", c_ulong),
                 ("Data", ctypes.c_ubyte * 4128)]
 
+    def setData(self, data: bytes):
+        self.DataSize = len(data)
+        for i in range(self.DataSize):
+            self.Data[i] = data[i]
+
+    def getData(self):
+        addr_size = 5 if self.RxStatus & RxStatus.ISO15765_ADDR_TYPE.value else 4
+        return bytes(self.Data[addr_size : self.DataSize])
+
 
 class SCONFIG(Structure):
     _fields_ = [("Parameter", c_ulong),
@@ -44,7 +53,7 @@ class J2534():
     dllPassThruStartMsgFilter = None
     dllPassThruIoctl = None
 
-    def __init__(self, windll, rxid, txid):
+    def __init__(self, windll, rxid, txid, extid):
         global dllPassThruOpen
         global dllPassThruClose
         global dllPassThruConnect
@@ -67,6 +76,11 @@ class J2534():
         if txid >> 11:
             self.txFlags |= TxFlags.CAN_29_BIT_ID.value
             self.connectFlags |= ConnectFlags.CAN_29_BIT_ID.value
+
+        if extid is not None:
+            self.rxid += extid.to_bytes(1, 'big')
+            self.txid += extid.to_bytes(1, 'big')
+            self.txFlags |= TxFlags.ISO15765_ADDR_TYPE.value
 
         self.logger = logging.getLogger()
 
@@ -221,20 +235,16 @@ class J2534():
             if pMsg.RxStatus & (RxStatus.TX_INDICATION.value | RxStatus.TX_MSG_TYPE.value | RxStatus.START_OF_MESSAGE.value):
                 continue
 
-            return Error_ID(hex(result)), bytes(pMsg.Data[4:pMsg.DataSize]), pNumMsgs
+            return Error_ID(hex(result)), pMsg.getData(), pNumMsgs
 
     def PassThruWriteMsgs(self, ChannelID, Data, protocol, pNumMsgs=1, Timeout=1000):
-        txmsg = PASSTHRU_MSG()
-        txmsg.TxFlags = self.txFlags
-        txmsg.ProtocolID = protocol
-
         Data = self.txid + Data
         self.logger.info("Sending data: " + str(Data.hex()))
 
-        for i in range(0, len(Data)):
-            txmsg.Data[i] = Data[i]
-
-        txmsg.DataSize = len(Data)
+        txmsg = PASSTHRU_MSG()
+        txmsg.TxFlags = self.txFlags
+        txmsg.ProtocolID = protocol
+        txmsg.setData(Data)
 
         result = dllPassThruWriteMsgs(ChannelID, byref(txmsg), byref(c_ulong(pNumMsgs)), c_ulong(Timeout))
 
@@ -242,9 +252,7 @@ class J2534():
 
     def PassThruStartPeriodicMsg(self, ChannelID, Data, MsgID=0, TimeInterval=100):
         pMsg = PASSTHRU_MSG()
-
-        pMsg.Data = Data
-        pMsg.DataSize = len(Data)
+        pMsg.setData(Data)
 
         result = dllPassThruStartPeriodicMsg(ChannelID, byref(pMsg), byref(c_ulong(MsgID)), c_ulong(TimeInterval))
 
@@ -281,18 +289,14 @@ class J2534():
         msgMask = PASSTHRU_MSG()
         msgMask.ProtocolID = protocol
         msgMask.TxFlags = self.txFlags
-        msgMask.DataSize = 4
         msgMask.RxStatus = msgMask.ExtraDataIndex = 0xCCCC_CCCC
-        for i in range(0, 4):
-            msgMask.Data[i] = 0xFF
+        msgMask.setData(b'\xFF' * len(self.rxid))
 
         msgPattern = PASSTHRU_MSG()
         msgPattern.ProtocolID = protocol
         msgPattern.TxFlags = self.txFlags
-        msgPattern.DataSize = 4
         msgPattern.RxStatus = msgPattern.ExtraDataIndex = 0xCCCC_CCCC
-        for i in range(0, len(self.rxid)):
-            msgPattern.Data[i] = self.rxid[i]
+        msgPattern.setData(self.rxid)
 
         if protocol in [Protocol_ID.ISO9141.value, Protocol_ID.ISO14230.value]:
             filterType = c_ulong(Filter.PASS_FILTER.value)
@@ -302,10 +306,8 @@ class J2534():
             msgFlow = PASSTHRU_MSG()
             msgFlow.ProtocolID = protocol
             msgFlow.TxFlags = self.txFlags
-            msgFlow.DataSize = 4
             msgFlow.RxStatus = msgFlow.ExtraDataIndex = 0xCCCC_CCCC
-            for i in range(0, len(self.txid)):
-                msgFlow.Data[i] = self.txid[i]
+            msgFlow.setData(self.txid)
             msgFlow = byref(msgFlow)
 
         msgID = c_ulong(0)
@@ -454,8 +456,6 @@ class RxStatus(Enum):
     # 1 = First byte or frame received
     START_OF_MESSAGE = 0x00000002
     ISO15765_FIRST_FRAME = 0x00000002  
-
-    ISO15765_EXT_ADDR = 0x00000080
 
     # 0 = No break received
     # 1 = Break received

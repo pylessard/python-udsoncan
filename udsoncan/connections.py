@@ -700,6 +700,7 @@ class J2534Connection(BaseConnection):
                  windll: str,
                  rxid: int,
                  txid: int,
+                 extid: Optional[int] = None,
                  name: Optional[str] = None,
                  debug: bool = False,
                  protocol = None,
@@ -713,7 +714,7 @@ class J2534Connection(BaseConnection):
 
         try:
             # Set up a J2534 interface using the DLL provided
-            self.interface = J2534(windll=windll, rxid=rxid, txid=txid)
+            self.interface = J2534(windll=windll, rxid=rxid, txid=txid, extid=extid)
 
             # Open the interface (connect to the DLL)
             self.result, self.devID = self.interface.PassThruOpen()
