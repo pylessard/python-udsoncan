@@ -575,8 +575,8 @@ class PythonIsoTpV2Connection(BaseConnection):
 
 
 class PythonIsoTpV1Connection(BaseConnection):
-    toIsoTPQueue: "queue.Queue[bytes]"
-    fromIsoTPQueue: "queue.Queue[bytes]"
+    toIsoTPQueue: "queue.Queue[Union[bytearray, bytes]]"
+    fromIsoTPQueue: "queue.Queue[Union[bytearray, bytes]]"
     rxthread: Optional[threading.Thread]
     exit_requested: bool
     opened: bool
