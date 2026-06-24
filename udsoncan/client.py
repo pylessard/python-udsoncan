@@ -41,7 +41,7 @@ class Client:
     """
     __init__(self, conn, config=default_client_config, request_timeout = None)
 
-    Object that interacts with a UDS server. 
+    Object that interacts with a UDS server.
     It builds a service request, sends it to the server, receives and parses its response, detects communication anomalies and logs what it is doing for further debugging.
 
     :param conn: The underlying protocol interface.
@@ -215,7 +215,7 @@ class Client:
 
     def get_session_timing(self) -> SessionTiming:
         """Return the session timing provided by the server, including P2 & P2* timeouts.
-        If the timeout values are ``None``, it means that no timing has been given by the server yet and the timings form the client configuration 
+        If the timeout values are ``None``, it means that no timing has been given by the server yet and the timings form the client configuration
         (:ref:`p2_timeout<config_p2_timeout>`, :ref:`p2_star_timeout<config_p2_star_timeout>`)
 
         :return: The session timings
@@ -224,13 +224,13 @@ class Client:
 
     @standard_error_management
     def change_session(self, newsession: int) -> Optional[services.DiagnosticSessionControl.InterpretedResponse]:
-        """ 
+        """
         Requests the server to change the diagnostic session with a :ref:`DiagnosticSessionControl<DiagnosticSessionControl>` service request
 
         :Effective configuration: ``exception_on_<type>_response``
 
         :param newsession: The session to try to switch. Values from :class:`DiagnosticSessionControl.Session <udsoncan.services.DiagnosticSessionControl.Session>` can be used.
-        :type newsession: int 
+        :type newsession: int
 
         :return: The server response parsed by :meth:`DiagnosticSessionControl.interpret_response<udsoncan.services.DiagnosticSessionControl.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -263,16 +263,16 @@ class Client:
 
     @standard_error_management
     def request_seed(self, level: int, data=bytes()) -> Optional[services.SecurityAccess.InterpretedResponse]:
-        """ 
-        Requests a seed to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service 
+        """
+        Requests a seed to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service
 
         :Effective configuration: ``exception_on_<type>_response``
 
         :param level: The security level to unlock. If value is even, it will be converted to the corresponding odd value
-        :type level: int 
+        :type level: int
 
         :param data: The data to send to the server (securityAccessDataRecord)
-        :type data: bytes 
+        :type data: bytes
 
         :return: The server response parsed by :meth:`SecurityAccess.interpret_response<udsoncan.services.SecurityAccess.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -302,16 +302,16 @@ class Client:
     # Performs a SecurityAccess service request. Send key
     @standard_error_management
     def send_key(self, level: int, key: bytes) -> Optional[services.SecurityAccess.InterpretedResponse]:
-        """ 
-        Sends a key to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service 
+        """
+        Sends a key to unlock a security level with the :ref:`SecurityAccess<SecurityAccess>` service
 
         :Effective configuration: ``exception_on_<type>_response``
 
         :param level: The security level to unlock. If value is odd, it will be converted to the corresponding even value
-        :type level: int 
+        :type level: int
 
         :param key: The key to send to the server
-        :type key: bytes 
+        :type key: bytes
 
         :return: The server response parsed by :meth:`SecurityAccess.interpret_response<udsoncan.services.SecurityAccess.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -414,8 +414,8 @@ class Client:
     @standard_error_management
     def read_data_by_identifier_first(self, didlist: Union[int, List[int]]) -> Optional[Any]:
         """
-        Shortcut to extract a single DID. 
-        Calls read_data_by_identifier then returns the first DID asked for. 
+        Shortcut to extract a single DID.
+        Calls read_data_by_identifier then returns the first DID asked for.
 
         :Effective configuration: ``exception_on_<type>_response`` ``data_identifiers`` ``tolerate_zero_padding``
 
@@ -442,7 +442,7 @@ class Client:
             :Effective configuration: ``exception_on_<type>_response``
 
             :param didlist: The DIDs to peek
-            :type didlist: list[int] 
+            :type didlist: list[int]
 
             :return: The raw server response. The response will not be parsed by any service, causing ``service_data`` to always be ``None``
             :rtype: :ref:`Response<Response>`
@@ -593,7 +593,7 @@ class Client:
                 - ``0xFFFFFF`` : All DTCs
         :type group: int
 
-        :param memory_selection: MemorySelection byte (0-0xFF). This value is user defined and introduced in 2020 version of ISO-14229-1. 
+        :param memory_selection: MemorySelection byte (0-0xFF). This value is user defined and introduced in 2020 version of ISO-14229-1.
             Only added to the request payload when different from None. Default : None
         :type memory_selection: int
 
@@ -704,7 +704,7 @@ class Client:
         if control_type == services.RoutineControl.ControlType.startRoutine:
             action = "Starting routine ID"
         elif control_type == services.RoutineControl.ControlType.stopRoutine:
-            action = "Stoping routine ID"
+            action = "Stopping routine ID"
         elif control_type == services.RoutineControl.ControlType.requestRoutineResults:
             action = "Requesting result for routine ID"
 
@@ -845,7 +845,7 @@ class Client:
         :param communication_type: Indicates what section of the network and the type of message that should be affected by the command. Refer to :ref:`CommunicationType<CommunicationType>` for more details. If an `integer` or a `bytes` is given, the value will be decoded to create the required :ref:`CommunicationType<CommunicationType>` object
         :type communication_type: :ref:`CommunicationType<CommunicationType>`, bytes, int
 
-        :param node_id: DTC memory identifier (nodeIdentificationNumber). This value is user defined and introduced in 2013 version of ISO-14229-1. 
+        :param node_id: DTC memory identifier (nodeIdentificationNumber). This value is user defined and introduced in 2013 version of ISO-14229-1.
             Possible only when control type is ``enableRxAndDisableTxWithEnhancedAddressInformation`` or ``enableRxAndTxWithEnhancedAddressInformation``
             Only added to the request payload when different from None. Default : None
         :type node_id: int
@@ -893,7 +893,7 @@ class Client:
         :param memory_location: The address and size of the memory block to be written.
         :type memory_location: :ref:`MemoryLocation <MemoryLocation>`
 
-        :param dfi: Optional :ref:`DataFormatIdentifier <DataFormatIdentifier>` defining the compression and encryption scheme of the data. 
+        :param dfi: Optional :ref:`DataFormatIdentifier <DataFormatIdentifier>` defining the compression and encryption scheme of the data.
                 If not specified, the default value of 00 will be used, specifying no encryption and no compression
         :type dfi: :ref:`DataFormatIdentifier <DataFormatIdentifier>`
 
@@ -915,7 +915,7 @@ class Client:
         :param memory_location: The address and size of the memory block to be written.
         :type memory_location: :ref:`MemoryLocation <MemoryLocation>`
 
-        :param dfi: Optional :ref:`DataFormatIdentifier <DataFormatIdentifier>` defining the compression and encryption scheme of the data. 
+        :param dfi: Optional :ref:`DataFormatIdentifier <DataFormatIdentifier>` defining the compression and encryption scheme of the data.
                 If not specified, the default value of 00 will be used, specifying no encryption and no compression
         :type dfi: :ref:`DataFormatIdentifier <DataFormatIdentifier>`
 
@@ -1082,7 +1082,7 @@ class Client:
         :param control_param: Optional parameter that can be a value from :class:`InputOutputControlByIdentifier.ControlParam<udsoncan.services.InputOutputControlByIdentifier.ControlParam>`
         :type control_param: int
 
-        :param values: Optional values to send to the server. This parameter will be given to :ref:`DidCodec<DidCodec>`.encode() method. 
+        :param values: Optional values to send to the server. This parameter will be given to :ref:`DidCodec<DidCodec>`.encode() method.
                 It can be:
 
                         - A list for positional arguments
@@ -1144,7 +1144,7 @@ class Client:
     @standard_error_management
     def control_dtc_setting(self, setting_type: int, data: Optional[bytes] = None) -> Optional[services.ControlDTCSetting.InterpretedResponse]:
         """
-        Controls some settings related to the Diagnostic Trouble Codes by sending a :ref:`ControlDTCSetting<ControlDTCSetting>` service request. 
+        Controls some settings related to the Diagnostic Trouble Codes by sending a :ref:`ControlDTCSetting<ControlDTCSetting>` service request.
         It can enable/disable some DTCs or perform some ECU specific configuration.
 
         :Effective configuration: ``exception_on_<type>_response``
@@ -1186,7 +1186,7 @@ class Client:
     @standard_error_management
     def read_memory_by_address(self, memory_location: MemoryLocation) -> Optional[services.ReadMemoryByAddress.InterpretedResponse]:
         """
-        Reads a block of memory from the server by sending a :ref:`ReadMemoryByAddress<ReadMemoryByAddress>` service request. 
+        Reads a block of memory from the server by sending a :ref:`ReadMemoryByAddress<ReadMemoryByAddress>` service request.
 
         :Effective configuration: ``exception_on_<type>_response`` ``server_address_format`` ``server_memorysize_format``
 
@@ -1231,11 +1231,11 @@ class Client:
     @standard_error_management
     def write_memory_by_address(self, memory_location: MemoryLocation, data: bytes) -> Optional[services.WriteMemoryByAddress.InterpretedResponse]:
         """
-        Writes a block of memory in the server by sending a :ref:`WriteMemoryByAddress<WriteMemoryByAddress>` service request. 
+        Writes a block of memory in the server by sending a :ref:`WriteMemoryByAddress<WriteMemoryByAddress>` service request.
 
         :Effective configuration: ``exception_on_<type>_response`` ``server_address_format`` ``server_memorysize_format``
 
-        :param memory_location: The address and the size of the memory block to read. 
+        :param memory_location: The address and the size of the memory block to read.
         :type memory_location: :ref:`MemoryLocation <MemoryLocation>`
 
         :param data: The data to write into memory.
@@ -1289,12 +1289,12 @@ class Client:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCByStatusMask``
 
-        Reads all the Diagnostic Trouble Codes that have a status matching the given mask. 
+        Reads all the Diagnostic Trouble Codes that have a status matching the given mask.
         The server will check all of its DTCs and if (Dtc.status & status_mask) != 0, then the DTCs match the filter and are sent back to the client.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
-        :param status_mask: The status mask against which the DTCs are tested. 
+        :param status_mask: The status mask against which the DTCs are tested.
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
@@ -1306,15 +1306,15 @@ class Client:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportUserDefMemoryDTCByStatusMask``
 
-        Reads  Diagnostic Trouble Codes that have a status matching the given mask in a user defined memory . 
-        The server will check all of its DTCs inside the user defined memory region and if (Dtc.status & status_mask) != 0, 
+        Reads  Diagnostic Trouble Codes that have a status matching the given mask in a user defined memory .
+        The server will check all of its DTCs inside the user defined memory region and if (Dtc.status & status_mask) != 0,
         then the DTCs match the filter and are sent back to the client.
 
         Introduced in 2020 version of ISO-14229
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc`` ``standard_version``
 
-        :param status_mask: The status mask against which the DTCs are tested. 
+        :param status_mask: The status mask against which the DTCs are tested.
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
 
         :param memory_selection: A 1 byte wide identifier for the memory region. Defined by ECU manufacturer.
@@ -1334,7 +1334,7 @@ class Client:
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
-        :param status_mask: The status mask against which the DTCs are tested. 
+        :param status_mask: The status mask against which the DTCs are tested.
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
@@ -1346,12 +1346,12 @@ class Client:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportMirrorMemoryDTCByStatusMask``
 
-        Reads all the Diagnostic Trouble Codes stored in mirror memory that have a status matching the given mask. 
+        Reads all the Diagnostic Trouble Codes stored in mirror memory that have a status matching the given mask.
         The server will check all of its DTCs and if (Dtc.status & status_mask) != 0, then the DTCs match the filter and are sent back to the client.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
-        :param status_mask: The status mask against which the DTCs are tested. 
+        :param status_mask: The status mask against which the DTCs are tested.
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
@@ -1363,15 +1363,15 @@ class Client:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCBySeverityMaskRecord``
 
-        Reads all the Diagnostic Trouble Codes that have a status and a severity matching the given masks. 
+        Reads all the Diagnostic Trouble Codes that have a status and a severity matching the given masks.
         The server will check all of its DTCs and if ( (Dtc.status & status_mask) != 0 && (Dtc.severity & severity) !=0), then the DTCs match the filter and are sent back to the client.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
-        :param status_mask: The status mask against which the DTCs are tested. 
+        :param status_mask: The status mask against which the DTCs are tested.
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
 
-        :param severity_mask: The severity mask against which the DTCs are tested. 
+        :param severity_mask: The severity mask against which the DTCs are tested.
         :type severity_mask: int or :ref:`Dtc.Severity<DTC_Severity>`
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
@@ -1379,25 +1379,25 @@ class Client:
         """
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportDTCBySeverityMaskRecord, status_mask=status_mask, severity_mask=severity_mask)
 
-    def get_wwh_obd_dtc_by_status_mask(self, 
-                                       functional_group_id: int, 
-                                       status_mask: int, 
-                                       severity_mask: Union[int,Dtc.Severity], 
+    def get_wwh_obd_dtc_by_status_mask(self,
+                                       functional_group_id: int,
+                                       status_mask: int,
+                                       severity_mask: Union[int,Dtc.Severity],
                                        dtc_class: Union[int, Dtc.DtcClass]
                                        ) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportWWHOBDDTCByMaskRecord``
 
-        Reads all the WWH OBD Diagnostic Trouble Codes that have a functional_group, class, status and a severity matching the given masks. 
+        Reads all the WWH OBD Diagnostic Trouble Codes that have a functional_group, class, status and a severity matching the given masks.
         The server will check all of its DTCs and if ( (Dtc.status & status_mask) != 0 && (Dtc.severity & severity) !=0), then the DTCs match the filter and are sent back to the client.
         Note: severity_mask and dtc_class are combined into a single byte to populate DTCSeverityMask- see Table D.11.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
-        :param functional_group_id: Functional Group ID to search for (FGID) (0x00 to 0xFE) :ref:`Dtc.FunctionalGroupIdentifiers<DTC_FunctionalGroupIdentifiers>` 
+        :param functional_group_id: Functional Group ID to search for (FGID) (0x00 to 0xFE) :ref:`Dtc.FunctionalGroupIdentifiers<DTC_FunctionalGroupIdentifiers>`
         :type functional_group_id: int
 
-        :param status_mask: The status mask against which the DTCs are tested. 
+        :param status_mask: The status mask against which the DTCs are tested.
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
 
         :param severity_mask: The severity mask against which the DTCs are tested. (Bit mask of: 0x20, 0x40, or 0x80)
@@ -1411,16 +1411,16 @@ class Client:
         """
 
         return self.read_dtc_information(services.ReadDTCInformation.Subfunction.reportWWHOBDDTCByMaskRecord, status_mask=status_mask, severity_mask=severity_mask, dtc_class=dtc_class, functional_group_id=functional_group_id)
-    
+
     def get_wwh_obd_dtc_with_permanent_status(self, functional_group_id: int) -> Optional[services.ReadDTCInformation.InterpretedResponse]:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportWWHOBDDTCWithPermanentStatus,``
 
-        Reads all the WWH OBD Diagnostic Trouble Codes that have the specified functional_group and a permanent status. 
+        Reads all the WWH OBD Diagnostic Trouble Codes that have the specified functional_group and a permanent status.
 
         :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc``
 
-        :param functional_group_id: Functional Group ID to search for (FGID) (0x00 to 0xFE) :ref:`Dtc.FunctionalGroupIdentifiers<DTC_FunctionalGroupIdentifiers>` 
+        :param functional_group_id: Functional Group ID to search for (FGID) (0x00 to 0xFE) :ref:`Dtc.FunctionalGroupIdentifiers<DTC_FunctionalGroupIdentifiers>`
         :type functional_group_id: int
 
 
@@ -1438,7 +1438,7 @@ class Client:
 
         :Effective configuration: ``exception_on_<type>_response``
 
-        :param status_mask: The status mask against which the DTCs are tested. 
+        :param status_mask: The status mask against which the DTCs are tested.
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
@@ -1454,7 +1454,7 @@ class Client:
 
         :Effective configuration: ``exception_on_<type>_response``
 
-        :param status_mask: The status mask against which the DTCs are tested. 
+        :param status_mask: The status mask against which the DTCs are tested.
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
@@ -1470,7 +1470,7 @@ class Client:
 
         :Effective configuration: ``exception_on_<type>_response``
 
-        :param status_mask: The status mask against which the DTCs are tested. 
+        :param status_mask: The status mask against which the DTCs are tested.
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
@@ -1486,10 +1486,10 @@ class Client:
 
         :Effective configuration: ``exception_on_<type>_response``
 
-        :param status_mask: The status mask against which the DTCs are tested. 
+        :param status_mask: The status mask against which the DTCs are tested.
         :type status_mask: int or :ref:`Dtc.Status<DTC_Status>`
 
-        :param severity_mask: The severity mask against which the DTCs are tested. 
+        :param severity_mask: The severity mask against which the DTCs are tested.
         :type severity_mask: int or :ref:`Dtc.Severity<DTC_Severity>`
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
@@ -1582,7 +1582,7 @@ class Client:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCWithPermanentStatus``
 
-        Returns all DTCs that the server marked as `permanent`. 
+        Returns all DTCs that the server marked as `permanent`.
 
         A permanent DTC is a DTC stored in Non-Volatile memory and that cannot be erased by test equipment or by power-cycling the ECU.
 
@@ -1597,9 +1597,9 @@ class Client:
         """
         Performs a ``ReadDTCInformation`` service request with subfunction ``reportDTCFaultDetectionCounter``
 
-        Requests the server for all DTCs that are `prefailed` along with their fault detection counter. 
+        Requests the server for all DTCs that are `prefailed` along with their fault detection counter.
 
-        A prefailed DTC is a DTC for which the detection condition is met, but has not been identified as `pending` or `confirmed` yet. 
+        A prefailed DTC is a DTC for which the detection condition is met, but has not been identified as `pending` or `confirmed` yet.
 
         If the ECU follows the UDS guidelines, it will wait to detect a fault many times before setting a status bit for this fault DTC. Each time the fault is detected, a fault counter is incremented, when it is not detected, the counter is decremented.
         Once the fault counter reaches a threshold, a status bit is set and the DTC is not `prefailed` anymore. A `prefailed` DTC is any DTC that has fault detection counter greater than 0, but less than the detection threshold.
@@ -1653,7 +1653,7 @@ class Client:
 
         Introduced in 2020 version of ISO-14229
 
-        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc`` ``dtc_snapshot_did_size`` ``standard_version`` 
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``ignore_all_zero_dtc`` ``dtc_snapshot_did_size`` ``standard_version``
 
         :param dtc: The DTC ID for which we request the snapshot data. It can be a 3-byte integer or a DTC instance with an ID set.
         :type dtc: int or :ref:`Dtc<DTC>`
@@ -1662,7 +1662,7 @@ class Client:
         :type record_number: int
 
         :param memory_selection: A 1 byte wide identifier for the memory region. Defined by ECU manufacturer.
-        :type memory_selection: int      
+        :type memory_selection: int
 
         :return: The server response parsed by :meth:`ReadDTCInformation.interpret_response<udsoncan.services.ReadDTCInformation.interpret_response>`
         :rtype: :ref:`Response<Response>`
@@ -1726,8 +1726,8 @@ class Client:
         :param record_number: The record number of the extended data to read. Value must range between 0x00 and 0xEF. 0xFF (all) cannot be used.
         :type record_number: int
 
-        :param data_size: The number of bytes of each extended data record. If not specified ``config['extended_data_size']`` will be used. 
-            Since this method can return data for multiple DTCs and data size might be different for each DTC, it is possible to pass a dictionary 
+        :param data_size: The number of bytes of each extended data record. If not specified ``config['extended_data_size']`` will be used.
+            Since this method can return data for multiple DTCs and data size might be different for each DTC, it is possible to pass a dictionary
             with a size for each DTC id (just like ``extended_data_size`` configuration). Example : size = {0x123456 : 5, 0x112233 : 10}
         :type data_size: int, dict or None
 
@@ -1747,13 +1747,13 @@ class Client:
 
         Introduced in 2020 version of ISO-14229
 
-        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``extended_data_size`` ``standard_version`` 
+        :Effective configuration: ``exception_on_<type>_response`` ``tolerate_zero_padding`` ``extended_data_size`` ``standard_version``
 
         :param dtc: The DTC ID for which we request the extended data. It can be a 3-byte integer or a DTC instance with an ID set.
         :type dtc: int or :ref:`Dtc<DTC>`
 
         :param memory_selection: A 1 byte wide identifier for the memory region. Defined by ECU manufacturer.
-        :type memory_selection: int           
+        :type memory_selection: int
 
         :param record_number: The record number of the extended data to read. If 0xFF is given, then all extended data entries will be read, otherwise, a single entry will be read.
         :type record_number: int
@@ -1933,11 +1933,11 @@ class Client:
         :param filename: The name of the file to create, limited to ASCII characters.
         :type filename: str
 
-        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data. 
-                If not specified, the default value of 00 will be used, specifying no encryption and no compression. 
+        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data.
+                If not specified, the default value of 00 will be used, specifying no encryption and no compression.
         :type dfi: :ref:`DataFormatIdentifier<DataFormatIdentifier>`
 
-        :param filesize: The filesize of the file to write. 
+        :param filesize: The filesize of the file to write.
             If filesize is an object of type :ref:`Filesize<Filesize>`, the uncompressed size and compressed size will be encoded on
             the minimum amount of bytes necessary, unless a ``width`` is explicitly defined. If no compressed size is given or filesize is an ``int``,
             then the compressed size will be set equal to the uncompressed size or the integer value given as specified by ISO-14229
@@ -2003,11 +2003,11 @@ class Client:
         :param filename: The name of the file to replace, limited to ASCII characters.
         :type filename: str
 
-        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data. 
-                If not specified, the default value of 00 will be used, specifying no encryption and no compression. 
+        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data.
+                If not specified, the default value of 00 will be used, specifying no encryption and no compression.
         :type dfi: :ref:`DataFormatIdentifier<DataFormatIdentifier>`
 
-        :param filesize: The filesize of the file to write. 
+        :param filesize: The filesize of the file to write.
             If filesize is an object of type :ref:`Filesize<Filesize>`, the uncompressed size and compressed size will be encoded on
             the minimum amount of bytes necessary, unless a ``width`` is explicitly defined. If no compressed size is given or filesize is an ``int``,
             then the compressed size will be set equal to the uncompressed size or the integer value given as specified by ISO-14229
@@ -2030,8 +2030,8 @@ class Client:
         :param filename: The name of the file to read, limited to ASCII characters.
         :type filename: str
 
-        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data. 
-                If not specified, the default value of 00 will be used, specifying no encryption and no compression. 
+        :param dfi: DataFormatIdentifier defining the compression and encryption scheme of the data.
+                If not specified, the default value of 00 will be used, specifying no encryption and no compression.
         :type dfi: :ref:`DataFormatIdentifier<DataFormatIdentifier>`
 
         :return: The server response parsed by :meth:`RequestFileTransfer.interpret_response<udsoncan.services.RequestFileTransfer.interpret_response>`
@@ -2109,7 +2109,7 @@ class Client:
         :param did: The data identifier to define.
         :type did: int
 
-        :param did_definition: The definition of the DID. Can be defined by source DID or memory address. 
+        :param did_definition: The definition of the DID. Can be defined by source DID or memory address.
             If a :ref:`MemoryLocation<MemoryLocation>` object is given, definition will automatically be by memory address
         :type did_definition: :ref:`DynamicDidDefinition<DynamicDidDefinition>` or :ref:`MemoryLocation<MemoryLocation>`
 
@@ -2327,7 +2327,7 @@ class Client:
                 if response.code == Response.Code.RequestCorrectlyReceived_ResponsePending:
                     if self.config['nrc78_callback'] is not None:
                         self.config['nrc78_callback']()
-                    
+
                     done_receiving = False
                     if not using_p2_star:
                         # Received a 0x78 NRC: timeout is now set to P2*
