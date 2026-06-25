@@ -21,7 +21,7 @@ from udsoncan.common.Routine import *
 from udsoncan.common.Units import *
 from udsoncan.typing import *
 
-__version__ = '1.26.0'
+__version__ = '1.26.1'
 __license__ = 'MIT'
 __author__ = 'Pier-Yves Lessard'
 
