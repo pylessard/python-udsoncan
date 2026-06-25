@@ -20,7 +20,7 @@ Purpose
 
 This project is an implementation of the Unified Diagnostic Services (UDS) protocol defined by ISO-14229 written in Python 3. The code is published under MIT license on GitHub (`pylessard/python-udsoncan <https://github.com/pylessard/python-udsoncan>`_).
 
-The goal of this project is to provide with a set of tool to interract with a UDS server by building/interpreting UDS payload and detecting malformed messages. All of this, with minimal effort and comprehensive code. It can be useful to develop a tester unit, debugging a server code, searching for security flaws or just messing with your car. 
+The goal of this project is to provide with a set of tools to interact with a UDS server by building/interpreting UDS payload and detecting malformed messages. All of this, with minimal effort and comprehensive code. It can be useful to develop a tester unit, debugging a server code, searching for security flaws or just messing with your car.
 
 Example
 -------

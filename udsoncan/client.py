@@ -479,7 +479,7 @@ class Client:
                              (self.service_log_prefix(services.ReadDataByIdentifier), len(didlist), list(map(hex, didlist))))
 
         if 'data_identifiers' not in self.config or not isinstance(self.config['data_identifiers'], dict):
-            raise ConfigError('Configuration does not contains a valid data identifier description.')
+            raise ConfigError('Configuration does not contain a valid data identifier description.')
 
         response = self.send_request(req)
         if response is None:
@@ -704,7 +704,7 @@ class Client:
         if control_type == services.RoutineControl.ControlType.startRoutine:
             action = "Starting routine ID"
         elif control_type == services.RoutineControl.ControlType.stopRoutine:
-            action = "Stoping routine ID"
+            action = "Stopping routine ID"
         elif control_type == services.RoutineControl.ControlType.requestRoutineResults:
             action = "Requesting result for routine ID"
 

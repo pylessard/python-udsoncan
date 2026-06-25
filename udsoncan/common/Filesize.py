@@ -39,7 +39,7 @@ class Filesize:
                 raise ValueError('Compressed size must be an integer')
 
             if compressed < 0:
-                raise ValueError("Comrpessed size must be an integer greater than 0")
+                raise ValueError("Compressed size must be an integer greater than 0")
 
         if width is not None:
             if not isinstance(width, int):

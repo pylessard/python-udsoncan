@@ -30,7 +30,7 @@ def fetch_io_entry_from_config(did: int, ioconfig: IOConfig) -> IOConfigEntry:
 
 
 def check_io_config_composite_entry(didname: str, entry: IOConfigEntry) -> None:
-    if 'codec'not in entry:
+    if 'codec' not in entry:
         raise ConfigError('codec', msg='Configuration for Input/Output identifier %s is missing a codec')
 
     if 'mask' in entry:

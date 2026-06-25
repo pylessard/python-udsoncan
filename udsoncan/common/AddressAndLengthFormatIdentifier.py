@@ -5,7 +5,7 @@ __all__ = ['AddressAndLengthFormatIdentifier']
 
 class AddressAndLengthFormatIdentifier:
     """
-    This class defines how many bytes of a memorylocation, composed of an address and a memorysize, should be encoded when sent over the underlying protocol.
+    This class defines how many bytes of a memory location, composed of an address and a memorysize, should be encoded when sent over the underlying protocol.
     Mainly used by :ref:`ReadMemoryByAddress<ReadMemoryByAddress>`, :ref:`WriteMemoryByAddress<WriteMemoryByAddress>`, :ref:`RequestDownload<RequestDownload>` and :ref:`RequestUpload<RequestUpload>` services
 
     Defined by ISO-14229:2020, Annex H
@@ -44,7 +44,7 @@ class AddressAndLengthFormatIdentifier:
 
     def __init__(self, address_format: int, memorysize_format: int):
         if address_format not in self.address_map:
-            raise ValueError('address_format must ba an integer selected from : %s ' % (self.address_map.keys()))
+            raise ValueError('address_format must be an integer selected from : %s ' % (self.address_map.keys()))
 
         if not isinstance(memorysize_format, int) or not isinstance(address_format, int):
             raise ValueError('memorysize_format and address_format must be integers')

@@ -115,10 +115,10 @@ class DynamicDidDefinition:
             else:
                 if alfid.get_byte() != entry.memloc.alfid.get_byte():
                     raise ValueError(
-                        'AddressAndLengthFormatIdentifier of DynamicDidDefinition entries are not consistent. Make sure address_format and memorysize_format are the same accross all entries.')
+                        'AddressAndLengthFormatIdentifier of DynamicDidDefinition entries are not consistent. Make sure address_format and memorysize_format are the same across all entries.')
 
         if alfid is None:
-            raise ValueError('No AddressAndLengthFormatIdentifier avaialble')  # should never happen.
+            raise ValueError('No AddressAndLengthFormatIdentifier available')  # should never happen.
 
         return alfid
 

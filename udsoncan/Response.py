@@ -177,7 +177,7 @@ class Response:
             response.service = BaseService.from_response_id(payload[0])
             if response.service is None:
                 response.valid = False
-                response.invalid_reason = "Payload first byte is not a know service response ID."
+                response.invalid_reason = "Payload first byte is not a known service response ID."
                 return response
 
             data_start = 1

@@ -96,7 +96,7 @@ class WriteMemoryByAddress(BaseService):
 
         expected_response_size = 1 + len(address_bytes) + len(memorysize_bytes)
         if len(response.data) < expected_response_size:
-            raise InvalidResponseException(response, 'Repsonse should be at least %d bytes' % (expected_response_size))
+            raise InvalidResponseException(response, 'Response should be at least %d bytes' % (expected_response_size))
 
         offset = 1
         length = len(memory_location.get_address_bytes())

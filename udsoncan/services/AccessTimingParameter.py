@@ -68,7 +68,7 @@ class AccessTimingParameter(BaseService):
         tools.validate_int(access_type, min=0, max=0x7F, name='Access type')
 
         if timing_param_record is not None and access_type != cls.AccessType.setTimingParametersToGivenValues:
-            raise ValueError('timing_param_record can only be set when access_type is setTimingParametersToGivenValues"')
+            raise ValueError('timing_param_record can only be set when access_type is setTimingParametersToGivenValues')
 
         if timing_param_record is None and access_type == cls.AccessType.setTimingParametersToGivenValues:
             raise ValueError('A timing_param_record must be provided when access_type is "setTimingParametersToGivenValues"')
@@ -78,7 +78,7 @@ class AccessTimingParameter(BaseService):
 
         if timing_param_record is not None:
             if not isinstance(timing_param_record, bytes):
-                raise ValueError("timing_param_record must be a valid bytes objects")
+                raise ValueError("timing_param_record must be a valid bytes object")
             request.data += timing_param_record
 
         return request

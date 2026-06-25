@@ -454,7 +454,7 @@ class QueueConnection(BaseConnection):
 class PythonIsoTpConnection(BaseConnection):
     """
     Sends and receives data using a `can-isotp <https://github.com/pylessard/python-can-isotp>`_ Python module which is a Python implementation of the IsoTp transport protocol
-    which can be coupled with `python-can <https://python-can.readthedocs.io>`_ module to interract with CAN hardware
+    which can be coupled with `python-can <https://python-can.readthedocs.io>`_ module to interact with CAN hardware
 
     `can-isotp <https://github.com/pylessard/python-can-isotp>`_ must be installed in order to use this connection.
 
