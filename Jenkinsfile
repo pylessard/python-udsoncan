@@ -120,7 +120,11 @@ pipeline {
                     }
                 }
             }
+        } 
+    }
+    post {
+        always {
+            deleteDir()
         }
-       
     }
 }
