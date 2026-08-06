@@ -516,6 +516,11 @@ class J2534():
         else:
             self.txFlags &= ~TxFlags.ISO15765_ADDR_TYPE.value
 
+        if txid >> 11:
+            self.txFlags |= TxFlags.CAN_29_BIT_ID.value
+        else:
+            self.txFlags &= ~TxFlags.CAN_29_BIT_ID.value
+
         msgMask = PASSTHRU_MSG()
         msgMask.ProtocolID = protocol.value
         msgMask.TxFlags = self.txFlags

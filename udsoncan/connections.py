@@ -700,13 +700,11 @@ class J2534Connection(BaseConnection):
                  protocol = None,
                  baudrate = 500000,
                  ):
-        
-
         BaseConnection.__init__(self, name)
 
         self.opened = False
         self.result = None
-        self.protocol = protocol if protocol else Protocol_ID.ISO15765
+        self.protocol = protocol or Protocol_ID.ISO15765
         self.baudrate = baudrate
         self.dll_debug = debug
 
@@ -718,7 +716,7 @@ class J2534Connection(BaseConnection):
             raise RuntimeError('DLL not found')
 
         if (txid or rxid or extid) is not None:
-            self.logger.critical('txid, rxid, and extid are deprecated constructor arguments. Pass them, for example, "with J2534 Connection(windll) as conn: conn.set_can_id(txid, txid, extid)".')
+            self.logger.critical('txid, rxid, and extid are deprecated constructor arguments. Pass them, for example, "with J2534Connection(windll) as conn: conn.set_can_id(txid, txid, extid)".')
             self.open()
             self.set_can_id(txid, rxid, extid)
 
