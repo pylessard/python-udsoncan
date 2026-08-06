@@ -458,7 +458,8 @@ class J2534():
             # breakpoint()
             # Do not wrap in queue for avoid mixing timeout of usb connection and real server response Timeout.
             result = dllPassThruReadMsgs(ChannelID, byref(pMsg), byref(pNumMsgs), c_ulong(Timeout))
-            if pMsg.RxStatus & (RxStatus.TX_INDICATION.value | RxStatus.TX_MSG_TYPE.value | RxStatus.START_OF_MESSAGE.value):
+
+            if Error_ID(result) == Error_ID.ERR_SUCCESS and pMsg.RxStatus & (RxStatus.TX_INDICATION.value | RxStatus.TX_MSG_TYPE.value | RxStatus.START_OF_MESSAGE.value):
                 continue
 
             return Error_ID(result), pMsg.getData(), pNumMsgs
