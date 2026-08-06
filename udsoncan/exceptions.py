@@ -14,8 +14,12 @@ class TimeoutException(Exception):
     Simple extension of ``Exception`` with no additional property. Raised when a timeout in the communication happens.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, timeout, kind: str = 'Timeout'):
+        self.timeout = timeout
+        self.kind = kind
+
+    def __str__(self):
+        return "Did not received frame in time (%s=%.3f sec)" % (self.kind, self.timeout)
 
 
 class NegativeResponseException(Exception):

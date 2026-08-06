@@ -2283,17 +2283,11 @@ class Client:
                 if spr_used:
                     return None
                 if timeout_type_used == 'single_request':
-                    timeout_name_to_report = 'P2* timeout' if using_p2_star else 'P2 timeout'
-                    timeout_value_to_report = single_request_timeout
+                    raise TimeoutException(single_request_timeout, 'P2* timeout' if using_p2_star else 'P2 timeout')
                 elif timeout_type_used == 'overall':
-                    timeout_name_to_report = 'Global request timeout'
-                    timeout_value_to_report = overall_timeout
+                    raise TimeoutException(overall_timeout, 'Global request timeout')
                 else:  # Shouldn't go here.
-                    timeout_name_to_report = 'Timeout'
-                    timeout_value_to_report = timeout_value
-
-                raise TimeoutException('Did not receive response in time. %s time has expired (timeout=%.3f sec)' %
-                                       (timeout_name_to_report, float(timeout_value_to_report)))
+                    raise TimeoutException(timeout_value, 'Timeout')
 
             response = Response.from_payload(recv_payload)
             self.last_response = response
