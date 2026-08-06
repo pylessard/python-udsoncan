@@ -734,6 +734,8 @@ class J2534Connection(BaseConnection):
         pass
 
     def open(self) -> "J2534Connection":
+        if self.is_open():
+            return
         try:
             # Open the interface (connect to the DLL)
             self.result, self.devID = self.interface.PassThruOpen()
