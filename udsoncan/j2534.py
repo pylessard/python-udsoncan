@@ -1,351 +1,36 @@
-import ctypes
-from ctypes import Structure, WINFUNCTYPE, POINTER, cast, c_long, c_void_p, c_ulong, byref  # type: ignore
-
 from enum import Enum
-
-import logging
-
-
-class PASSTHRU_MSG(Structure):
-    _fields_ = [("ProtocolID", c_ulong),
-                ("RxStatus", c_ulong),
-                ("TxFlags", c_ulong),
-                ("Timestamp", c_ulong),
-                ("DataSize", c_ulong),
-                ("ExtraDataIndex", c_ulong),
-                ("Data", ctypes.c_ubyte * 4128)]
-
-    def setData(self, data: bytes):
-        self.DataSize = len(data)
-        for i in range(self.DataSize):
-            self.Data[i] = data[i]
-
-    def getData(self):
-        addr_size = 5 if self.RxStatus & RxStatus.ISO15765_ADDR_TYPE.value else 4
-        return bytes(self.Data[addr_size : self.DataSize])
-
-
-class SCONFIG(Structure):
-    _fields_ = [("Parameter", c_ulong),
-                ("Value", c_ulong)]
-
-
-class SCONFIG_LIST(Structure):
-    _fields_ = [("NumOfParams", c_ulong),
-                ("ConfigPtr", POINTER(SCONFIG))]
-
-    def __init__(self, values):
-        self.NumOfParams = len(values)
-        self.ConfigPtr = (SCONFIG * self.NumOfParams)(*values)
-
-
-class J2534():
-    dllPassThruOpen = None
-    dllPassThruClose = None
-    dllPassThruConnect = None
-    dllPassThruDisconnect = None
-    dllPassThruReadMsgs = None
-    dllPassThruWriteMsgs = None
-    dllPassThruStartPeriodicMsg = None
-    dllPassThruStopPeriodicMsg = None
-    dllPassThruReadVersion = None
-    dllPassThruGetLastError = None
-    dllPassThruStartMsgFilter = None
-    dllPassThruIoctl = None
-
-    def __init__(self, windll, rxid, txid, extid):
-        global dllPassThruOpen
-        global dllPassThruClose
-        global dllPassThruConnect
-        global dllPassThruDisconnect
-        global dllPassThruReadMsgs
-        global dllPassThruWriteMsgs
-        global dllPassThruStartPeriodicMsg
-        global dllPassThruStopPeriodicMsg
-        global dllPassThruReadVersion
-        global dllPassThruGetLastError
-        global dllPassThruStartMsgFilter
-        global dllPassThruIoctl
-
-        self.hDLL = ctypes.cdll.LoadLibrary(windll)
-        self.rxid = rxid.to_bytes(4, 'big')
-        self.txid = txid.to_bytes(4, 'big')
-        self.txFlags = TxFlags.ISO15765_FRAME_PAD.value
-        self.connectFlags = ConnectFlags.NONE.value
-        # Determine mode ID29 or ID11
-        if txid >> 11:
-            self.txFlags |= TxFlags.CAN_29_BIT_ID.value
-            self.connectFlags |= ConnectFlags.CAN_29_BIT_ID.value
-
-        if extid is not None:
-            self.rxid += extid.to_bytes(1, 'big')
-            self.txid += extid.to_bytes(1, 'big')
-            self.txFlags |= TxFlags.ISO15765_ADDR_TYPE.value
-
-        self.logger = logging.getLogger()
-
-        dllPassThruOpenProto = WINFUNCTYPE(
-            c_long,
-            c_void_p,
-            POINTER(c_ulong))
-
-        dllPassThruOpenParams = (1, "pName", 0), (1, "pDeviceID", 0)
-        dllPassThruOpen = dllPassThruOpenProto(("PassThruOpen", self.hDLL), dllPassThruOpenParams)
-
-        dllPassThruCloseProto = WINFUNCTYPE(
-            c_long,
-            c_ulong)
-
-        dllPassThruCloseParams = (1, "DeviceID", 0),
-        dllPassThruClose = dllPassThruCloseProto(("PassThruClose", self.hDLL), dllPassThruCloseParams)
-
-        dllPassThruConnectProto = WINFUNCTYPE(
-            c_long,
-            c_ulong,
-            c_ulong,
-            c_ulong,
-            c_ulong,
-            POINTER(c_ulong))
-
-        dllPassThruConnectParams = (1, "DeviceID", 0), (1, "ProtocolID", 0), (1, "Flags", 0), (1, "BaudRate", 500000), (1, "pChannelID", 0)
-        dllPassThruConnect = dllPassThruConnectProto(("PassThruConnect", self.hDLL), dllPassThruConnectParams)
-
-        dllPassThruDisconnectProto = WINFUNCTYPE(
-            c_long,
-            c_ulong)
-
-        dllPassThruDisconnectParams = (1, "ChannelID", 0),
-        dllPassThruDisconnect = dllPassThruDisconnectProto(("PassThruDisconnect", self.hDLL), dllPassThruDisconnectParams)
-
-        dllPassThruReadMsgsProto = WINFUNCTYPE(
-            c_long,
-            c_ulong,
-            POINTER(PASSTHRU_MSG),
-            POINTER(c_ulong),
-            c_ulong)
-
-        dllPassThruReadMsgsParams = (1, "ChannelID", 0), (1, "pMsg", 0), (1, "pNumMsgs", 0), (1, "Timeout", 0)
-        dllPassThruReadMsgs = dllPassThruReadMsgsProto(("PassThruReadMsgs", self.hDLL), dllPassThruReadMsgsParams)
-
-        dllPassThruWriteMsgsProto = WINFUNCTYPE(
-            c_long,
-            c_ulong,
-            POINTER(PASSTHRU_MSG),
-            POINTER(c_ulong),
-            c_ulong)
-
-        dllPassThruWriteMsgsParams = (1, "ChannelID", 0), (1, "pMsg", 0), (1, "pNumMsgs", 0), (1, "Timeout", 0)
-        dllPassThruWriteMsgs = dllPassThruWriteMsgsProto(("PassThruWriteMsgs", self.hDLL), dllPassThruWriteMsgsParams)
-
-        dllPassThruStartPeriodicMsgProto = WINFUNCTYPE(
-            c_long,
-            c_ulong,
-            POINTER(PASSTHRU_MSG),
-            POINTER(c_ulong),
-            c_ulong)
-
-        dllPassThruStartPeriodicMsgParams = (1, "ChannelID", 0), (1, "pMsg", 0), (1, "pMsgID", 0), (1, "TimeInterval", 0)
-        dllPassThruStartPeriodicMsg = dllPassThruStartPeriodicMsgProto(("PassThruStartPeriodicMsg", self.hDLL), dllPassThruStartPeriodicMsgParams)
-
-        dllPassThruStopPeriodicMsgProto = WINFUNCTYPE(
-            c_long,
-            c_ulong,
-            c_ulong)
-
-        dllPassThruStopPeriodicMsgParams = (1, "ChannelID", 0), (1, "MsgID", 0)
-        dllPassThruStopPeriodicMsg = dllPassThruStopPeriodicMsgProto(("PassThruStopPeriodicMsg", self.hDLL), dllPassThruStopPeriodicMsgParams)
-
-        dllPassThruReadVersionProto = WINFUNCTYPE(
-            c_long,
-            c_ulong,
-            POINTER(ctypes.c_char),
-            POINTER(ctypes.c_char),
-            POINTER(ctypes.c_char))
-
-        dllPassThruReadVersionParams = (1, "DeviceID", 0), (1, "pFirmwareVersion", 0), (1, "pDllVersion", 0), (1, "pApiVersoin", 0)
-        dllPassThruReadVersion = dllPassThruReadVersionProto(("PassThruReadVersion", self.hDLL), dllPassThruReadVersionParams)
-
-        dllPassThruGetLastErrorProto = WINFUNCTYPE(
-            c_long,
-            POINTER(ctypes.c_char),
-        )
-        dllPassThruGetLastErrorParams = (1, "pErrorDescription", 0),
-        dllPassThruGetLastError = dllPassThruGetLastErrorProto(("PassThruGetLastError", self.hDLL), dllPassThruGetLastErrorParams)
-
-        dllPassThruStartMsgFilterProto = WINFUNCTYPE(
-            c_long,
-            c_ulong,
-            c_ulong,
-            POINTER(PASSTHRU_MSG),
-            POINTER(PASSTHRU_MSG),
-            POINTER(PASSTHRU_MSG),
-            POINTER(c_ulong)
-        )
-
-        dllPassThruStartMsgFilterParams = (1,"ChannelID",0), (1,"FilterType",0),(1,"pMaskMsg",0),(1,"pPatternMsg",0),(1,"pFlowControlMsg",0),(1,"pMsgID",0)
-
-        dllPassThruStartMsgFilter = dllPassThruStartMsgFilterProto(("PassThruStartMsgFilter", self.hDLL), dllPassThruStartMsgFilterParams)
-
-        dllPassThruIoctlProto = WINFUNCTYPE(
-            c_long,
-            c_ulong,
-            c_ulong,
-            c_void_p,
-            c_void_p
-        )
-
-        dllPassThruIoctlParams = (1, "Handle", 0), (1, "IoctlID", 0), (1, "pInput", 0), (1, "pOutput", 0)
-
-        dllPassThruIoctl = dllPassThruIoctlProto(("PassThruIoctl", self.hDLL), dllPassThruIoctlParams)
-
-    def PassThruOpen(self, pDeviceID=None):
-        if not pDeviceID:
-            pDeviceID = ctypes.c_ulong()
-
-        result = dllPassThruOpen(bytes('J2534-2:', 'ascii'), byref(pDeviceID))
-        return Error_ID(hex(result)), pDeviceID
-
-    def PassThruConnect(self, deviceID, protocol, baudrate, pChannelID=None):
-        if not pChannelID:
-            pChannelID = c_ulong()
-
-        result = dllPassThruConnect(deviceID, protocol, self.connectFlags, baudrate, byref(pChannelID))
-        return Error_ID(hex(result)), pChannelID
-
-    def PassThruClose(self, DeviceID):
-        result = dllPassThruClose(DeviceID)
-        return Error_ID(hex(result))
-
-    def PassThruDisconnect(self, ChannelID):
-        result = dllPassThruDisconnect(ChannelID)
-        return Error_ID(hex(result))
-
-    def PassThruReadMsgs(self, ChannelID, protocol, pNumMsgs=1, Timeout=20):
-        pMsg = PASSTHRU_MSG()
-        pMsg.ProtocolID = protocol
-
-        pNumMsgs = c_ulong(pNumMsgs)
-
-        while 1:
-            # breakpoint()
-            result = dllPassThruReadMsgs(ChannelID, byref(pMsg), byref(pNumMsgs), c_ulong(Timeout))
-            if hex(result) == Error_ID.ERR_BUFFER_EMPTY.value or pNumMsgs == 0:
-                return None, None, 0
-
-            if pMsg.RxStatus & (RxStatus.TX_INDICATION.value | RxStatus.TX_MSG_TYPE.value | RxStatus.START_OF_MESSAGE.value):
-                continue
-
-            return Error_ID(hex(result)), pMsg.getData(), pNumMsgs
-
-    def PassThruWriteMsgs(self, ChannelID, Data, protocol, pNumMsgs=1, Timeout=1000):
-        Data = self.txid + Data
-        self.logger.info("Sending data: " + str(Data.hex()))
-
-        txmsg = PASSTHRU_MSG()
-        txmsg.TxFlags = self.txFlags
-        txmsg.ProtocolID = protocol
-        txmsg.setData(Data)
-
-        result = dllPassThruWriteMsgs(ChannelID, byref(txmsg), byref(c_ulong(pNumMsgs)), c_ulong(Timeout))
-
-        return Error_ID(hex(result))
-
-    def PassThruStartPeriodicMsg(self, ChannelID, Data, MsgID=0, TimeInterval=100):
-        pMsg = PASSTHRU_MSG()
-        pMsg.setData(Data)
-
-        result = dllPassThruStartPeriodicMsg(ChannelID, byref(pMsg), byref(c_ulong(MsgID)), c_ulong(TimeInterval))
-
-        return Error_ID(hex(result))
-
-    def PassThruStopPeriodicMsg(self, ChannelID, MsgID):
-        result = dllPassThruStopPeriodicMsg(ChannelID, MsgID)
-
-        return Error_ID(hex(result))
-
-    def PassThruReadVersion(self, DeviceID):
-        pFirmwareVersion = (ctypes.c_char * 80)()
-        pDllVersion = (ctypes.c_char * 80)()
-        pApiVersion = (ctypes.c_char * 80)()
-        result = dllPassThruReadVersion(DeviceID, pFirmwareVersion, pDllVersion, pApiVersion)
-
-        return Error_ID(hex(result)), pFirmwareVersion, pDllVersion, pApiVersion
-
-    def PassThruGetLastError(self):
-        pErrorDescription = (ctypes.c_char * 80)()
-        result = dllPassThruGetLastError(pErrorDescription)
-
-        return Error_ID(hex(result)), pErrorDescription.value.decode()
-
-    def PassThruIoctl(self, Handle, IoctlID, ioctlInput=None, ioctlOutput=None):
-        pInput = None if ioctlInput is None else byref(ioctlInput)
-        pOutput = None if ioctlOutput is None else byref(ioctlOutput)
-
-        result = dllPassThruIoctl(Handle, c_ulong(IoctlID.value), pInput, pOutput)
-
-        return Error_ID(hex(result))
-
-    def PassThruStartMsgFilter(self, ChannelID, protocol):
-        msgMask = PASSTHRU_MSG()
-        msgMask.ProtocolID = protocol
-        msgMask.TxFlags = self.txFlags
-        msgMask.RxStatus = msgMask.ExtraDataIndex = 0xCCCC_CCCC
-        msgMask.setData(b'\xFF' * len(self.rxid))
-
-        msgPattern = PASSTHRU_MSG()
-        msgPattern.ProtocolID = protocol
-        msgPattern.TxFlags = self.txFlags
-        msgPattern.RxStatus = msgPattern.ExtraDataIndex = 0xCCCC_CCCC
-        msgPattern.setData(self.rxid)
-
-        if protocol in [Protocol_ID.ISO9141.value, Protocol_ID.ISO14230.value]:
-            filterType = c_ulong(Filter.PASS_FILTER.value)
-            msgFlow = None
-        else:
-            filterType = c_ulong(Filter.FLOW_CONTROL_FILTER.value)
-            msgFlow = PASSTHRU_MSG()
-            msgFlow.ProtocolID = protocol
-            msgFlow.TxFlags = self.txFlags
-            msgFlow.RxStatus = msgFlow.ExtraDataIndex = 0xCCCC_CCCC
-            msgFlow.setData(self.txid)
-            msgFlow = byref(msgFlow)
-
-        msgID = c_ulong(0)
-
-        result = dllPassThruStartMsgFilter(ChannelID, filterType, byref(msgMask), byref(msgPattern), msgFlow, byref(msgID))
-
-        return Error_ID(hex(result))
+from ctypes import Structure, WINFUNCTYPE, POINTER, cast, cdll, c_char, c_long, c_void_p, c_ubyte, c_ulong, byref  # type: ignore
 
 
 class Error_ID(Enum):
-    ERR_SUCCESS = hex(0x00)
-    STATUS_NOERROR = hex(0x00)
-    ERR_NOT_SUPPORTED = hex(0x01)
-    ERR_INVALID_CHANNEL_ID = hex(0x02)
-    ERR_INVALID_PROTOCOL_ID = hex(0x03)
-    ERR_NULL_PARAMETER = hex(0x04)
-    ERR_INVALID_IOCTL_VALUE = hex(0x05)
-    ERR_INVALID_FLAGS = hex(0x06)
-    ERR_FAILED = hex(0x07)
-    ERR_DEVICE_NOT_CONNECTED = hex(0x08)
-    ERR_TIMEOUT = hex(0x09)
-    ERR_INVALID_MSG = hex(0x0A)
-    ERR_INVALID_TIME_INTERVAL = hex(0x0B)
-    ERR_EXCEEDED_LIMIT = hex(0x0C)
-    ERR_INVALID_MSG_ID = hex(0x0D)
-    ERR_DEVICE_IN_USE = hex(0x0E)
-    ERR_INVALID_IOCTL_ID = hex(0x0F)
-    ERR_BUFFER_EMPTY = hex(0x10)
-    ERR_BUFFER_FULL = hex(0x11)
-    ERR_BUFFER_OVERFLOW = hex(0x12)
-    ERR_PIN_INVALID = hex(0x13)
-    ERR_CHANNEL_IN_USE = hex(0x14)
-    ERR_MSG_PROTOCOL_ID = hex(0x15)
-    ERR_INVALID_FILTER_ID = hex(0x16)
-    ERR_NO_FLOW_CONTROL = hex(0x17)
-    ERR_NOT_UNIQUE = hex(0x18)
-    ERR_INVALID_BAUDRATE = hex(0x19)
-    ERR_INVALID_DEVICE_ID = hex(0x1A)
+    ERR_SUCCESS = 0x00
+    STATUS_NOERROR = 0x00
+    ERR_NOT_SUPPORTED = 0x01
+    ERR_INVALID_CHANNEL_ID = 0x02
+    ERR_INVALID_PROTOCOL_ID = 0x03
+    ERR_NULL_PARAMETER = 0x04
+    ERR_INVALID_IOCTL_VALUE = 0x05
+    ERR_INVALID_FLAGS = 0x06
+    ERR_FAILED = 0x07
+    ERR_DEVICE_NOT_CONNECTED = 0x08
+    ERR_TIMEOUT = 0x09
+    ERR_INVALID_MSG = 0x0A
+    ERR_INVALID_TIME_INTERVAL = 0x0B
+    ERR_EXCEEDED_LIMIT = 0x0C
+    ERR_INVALID_MSG_ID = 0x0D
+    ERR_DEVICE_IN_USE = 0x0E
+    ERR_INVALID_IOCTL_ID = 0x0F
+    ERR_BUFFER_EMPTY = 0x10
+    ERR_BUFFER_FULL = 0x11
+    ERR_BUFFER_OVERFLOW = 0x12
+    ERR_PIN_INVALID = 0x13
+    ERR_CHANNEL_IN_USE = 0x14
+    ERR_MSG_PROTOCOL_ID = 0x15
+    ERR_INVALID_FILTER_ID = 0x16
+    ERR_NO_FLOW_CONTROL = 0x17
+    ERR_NOT_UNIQUE = 0x18
+    ERR_INVALID_BAUDRATE = 0x19
+    ERR_INVALID_DEVICE_ID = 0x1A
 
 
 class Protocol_ID(Enum):
@@ -553,3 +238,309 @@ class Ioctl_Flags(Enum):
     TX_IOCTL_BASE = 0x70000
     TX_IOCTL_SET_DLL_DEBUG_FLAGS = 0x70001
     TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS = 0x00000001
+
+
+class PASSTHRU_MSG(Structure):
+    _fields_ = [("ProtocolID", c_ulong),
+                ("RxStatus", c_ulong),
+                ("TxFlags", c_ulong),
+                ("Timestamp", c_ulong),
+                ("DataSize", c_ulong),
+                ("ExtraDataIndex", c_ulong),
+                ("Data", c_ubyte * 4128)]
+
+    def setData(self, data: bytes):
+        self.DataSize = len(data)
+        for i in range(self.DataSize):
+            self.Data[i] = data[i]
+
+    def getData(self):
+        addr_size = 5 if self.RxStatus & RxStatus.ISO15765_ADDR_TYPE.value else 4
+        return bytes(self.Data[addr_size : self.DataSize])
+
+
+class SCONFIG(Structure):
+    _fields_ = [("Parameter", c_ulong),
+                ("Value", c_ulong)]
+
+
+class SCONFIG_LIST(Structure):
+    _fields_ = [("NumOfParams", c_ulong),
+                ("ConfigPtr", POINTER(SCONFIG))]
+
+    def __init__(self, values):
+        self.NumOfParams = len(values)
+        self.ConfigPtr = (SCONFIG * self.NumOfParams)(*values)
+
+
+class J2534():
+    dllPassThruOpen = None
+    dllPassThruClose = None
+    dllPassThruConnect = None
+    dllPassThruDisconnect = None
+    dllPassThruReadMsgs = None
+    dllPassThruWriteMsgs = None
+    dllPassThruStartPeriodicMsg = None
+    dllPassThruStopPeriodicMsg = None
+    dllPassThruReadVersion = None
+    dllPassThruGetLastError = None
+    dllPassThruStartMsgFilter = None
+    dllPassThruIoctl = None
+
+    def __init__(self, windll, txid=None, rxid=None, extid=None):
+        assert (txid or rxid or extid) is None, 'txid, rxid, extid its legacy argumets. Pass into J2534.PassThruStartMsgFilter() method.'
+
+        global dllPassThruOpen
+        global dllPassThruClose
+        global dllPassThruConnect
+        global dllPassThruDisconnect
+        global dllPassThruReadMsgs
+        global dllPassThruWriteMsgs
+        global dllPassThruStartPeriodicMsg
+        global dllPassThruStopPeriodicMsg
+        global dllPassThruReadVersion
+        global dllPassThruGetLastError
+        global dllPassThruStartMsgFilter
+        global dllPassThruIoctl
+
+        self.hDLL = cdll.LoadLibrary(windll)
+
+        dllPassThruOpenProto = WINFUNCTYPE(
+            c_long,
+            c_void_p,
+            POINTER(c_ulong))
+
+        dllPassThruOpenParams = (1, "pName", 0), (1, "pDeviceID", 0)
+        dllPassThruOpen = dllPassThruOpenProto(("PassThruOpen", self.hDLL), dllPassThruOpenParams)
+
+        dllPassThruCloseProto = WINFUNCTYPE(
+            c_long,
+            c_ulong)
+
+        dllPassThruCloseParams = (1, "DeviceID", 0),
+        dllPassThruClose = dllPassThruCloseProto(("PassThruClose", self.hDLL), dllPassThruCloseParams)
+
+        dllPassThruConnectProto = WINFUNCTYPE(
+            c_long,
+            c_ulong,
+            c_ulong,
+            c_ulong,
+            c_ulong,
+            POINTER(c_ulong))
+
+        dllPassThruConnectParams = (1, "DeviceID", 0), (1, "ProtocolID", 0), (1, "Flags", 0), (1, "BaudRate", 500000), (1, "pChannelID", 0)
+        dllPassThruConnect = dllPassThruConnectProto(("PassThruConnect", self.hDLL), dllPassThruConnectParams)
+
+        dllPassThruDisconnectProto = WINFUNCTYPE(
+            c_long,
+            c_ulong)
+
+        dllPassThruDisconnectParams = (1, "ChannelID", 0),
+        dllPassThruDisconnect = dllPassThruDisconnectProto(("PassThruDisconnect", self.hDLL), dllPassThruDisconnectParams)
+
+        dllPassThruReadMsgsProto = WINFUNCTYPE(
+            c_long,
+            c_ulong,
+            POINTER(PASSTHRU_MSG),
+            POINTER(c_ulong),
+            c_ulong)
+
+        dllPassThruReadMsgsParams = (1, "ChannelID", 0), (1, "pMsg", 0), (1, "pNumMsgs", 0), (1, "Timeout", 0)
+        dllPassThruReadMsgs = dllPassThruReadMsgsProto(("PassThruReadMsgs", self.hDLL), dllPassThruReadMsgsParams)
+
+        dllPassThruWriteMsgsProto = WINFUNCTYPE(
+            c_long,
+            c_ulong,
+            POINTER(PASSTHRU_MSG),
+            POINTER(c_ulong),
+            c_ulong)
+
+        dllPassThruWriteMsgsParams = (1, "ChannelID", 0), (1, "pMsg", 0), (1, "pNumMsgs", 0), (1, "Timeout", 0)
+        dllPassThruWriteMsgs = dllPassThruWriteMsgsProto(("PassThruWriteMsgs", self.hDLL), dllPassThruWriteMsgsParams)
+
+        dllPassThruStartPeriodicMsgProto = WINFUNCTYPE(
+            c_long,
+            c_ulong,
+            POINTER(PASSTHRU_MSG),
+            POINTER(c_ulong),
+            c_ulong)
+
+        dllPassThruStartPeriodicMsgParams = (1, "ChannelID", 0), (1, "pMsg", 0), (1, "pMsgID", 0), (1, "TimeInterval", 0)
+        dllPassThruStartPeriodicMsg = dllPassThruStartPeriodicMsgProto(("PassThruStartPeriodicMsg", self.hDLL), dllPassThruStartPeriodicMsgParams)
+
+        dllPassThruStopPeriodicMsgProto = WINFUNCTYPE(
+            c_long,
+            c_ulong,
+            c_ulong)
+
+        dllPassThruStopPeriodicMsgParams = (1, "ChannelID", 0), (1, "MsgID", 0)
+        dllPassThruStopPeriodicMsg = dllPassThruStopPeriodicMsgProto(("PassThruStopPeriodicMsg", self.hDLL), dllPassThruStopPeriodicMsgParams)
+
+        dllPassThruReadVersionProto = WINFUNCTYPE(
+            c_long,
+            c_ulong,
+            POINTER(c_char),
+            POINTER(c_char),
+            POINTER(c_char))
+
+        dllPassThruReadVersionParams = (1, "DeviceID", 0), (1, "pFirmwareVersion", 0), (1, "pDllVersion", 0), (1, "pApiVersoin", 0)
+        dllPassThruReadVersion = dllPassThruReadVersionProto(("PassThruReadVersion", self.hDLL), dllPassThruReadVersionParams)
+
+        dllPassThruGetLastErrorProto = WINFUNCTYPE(
+            c_long,
+            POINTER(c_char),
+        )
+        dllPassThruGetLastErrorParams = (1, "pErrorDescription", 0),
+        dllPassThruGetLastError = dllPassThruGetLastErrorProto(("PassThruGetLastError", self.hDLL), dllPassThruGetLastErrorParams)
+
+        dllPassThruStartMsgFilterProto = WINFUNCTYPE(
+            c_long,
+            c_ulong,
+            c_ulong,
+            POINTER(PASSTHRU_MSG),
+            POINTER(PASSTHRU_MSG),
+            POINTER(PASSTHRU_MSG),
+            POINTER(c_ulong)
+        )
+
+        dllPassThruStartMsgFilterParams = (1,"ChannelID",0), (1,"FilterType",0),(1,"pMaskMsg",0),(1,"pPatternMsg",0),(1,"pFlowControlMsg",0),(1,"pMsgID",0)
+
+        dllPassThruStartMsgFilter = dllPassThruStartMsgFilterProto(("PassThruStartMsgFilter", self.hDLL), dllPassThruStartMsgFilterParams)
+
+        dllPassThruIoctlProto = WINFUNCTYPE(
+            c_long,
+            c_ulong,
+            c_ulong,
+            c_void_p,
+            c_void_p
+        )
+
+        dllPassThruIoctlParams = (1, "Handle", 0), (1, "IoctlID", 0), (1, "pInput", 0), (1, "pOutput", 0)
+
+        dllPassThruIoctl = dllPassThruIoctlProto(("PassThruIoctl", self.hDLL), dllPassThruIoctlParams)
+
+    def PassThruOpen(self, pDeviceID=None):
+        if not pDeviceID:
+            pDeviceID = c_ulong()
+
+        result = dllPassThruOpen(bytes('J2534-2:', 'ascii'), byref(pDeviceID))
+        return Error_ID(result), pDeviceID
+
+    def PassThruConnect(self, deviceID, protocol: Protocol_ID, baudrate, pChannelID=None):
+        self.txFlags = TxFlags.NONE.value
+
+        if protocol in [Protocol_ID.ISO15765, Protocol_ID.ISO15765_PS, Protocol_ID.SW_ISO15765_PS]:
+            self.txFlags |= TxFlags.ISO15765_FRAME_PAD.value
+
+        connectFlags = ConnectFlags.CAN_ID_BOTH.value
+
+        if not pChannelID:
+            pChannelID = c_ulong()
+
+        result = dllPassThruConnect(deviceID, protocol.value, connectFlags, baudrate, byref(pChannelID))
+        return Error_ID(result), pChannelID
+
+    def PassThruClose(self, DeviceID):
+        result = dllPassThruClose(DeviceID)
+        return Error_ID(result)
+
+    def PassThruDisconnect(self, ChannelID):
+        result = dllPassThruDisconnect(ChannelID)
+        return Error_ID(result)
+
+    def PassThruReadMsgs(self, ChannelID, protocol: Protocol_ID, pNumMsgs=1, Timeout=1000):
+        pMsg = PASSTHRU_MSG()
+        pMsg.ProtocolID = protocol.value
+
+        pNumMsgs = c_ulong(pNumMsgs)
+
+        while 1:
+            # breakpoint()
+            # Do not wrap in queue for avoid mixing timeout of usb connection and real server response Timeout.
+            result = dllPassThruReadMsgs(ChannelID, byref(pMsg), byref(pNumMsgs), c_ulong(Timeout))
+            if pMsg.RxStatus & (RxStatus.TX_INDICATION.value | RxStatus.TX_MSG_TYPE.value | RxStatus.START_OF_MESSAGE.value):
+                continue
+
+            return Error_ID(result), pMsg.getData(), pNumMsgs
+
+    def PassThruWriteMsgs(self, ChannelID, Data, protocol: Protocol_ID, pNumMsgs=1, Timeout=1000):
+        txmsg = PASSTHRU_MSG()
+        txmsg.TxFlags = self.txFlags
+        txmsg.ProtocolID = protocol.value
+        txmsg.setData(self.txid + Data)
+
+        result = dllPassThruWriteMsgs(ChannelID, byref(txmsg), byref(c_ulong(pNumMsgs)), c_ulong(Timeout))
+        return Error_ID(result)
+
+    def PassThruStartPeriodicMsg(self, ChannelID, Data, MsgID=0, TimeInterval=100):
+        pMsg = PASSTHRU_MSG()
+        pMsg.setData(Data)
+
+        result = dllPassThruStartPeriodicMsg(ChannelID, byref(pMsg), byref(c_ulong(MsgID)), c_ulong(TimeInterval))
+        return Error_ID(result)
+
+    def PassThruStopPeriodicMsg(self, ChannelID, MsgID):
+        result = dllPassThruStopPeriodicMsg(ChannelID, MsgID)
+
+        return Error_ID(result)
+
+    def PassThruReadVersion(self, DeviceID):
+        pFirmwareVersion = (c_char * 80)()
+        pDllVersion = (c_char * 80)()
+        pApiVersion = (c_char * 80)()
+
+        result = dllPassThruReadVersion(DeviceID, pFirmwareVersion, pDllVersion, pApiVersion)
+        return Error_ID(result), pFirmwareVersion, pDllVersion, pApiVersion
+
+    def PassThruGetLastError(self):
+        pErrorDescription = (c_char * 80)()
+        result = dllPassThruGetLastError(pErrorDescription)
+
+        return Error_ID(result), pErrorDescription.value.decode()
+
+    def PassThruIoctl(self, Handle, IoctlID, ioctlInput=None, ioctlOutput=None):
+        pInput = None if ioctlInput is None else byref(ioctlInput)
+        pOutput = None if ioctlOutput is None else byref(ioctlOutput)
+
+        result = dllPassThruIoctl(Handle, c_ulong(IoctlID.value), pInput, pOutput)
+        return Error_ID(result)
+
+    def PassThruStartMsgFilter(self, ChannelID, protocol: Protocol_ID, txid: int, rxid: int, extid: int = None):
+        self.txid = txid.to_bytes(4, 'big')
+        self.rxid = rxid.to_bytes(4, 'big')
+
+        if extid is not None:
+            self.txid += extid.to_bytes(1, 'big')
+            self.rxid += extid.to_bytes(1, 'big')
+            self.txFlags |= TxFlags.ISO15765_ADDR_TYPE.value
+        else:
+            self.txFlags &= ~TxFlags.ISO15765_ADDR_TYPE.value
+
+        msgMask = PASSTHRU_MSG()
+        msgMask.ProtocolID = protocol.value
+        msgMask.TxFlags = self.txFlags
+        msgMask.RxStatus = msgMask.ExtraDataIndex = 0xCCCC_CCCC
+        msgMask.setData(b'\xFF' * len(self.rxid))
+
+        msgPattern = PASSTHRU_MSG()
+        msgPattern.ProtocolID = protocol.value
+        msgPattern.TxFlags = self.txFlags
+        msgPattern.RxStatus = msgPattern.ExtraDataIndex = 0xCCCC_CCCC
+        msgPattern.setData(self.rxid)
+
+        if protocol in [Protocol_ID.ISO15765, Protocol_ID.ISO15765_PS, Protocol_ID.SW_ISO15765_PS]:
+            filterType = c_ulong(Filter.FLOW_CONTROL_FILTER.value)
+            msgFlow = PASSTHRU_MSG()
+            msgFlow.ProtocolID = protocol.value
+            msgFlow.TxFlags = self.txFlags
+            msgFlow.RxStatus = msgFlow.ExtraDataIndex = 0xCCCC_CCCC
+            msgFlow.setData(self.txid)
+            msgFlow = byref(msgFlow)
+        else:
+            filterType = c_ulong(Filter.PASS_FILTER.value)
+            msgFlow = None
+
+        msgID = c_ulong(0)
+
+        result = dllPassThruStartMsgFilter(ChannelID, filterType, byref(msgMask), byref(msgPattern), msgFlow, byref(msgID))
+        return Error_ID(result)
