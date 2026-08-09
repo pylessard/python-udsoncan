@@ -794,6 +794,14 @@ class J2534Connection(BaseConnection):
     def set_can_id(self, txid: int, rxid: Optional[int] = None, extid: Optional[int] = None) -> int:
         self.check_connection_opened()
 
+        if rxid is None:
+            if 0 <= txid <= 0xFF:
+                (txid, rxid) = (0x18DA00F1 | (txid << 8), 0x18DAF100 | txid)
+            elif 0x700 <= txid <= 0x7FF:
+                rxid = txid + 8
+            else:
+                assert False, "txid must between 0 and 0xFF or between 0x700 and 0x7FF for automatic resolve rxid."
+
         self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_MSG_FILTERS)
         self.log_last_operation("PassThruIoctl CLEAR_MSG_FILTERS", with_raise=True)
 
