@@ -685,9 +685,9 @@ class J2534Connection(BaseConnection):
     protocol: "Protocol_ID"
     baudrate: int
     result: "Error_ID"
-    firmwareVersion: "ctypes.Array[ctypes.c_char]"
-    dllVersion: "ctypes.Array[ctypes.c_char]"
-    apiVersion: "ctypes.Array[ctypes.c_char]"
+    firmwareVersion: "str"
+    dllVersion: "str"
+    apiVersion: "str"
     opened: bool
 
     def __init__(self,
@@ -703,7 +703,7 @@ class J2534Connection(BaseConnection):
         BaseConnection.__init__(self, name)
 
         self.opened = False
-        self.result = None
+        self.result = Error_ID.ERR_SUCCESS
         self.protocol = protocol or Protocol_ID.ISO15765
         self.baudrate = baudrate
         self.dll_debug = debug
@@ -711,12 +711,12 @@ class J2534Connection(BaseConnection):
         try:
             self.interface = J2534(windll)
         except AttributeError as e:
-            raise RuntimeError('DLL invalid: ' + str(e))
+            raise RuntimeError("DLL invalid: " + str(e))
         except FileNotFoundError:
-            raise RuntimeError('DLL not found')
+            raise RuntimeError("DLL not found")
 
-        if (txid or rxid or extid) is not None:
-            self.logger.critical('txid, rxid, and extid are deprecated constructor arguments. Pass them, for example, "with J2534Connection(windll) as conn: conn.set_can_id(txid, txid, extid)".')
+        if txid is not None:
+            self.logger.critical("Arguments txid, rxid, and extid are deprecated in the constructor. Pass them, for example, \"with J2534Connection(windll) as conn: conn.set_can_id(txid, txid, extid)\".")
             self.open()
             self.set_can_id(txid, rxid, extid)
 
@@ -735,16 +735,16 @@ class J2534Connection(BaseConnection):
 
     def open(self) -> "J2534Connection":
         if self.is_open():
-            return
+            return self
         try:
             # Open the interface (connect to the DLL)
             self.result, self.devID = self.interface.PassThruOpen()
         except OSError as e:
             if e.errno in [0x16, 0xe06d7363]:
-                raise RuntimeError('J2534 Device busy')
+                raise RuntimeError("J2534 Device busy")
             exception_str = type(e).__name__
             if e.errno is not None:
-                exception_str += ', %s' % e.errno
+                exception_str += ", %s" % e.errno
             raise RuntimeError(exception_str)
 
         self.log_last_operation("PassThruOpen", with_raise=True)
@@ -759,8 +759,7 @@ class J2534Connection(BaseConnection):
         # Get the firmeware and DLL version etc, mainly for debugging output
         self.result, self.firmwareVersion, self.dllVersion, self.apiVersion = self.interface.PassThruReadVersion(self.devID)
         self.log_last_operation("PassThruReadVersion")
-        self.logger.info("J2534 FirmwareVersion: " + str(self.firmwareVersion.value) + ", dllVersoin: " +
-                         str(self.dllVersion.value) + ", apiVersion" + str(self.apiVersion.value))
+        self.logger.info("J2534 FirmwareVersion: %s, dllVersion: %s, apiVersion: %s." % (self.firmwareVersion, self.dllVersion, self.apiVersion))
 
         # get the channel ID of the interface (used for subsequent communication)
         self.result, self.channelID = self.interface.PassThruConnect(self.devID, self.protocol, self.baudrate)
@@ -786,19 +785,20 @@ class J2534Connection(BaseConnection):
             ]
 
         self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.SET_CONFIG, SCONFIG_LIST(configs))
-        self.log_last_operation("PassThruIoctl SET_CONFIG")
+        self.log_last_operation("PassThruIoctl SET_CONFIG", with_raise=True)
 
         self.opened = True
         self.logger.info("J2534 Connection opened")
+        return self
 
-    def set_can_id(self, txid: int, rxid: int, extid: int=None):
+    def set_can_id(self, txid: int, rxid: Optional[int] = None, extid: Optional[int] = None) -> int:
         self.check_connection_opened()
 
         self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_MSG_FILTERS)
         self.log_last_operation("PassThruIoctl CLEAR_MSG_FILTERS", with_raise=True)
 
         # Set the filters and clear the read buffer (filters will be set based on tx/rxids)
-        self.result = self.interface.PassThruStartMsgFilter(self.channelID, self.protocol, txid, rxid, extid)
+        self.result, FilterID = self.interface.PassThruStartMsgFilter(self.channelID, txid, rxid, extid)
         self.log_last_operation("PassThruStartMsgFilter", with_raise=True)
 
         self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_RX_BUFFER)
@@ -806,6 +806,8 @@ class J2534Connection(BaseConnection):
 
         self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_TX_BUFFER)
         self.log_last_operation("PassThruIoctl CLEAR_TX_BUFFER", with_raise=True)
+
+        return FilterID
 
     def close(self) -> None:
         if not self.opened:
@@ -823,13 +825,15 @@ class J2534Connection(BaseConnection):
 
         timeout = timeout or 0
 
-        self.result = self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol, Timeout=int(timeout * 1000))
+        self.result = self.interface.PassThruWriteMsgs(self.channelID, payload, Timeout=int(timeout * 1000))
         self.log_last_operation("PassThruWriteMsgs", with_raise=True)
 
     def specific_wait_frame(self, timeout: Optional[float] = None) -> Optional[bytes]:
         self.check_connection_opened()
 
-        self.result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol, pNumMsgs=1, Timeout=int(timeout * 1000))
+        timeout = timeout or 1
+
+        self.result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, pNumMsgs=1, Timeout=int(timeout * 1000))
         if self.result in [Error_ID.ERR_BUFFER_EMPTY, Error_ID.ERR_TIMEOUT]:
             raise TimeoutException(timeout)
 
