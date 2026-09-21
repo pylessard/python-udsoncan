@@ -7,7 +7,6 @@ import sys
 from abc import ABC, abstractmethod
 import time
 from typing import Union, Dict
-import ctypes
 import selectors
 
 try:
@@ -696,7 +695,7 @@ class J2534Connection(BaseConnection):
                  txid: Optional[int] = None,
                  extid: Optional[int] = None,
                  name: Optional[str] = None,
-                 debug: bool = False,
+                 debug: Optional[bool] = None,
                  protocol = None,
                  baudrate = 500000,
                  ):
@@ -706,7 +705,6 @@ class J2534Connection(BaseConnection):
         self.result = Error_ID.ERR_SUCCESS
         self.protocol = protocol or Protocol_ID.ISO15765
         self.baudrate = baudrate
-        self.dll_debug = debug
 
         try:
             self.interface = J2534(windll)
@@ -719,6 +717,11 @@ class J2534Connection(BaseConnection):
             self.logger.critical("Arguments txid, rxid, and extid are deprecated in the constructor. Pass them, for example, \"with J2534Connection(windll) as conn: conn.set_can_id(txid, txid, extid)\".")
             self.open()
             self.set_can_id(txid, rxid, extid)
+
+        if isinstance(debug, bool):
+            self.logger.critical("Argument debug deprecated in the constructor. Call conn.set_tatrix_debug() if need.")
+            if debug:
+                self.set_tatrix_debug()
 
     def __enter__(self) -> "J2534Connection":
         self.open()
@@ -748,13 +751,6 @@ class J2534Connection(BaseConnection):
             raise RuntimeError(exception_str)
 
         self.log_last_operation("PassThruOpen", with_raise=True)
-
-        if self.dll_debug:
-            self.result = self.interface.PassThruIoctl(0,
-                                                       Ioctl_Flags.TX_IOCTL_SET_DLL_DEBUG_FLAGS,
-                                                       SCONFIG_LIST([(0, Ioctl_Flags.TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS.value)])
-                                                       )
-            self.log_last_operation("PassThruIoctl SET_DLL_DEBUG")
 
         # Get the firmeware and DLL version etc, mainly for debugging output
         self.result, self.firmwareVersion, self.dllVersion, self.apiVersion = self.interface.PassThruReadVersion(self.devID)
@@ -860,14 +856,17 @@ class J2534Connection(BaseConnection):
     def read_vbatt(self, digits=1) -> float:
         self.check_connection_opened()
 
-        vbatt = ctypes.POINTER(ctypes.c_int32)()
-
-        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.READ_VBATT, None, vbatt)
+        self.result, value = self.interface.PassThruIoctl_READ_VBATT(self.devID)
         self.log_last_operation("PassThruIoctl READ_VBATT")
 
-        value = ctypes.cast(vbatt, ctypes.c_void_p).value
-
         return round(value / 1000, digits) if value else 0
+
+    def set_tatrix_debug(self, enable: bool = True):
+        from ctypes import c_ulong
+        flags = Ioctl_Flags.TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS.value if enable else 0
+
+        self.result = self.interface.PassThruIoctl(0, Ioctl_ID.TX_IOCTL_SET_DLL_DEBUG_FLAGS, c_ulong(flags), None)
+        self.log_last_operation("PassThruIoctl SET_DLL_DEBUG_FLAGS")
 
 
 class FakeConnection(BaseConnection):
