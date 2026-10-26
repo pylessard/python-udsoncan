@@ -814,8 +814,7 @@ class J2534Connection(BaseConnection):
         return FilterID
 
     def close(self) -> None:
-        if not self.opened:
-            return
+        # Try to close the connection in any case. (Sometimes the "opened" flag is not set, but the internal state of J2534 devices is not reset).
         self.opened = False
 
         self.result = self.interface.PassThruDisconnect(self.channelID)
