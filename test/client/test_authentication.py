@@ -78,6 +78,92 @@ class TestAuthentication(ClientServerTest):
         self.assertEqual(response.service_data.challenge_server, b'\xAA\x44')
         self.assertEqual(response.service_data.ephemeral_public_key_server, b'')
 
+    def test_verifyCertificateBidirectional_without_key_length(self) -> None:
+        self.wait_request_and_respond(b'\x69\x02\x11\x00\x01\xAA\x00\x01\xBB\x00\x01\xCC')
+
+    def _test_verifyCertificateBidirectional_without_key_length(self) -> None:
+        response = self.udsclient.verify_certificate_bidirectional(
+            communication_configuration=0,
+            certificate_client=b'\x30',
+            challenge_client=b'\xAA\x44',
+        )
+        assert response is not None
+        self.assertEqual(response.service_data.ephemeral_public_key_server, b'')
+
+    def test_proofOfOwnership_without_session_key_info_length(self) -> None:
+        self.wait_request_and_respond(b'\x69\x03\x12')
+
+    def _test_proofOfOwnership_without_session_key_info_length(self) -> None:
+        response = self.udsclient.proof_of_ownership(proof_of_ownership_client=b'\xAA')
+        assert response is not None
+        self.assertEqual(response.service_data.session_key_info, b'')
+
+    def test_requestChallengeForAuthentication_without_additional_parameter_length(self) -> None:
+        self.wait_request_and_respond(b'\x69\x05\x00\x06\x01\x2A' + bytes(13) + b'\x00\x01\xAA')
+
+    def _test_requestChallengeForAuthentication_without_additional_parameter_length(self) -> None:
+        response = self.udsclient.request_challenge_for_authentication(
+            communication_configuration=0,
+            algorithm_indicator=b'\x06\x01\x2A' + bytes(13),
+        )
+        assert response is not None
+        self.assertEqual(response.service_data.needed_additional_parameter, b'')
+
+    def test_requestChallengeForAuthentication_with_additional_parameter(self) -> None:
+        self.wait_request_and_respond(b'\x69\x05\x00\x06\x01\x2A' + bytes(13) + b'\x00\x01\xAA\x00\x02\xBB\xCC')
+
+    def _test_requestChallengeForAuthentication_with_additional_parameter(self) -> None:
+        response = self.udsclient.request_challenge_for_authentication(
+            communication_configuration=0,
+            algorithm_indicator=b'\x06\x01\x2A' + bytes(13),
+        )
+        assert response is not None
+        self.assertEqual(response.service_data.needed_additional_parameter, b'\xBB\xCC')
+
+    def test_verifyProofOfOwnershipUnidirectional_without_session_key_info_length(self) -> None:
+        self.wait_request_and_respond(b'\x69\x06\x12\x06\x01\x2A' + bytes(13))
+
+    def _test_verifyProofOfOwnershipUnidirectional_without_session_key_info_length(self) -> None:
+        response = self.udsclient.verify_proof_of_ownership_unidirectional(
+            algorithm_indicator=b'\x06\x01\x2A' + bytes(13),
+            proof_of_ownership_client=b'\xAA',
+        )
+        assert response is not None
+        self.assertEqual(response.service_data.session_key_info, b'')
+
+    def test_verifyProofOfOwnershipBidirectional_without_session_key_info_length(self) -> None:
+        self.wait_request_and_respond(b'\x69\x07\x12\x06\x01\x2A' + bytes(13) + b'\x00\x01\xAA')
+
+    def _test_verifyProofOfOwnershipBidirectional_without_session_key_info_length(self) -> None:
+        response = self.udsclient.verify_proof_of_ownership_bidirectional(
+            algorithm_indicator=b'\x06\x01\x2A' + bytes(13),
+            proof_of_ownership_client=b'\xAA',
+            challenge_client=b'\xBB',
+        )
+        assert response is not None
+        self.assertEqual(response.service_data.session_key_info, b'')
+
+    def test_rejects_truncated_session_key_info_length(self) -> None:
+        self.wait_request_and_respond(b'\x69\x03\x12\x00')
+
+    def _test_rejects_truncated_session_key_info_length(self) -> None:
+        with self.assertRaisesRegex(InvalidResponseException, 'Not enough data for length of Session Key Info'):
+            self.udsclient.proof_of_ownership(proof_of_ownership_client=b'\xAA')
+
+    def test_rejects_truncated_session_key_info(self) -> None:
+        self.wait_request_and_respond(b'\x69\x03\x12\x00\x02\xAA')
+
+    def _test_rejects_truncated_session_key_info(self) -> None:
+        with self.assertRaisesRegex(InvalidResponseException, 'Not enough data for Session Key Info'):
+            self.udsclient.proof_of_ownership(proof_of_ownership_client=b'\xAA')
+
+    def test_rejects_extra_bytes_after_empty_session_key_info(self) -> None:
+        self.wait_request_and_respond(b'\x69\x03\x12\x00\x00\xAA')
+
+    def _test_rejects_extra_bytes_after_empty_session_key_info(self) -> None:
+        with self.assertRaisesRegex(InvalidResponseException, 'Response data had more bytes than expected'):
+            self.udsclient.proof_of_ownership(proof_of_ownership_client=b'\xAA')
+
     def test_verifyCertificateBidirectional_success(self) -> None:
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x02\xAA\x00\x7D\xAA' + bytes(123) + b'\xBB\x01\xCA\xCC' + bytes(456) + b'\xDD')

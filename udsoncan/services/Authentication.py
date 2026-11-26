@@ -1,5 +1,5 @@
 import struct
-from typing import Optional, cast
+from typing import Optional, Tuple, cast
 
 from udsoncan.Request import Request
 from udsoncan.Response import Response
@@ -279,6 +279,17 @@ class Authentication(BaseService):
                                                      f' is {len(data) - 2}')
 
     @classmethod
+    def _extract_trailing_bytes_parameter(cls, response: Response, data: bytes, offset: int,
+                                          parameter_name: str) -> Tuple[bytes, int]:
+        # ISO 14229-1:2020 requires the two-byte length even when the parameter is empty.
+        # For compatibility, treat an entirely omitted trailing length as zero.
+        if offset == len(data):
+            return b'', offset
+
+        parameter = cls._extract_byes_parameter(response, data[offset:], parameter_name)
+        return parameter, offset + 2 + len(parameter)
+
+    @classmethod
     def interpret_response(cls, response: Response) -> InterpretedResponse:
         """
         Populates the response ``service_data`` property with an instance of
@@ -317,16 +328,9 @@ class Authentication(BaseService):
                                                                       'Challenge Server')
             offset += 2 + len(challenge_server)
 
-            # ISO 14229-1:2020 Table 77 requires a two-byte lengthOfEphemeralPublicKeyServer.
-            # When it is 0x0000, the server omits the public key. For compatibility, also accept
-            # responses that end after challengeServer and treat the omitted length as zero.
-            if offset < len(response.data):
-                ephemeral_public_key_server = Authentication._extract_byes_parameter(
-                    response, response.data[offset:], 'Ephemeral Public Key Server'
-                )
-                offset += 2 + len(ephemeral_public_key_server)
-            else:
-                ephemeral_public_key_server = b''
+            ephemeral_public_key_server, offset = cls._extract_trailing_bytes_parameter(
+                response, response.data, offset, 'Ephemeral Public Key Server'
+            )
 
         elif subfunction == Authentication.AuthenticationTask.verifyCertificateBidirectional:
             challenge_server = Authentication._extract_byes_parameter(response, response.data[offset:],
@@ -341,14 +345,14 @@ class Authentication(BaseService):
                                                                                'Proof Of Ownership Server')
             offset += 2 + len(proof_of_ownership_server)
 
-            ephemeral_public_key_server = Authentication._extract_byes_parameter(response, response.data[offset:],
-                                                                                 'Ephemeral Public Key Server')
-            offset += 2 + len(ephemeral_public_key_server)
+            ephemeral_public_key_server, offset = cls._extract_trailing_bytes_parameter(
+                response, response.data, offset, 'Ephemeral Public Key Server'
+            )
 
         elif subfunction == Authentication.AuthenticationTask.proofOfOwnership:
-            session_key_info = Authentication._extract_byes_parameter(response, response.data[offset:],
-                                                                      'Session Key Info')
-            offset += 2 + len(session_key_info)
+            session_key_info, offset = cls._extract_trailing_bytes_parameter(
+                response, response.data, offset, 'Session Key Info'
+            )
 
         elif subfunction in (Authentication.AuthenticationTask.requestChallengeForAuthentication,
                              Authentication.AuthenticationTask.verifyProofOfOwnershipUnidirectional,
@@ -365,9 +369,9 @@ class Authentication(BaseService):
                                                                           'Challenge Server')
                 offset += 2 + len(challenge_server)
 
-                needed_additional_parameter = Authentication._extract_byes_parameter(response, response.data[offset:],
-                                                                                     'Needed Additional Parameter')
-                offset += 2 + len(needed_additional_parameter)
+                needed_additional_parameter, offset = cls._extract_trailing_bytes_parameter(
+                    response, response.data, offset, 'Needed Additional Parameter'
+                )
             else:
                 if subfunction == Authentication.AuthenticationTask.verifyProofOfOwnershipBidirectional:
                     proof_of_ownership_server = Authentication._extract_byes_parameter(response, response.data[offset:],
@@ -375,9 +379,9 @@ class Authentication(BaseService):
                     offset += 2 + len(proof_of_ownership_server)
 
                 # verifyProofOfOwnershipBidirectional or verifyProofOfOwnershipUnidirectional
-                session_key_info = Authentication._extract_byes_parameter(response, response.data[offset:],
-                                                                          'Session Key Info')
-                offset += 2 + len(session_key_info)
+                session_key_info, offset = cls._extract_trailing_bytes_parameter(
+                    response, response.data, offset, 'Session Key Info'
+                )
         else:
             raise InvalidResponseException(response, "Unknown Subfunction")
 
