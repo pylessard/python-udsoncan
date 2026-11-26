@@ -65,6 +65,19 @@ class TestAuthentication(ClientServerTest):
         self.assertIsNone(response.service_data.session_key_info)
         self.assertIsNone(response.service_data.algorithm_indicator)
 
+    def test_verifyCertificateUnidirectional_without_key_length(self) -> None:
+        self.wait_request_and_respond(b'\x69\x01\x11\x00\x02\xAA\x44')
+
+    def _test_verifyCertificateUnidirectional_without_key_length(self) -> None:
+        response: Authentication.InterpretedResponse = self.udsclient.verify_certificate_unidirectional(
+            communication_configuration=0,
+            certificate_client=b'\x30',
+            challenge_client=b'\xAA\x44',
+        )
+        self.assertTrue(response.positive)
+        self.assertEqual(response.service_data.challenge_server, b'\xAA\x44')
+        self.assertEqual(response.service_data.ephemeral_public_key_server, b'')
+
     def test_verifyCertificateBidirectional_success(self) -> None:
         request = self.conn.touserqueue.get(timeout=0.2)
         self.assertEqual(request, b'\x29\x02\xAA\x00\x7D\xAA' + bytes(123) + b'\xBB\x01\xCA\xCC' + bytes(456) + b'\xDD')
